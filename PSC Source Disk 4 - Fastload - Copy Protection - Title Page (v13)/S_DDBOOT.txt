@@ -1,0 +1,71 @@
+         NLS 
+         TTL "S:DDBOOT"
+ORG      =   $800
+         NOG 
+;
+; Print Shop
+; Boot Data Disk message
+;
+; Boot Sector...
+;
+         ORG ORG
+         OBJ $800
+;
+         HEX 01
+;
+         LDX $2B
+         LDA $C088,X
+;
+         STA $C000
+         STA $C00C
+         STA $C00E
+         STA $C054
+         JSR $FB2F
+         JSR $FE84
+         JSR $FC58
+         JSR $FE89
+         JSR $FE93
+;
+         LDY #0
+;
+^0       LDA TEXT,Y
+         BEQ >1
+         JSR $FDF0
+         INY 
+         BNE <0
+;
+^1       STA $3F3
+         STA $3F4
+;
+^2       LDA $C000
+         CMP #" "
+         BNE <2
+         BIT $C010
+         JSR $FC58
+         LDA $2B
+         LSR 
+         LSR 
+         LSR 
+         LSR 
+         ORA #$C0
+         SBC #0
+         PHA 
+         LDA #$FF
+         PHA 
+         RTS 
+;
+;
+TEXT     HEX 8D8D8D8D8D8D
+         INV "THIS IS A PRINT SHOP DATA DISK"
+         HEX 8D8D8D87
+         ASC "  "
+         ASC "PLEASE INSERT ANOTHER DISK"
+         HEX 8D8D
+         ASC "  "
+         ASC "AND PRESS THE SPACE BAR..."
+         HEX 6000
+;
+;
+;
+         USR "O:DDBOOT",ORG
+         END 

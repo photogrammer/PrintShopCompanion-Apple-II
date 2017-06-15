@@ -1,0 +1,307 @@
+         NLS 
+         TTL "S:BORDDATA"
+ORG      =   $1000
+;
+; BORDER TILE PIXEL DATA
+; ----------------------
+; Actual data followed by
+; screen equivalent
+;
+         ORG ORG
+         OBJ $800
+;-----------
+;
+; SINGLE LINE
+;
+         HEX 7F7F0000000000000000000000000000
+         HEX 00000000000000007F7F010101010101
+         HEX 01010101010101010101010101010100
+         HEX 00000000000000000000000000000000
+         HEX 00000000000000000101010101010101
+         HEX 01010101010101010101010101010100
+         HEX 7F7F0000000000000000000000000000
+         HEX 00000000000000007F7F000000000000
+         HEX 00000000000000000000000000000000
+;
+         HEX 7F7F
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+;
+         HEX 7F7F
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+;
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+;-----------
+;
+; DOUBLE LINE
+;
+B2       HEX 7F7F0000000000000000004040404040
+         HEX 40404040407F7F007F7F010101010101
+         HEX 01010101010101010101010101010100
+         HEX 01010101010101010101010101010101
+         HEX 01010101010101000101010101010101
+         HEX 01010101010101010101010101010100
+         HEX 7F7F0000000000000000007F7F000000
+         HEX 00000000000000007F7F000000000000
+         HEX 0000007F7F0000000000000000000000
+;
+         HEX 7F7F
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0300
+         HEX 0360
+         HEX 0360
+         HEX 0360
+         HEX 0360
+         HEX 0360
+         HEX 0360
+         HEX 037F
+;
+         HEX 7F7F
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 7F7F
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+         HEX 0000
+;
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+         HEX 0303
+;-----------
+;
+; THICK LINE
+;
+         HEX 7F7F7F7F7F7F7F7F
+         HEX 7F7F7F7F7F7F7F7F
+         HEX 7F7F7F7F7F7F7F00
+         HEX 7F7F7F7F7F7F7F7F
+         HEX 7F7F7F7F7F7F7F7F
+         HEX 7F7F7F7F7F7F7F00
+;
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+         HEX 7F7F
+;-----------
+;
+; BEADS
+;
+         HEX 00030F1F1C3D303A
+         HEX 3075606A6075603A
+         HEX 3035381E1F0F0300
+         HEX 00407078383C0C5C
+         HEX 0C2E0656062E065C
+         HEX 0C2C5C7878704000
+;
+         HEX 4003
+         HEX 700F
+         HEX 1819
+         HEX 2C34
+         HEX 0C31
+         HEX 2664
+         HEX 0E71
+         HEX 2664
+         HEX 0C31
+         HEX 2C34
+         HEX 1819
+         HEX 700F
+         HEX 4003
+         HEX 0000
+;-----------
+;
+; FANCY
+;
+         HEX 71737374740C0C1C
+         HEX 1C21216121211C1C
+         HEX 0C0C747473737100
+         HEX 476767171718181C
+         HEX 1C42424342421C1C
+         HEX 1818171767674700
+;
+         HEX 4771
+         HEX 6773
+         HEX 1774
+         HEX 180C
+         HEX 1C1C
+         HEX 0220
+         HEX 6363
+         HEX 6363
+         HEX 0220
+         HEX 1C1C
+         HEX 180C
+         HEX 1774
+         HEX 6773
+         HEX 4771
+;-----------
+;
+; FLORAL
+;
+         HEX 0001020A16121211
+         HEX 091D232323231D09
+         HEX 111212160A020100
+         HEX 006010141A121222
+         HEX 646E717171716E64
+         HEX 2212121A14106000
+;
+         HEX 0000
+         HEX 4001
+         HEX 380E
+         HEX 2412
+         HEX 2412
+         HEX 5C1D
+         HEX 6223
+         HEX 6223
+         HEX 5C1D
+         HEX 2412
+         HEX 2412
+         HEX 380E
+         HEX 4001
+         HEX 0000
+;-----------
+;
+; STARS
+;
+         HEX 0001010103030307
+         HEX 070F3F7F3F0F0707
+         HEX 0303030101010000
+         HEX 0000000040404060
+         HEX 60707C7E7C706060
+         HEX 4040400000000000
+;
+         HEX 0001
+         HEX 0001
+         HEX 4003
+         HEX 4003
+         HEX 6007
+         HEX 781F
+         HEX 7E7F
+         HEX 781F
+         HEX 6007
+         HEX 4003
+         HEX 4003
+         HEX 0001
+         HEX 0001
+         HEX 0000
+;-----------
+;
+; HEARTS
+;
+         HEX 000001030306060C
+         HEX 0C18307030180C0C
+         HEX 0606030301000000
+         HEX 387C7E4603030303
+         HEX 07060C180C060703
+         HEX 030303467E7C3800
+;
+         HEX 0000
+         HEX 1C0E
+         HEX 3E1F
+         HEX 6739
+         HEX 4330
+         HEX 0330
+         HEX 0738
+         HEX 0E1C
+         HEX 1C0E
+         HEX 3807
+         HEX 6001
+         HEX 4000
+         HEX 0000
+         HEX 0000
+;-----------
+;
+; WICKER
+;
+         HEX 7F7F4848484F4F48
+         HEX 4848484848484848
+         HEX 7F7F4040407F7F00
+         HEX 7F7F0101017F7F09
+         HEX 0909090909090909
+         HEX 79790909097F7F00
+;
+         HEX 7F7F
+         HEX 1940
+         HEX 1940
+         HEX 797F
+         HEX 194C
+         HEX 194C
+         HEX 194C
+         HEX 194C
+         HEX 194C
+         HEX 194C
+         HEX 7F4F
+         HEX 014C
+         HEX 014C
+         HEX 7F7F
+;
+;
+;
+         USR "O:BORDDATA",ORG
+         END 

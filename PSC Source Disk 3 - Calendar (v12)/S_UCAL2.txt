@@ -1,0 +1,523 @@
+;
+; S:UCAL2
+;
+; Calendar user interface menus
+;
+; SELGRPOS:select graphic position
+; SELYEAR :type in year for calendar
+; SELMONTH:select month
+; CALCDAY :calculate day of week
+;          given Y=date 1-31,
+;          MONTH=0-11 and YEARTEXT
+;
+;-----------
+;
+; Select graphic position option
+;
+LCTXT    BYT 'LEFT CORNER',0
+RCTXT    BYT 'RIGHT CORNER',0
+BCTXT    BYT 'BOTH CORNERS',0
+ROTXT    BYT 'ROW OF ',0
+;
+SGPY     =   28
+SGBXY    =   136
+;
+SELGRPOS LDA GRSEL
+         EOR #NOGR
+         BEQ >0
+;
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#SGPY
+         BYT 'SELECT '
+         .DA #PRSTR,TXTGR
+         BYT ' POSITION:',CR
+         BYT CR
+         .DA #PRSTR,LCTXT,#CR
+         .DA #PRSTR,RCTXT,#CR
+         .DA #PRSTR,BCTXT,#CR
+         .DA #PRSTR,ROTXT
+         BYT 'SIX',CR
+         BYT 'TILED',CR
+;
+         .DA #PRSTR,LCTXT,#CR
+         .DA #PRSTR,RCTXT,#CR
+         .DA #PRSTR,BCTXT,#CR
+         .DA #PRSTR,ROTXT
+         BYT 'THREE',CR
+         BYT 'TILED',CR
+;
+; Draw box for position information:
+;
+         BYT RTOSANY,$60,8,SGBXY,1,30
+         BYT RTOSANY,$03,31,SGBXY,1,30
+         BYT RTOSWITE,9,SGBXY,22,1
+         BYT RTOSWITE,9,SGBXY+29,22,1
+         BRK 
+;
+         LDY GROPTION
+         JSR SELECT
+         BYT 10,20,SGPY+15,10
+         ADR SGBOX
+         STY GROPTION
+^0       RTS 
+;---
+;
+; Show position on screen
+;
+SGBOX    PHA 
+         JSR PRINT
+         BYT RTOSBLAK,9,SGBXY+1,22,21,0
+         PLA 
+;
+         LSR 
+         TAX 
+;
+         LDY #SGBXSMAL
+         LDA /SGBXSMAL
+         CPX #5
+         BLT >0
+         LDY #SGBXBIG
+         LDA /SGBXBIG
+^0       STY SGBOX1+1
+         STA SGBOX1+2
+;
+         LDA SGBXSTRT,X
+         STA TMP0
+         LDA SGBXNUMB,X
+         STA TMP1
+         LDA SGBXINC,X
+         STA TMP2
+;
+^1       LDX TMP0
+SGBOX1   JSR $FFFF
+         LDA TMP0
+         CLC 
+         ADC TMP2
+         STA TMP0
+         DEC TMP1
+         BNE <1
+         RTS 
+;
+; Xstart,Xcount,Xinc
+;
+SGBXSTRT BYT 9,29,9,9,10
+         BYT 9,27,9,10,10
+SGBXNUMB BYT 1,1,2,6,10
+         BYT 1,1,2,3,5
+SGBXINC  BYT 0,0,20,4,2
+         BYT 0,0,18,8,4
+;
+; Small
+;
+SGBXSMAL STX >0+2
+         INX 
+         STX >1+2
+         JSR PRINT
+^0       BYT RTOSANY,$7E,00,SGBXY+7,1,10
+^1       BYT RTOSANY,$3F,01,SGBXY+7,1,10
+         BRK 
+         RTS 
+;
+; Big
+;
+SGBXBIG  STX >0+2
+         INX 
+         STX >1+1
+         INX 
+         INX 
+         STX >2+2
+         JSR PRINT
+^0       BYT RTOSANY,$7E,00,SGBXY+2,1,20
+^1       BYT RTOSWITE,01,SGBXY+2,2,20
+^2       BYT RTOSANY,$3F,03,SGBXY+2,1,20
+         BRK 
+         RTS 
+;-----------
+;
+; Select year for calendar
+;
+SYX      =   61
+SYY      =   69
+;
+SELYEAR  JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,SYX,#SYY
+         BYT 'WHAT YEAR IS THIS',CR
+         .DA #PRSTR,TXTCAL,' FOR ?',#CR
+         BYT CR,'>',CR,CR
+         BYT '(1753-9999)',CR,0
+;
+^0       JSR INPUT
+         ADR YEARTEXT
+         BYT 4
+         .DA SYX+9
+         BYT SYY+24
+         BCS >9
+;
+         JSR CALCYEAR
+         LDY #32
+         LDX #YEARTEXT
+         LDA /YEARTEXT
+         STX TMP4
+         STA TMP5
+         BCC STORE?
+;
+         JSR BOOP
+         JMP <0
+;-----------
+;
+; Given TMP4.5: source buffer
+;          Y  : dest string #
+;        (X,A): dest buffer
+;
+; If there is no data for the string,
+; store the text pointed to by X,A.
+;
+STORE?   STX STOREADR+1
+         STA STOREADR+2
+         STY >1+1
+         JSR GETTEXT
+;
+; Move the text to buffers
+;
+         LDA #$80
+         STA TEXTBUFF
+         LDY #$FF
+^0       INY 
+         LDA (TMP4),Y
+STOREADR STA $FFFF,Y
+         STA TEXTBUFF+1,Y
+         BNE <0
+         BCS >2
+;
+^1       LDY #00
+         JSR PUTTEXT
+;
+^2       CLC 
+^9       RTS 
+;-----------
+;
+; Get month for calendar
+;
+SMY      =   34
+;
+SELMONTH JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#SMY
+         .DA #PRSTR,TXTCHOO
+         BYT 'A MONTH:',CR,CR,0
+;
+         JSR PRINTGRP
+         BYT PRCNTR
+         BYT 12
+         ADR TXTJAN
+;
+         LDY MONTH
+         JSR SELECT
+         BYT 13,14,SMY+15,12
+         ADR RTS
+         STY MONTH
+         BCS <9
+;
+         LDX MONTHADL,Y
+         LDA MONTHADH,Y
+         STX TMP4
+         STA TMP5
+;
+         LDX #MONTHTXT
+         LDA /MONTHTXT
+         LDY #31
+         BCC STORE?
+;-----------
+MONTHADL BYT TXTJAN,TXTFEB,TXTMAR
+         BYT TXTAPR,TXTMAY,TXTJUN
+         BYT TXTJUL,TXTAUG,TXTSEP
+         BYT TXTOCT,TXTNOV,TXTDEC
+;
+MONTHADH HBY TXTJAN,TXTFEB,TXTMAR
+         HBY TXTAPR,TXTMAY,TXTJUN
+         HBY TXTJUL,TXTAUG,TXTSEP
+         HBY TXTOCT,TXTNOV,TXTDEC
+;
+; Text for all the months
+;
+TXTJAN   BYT 'JANUARY',0
+TXTFEB   BYT 'FEBRUARY',0
+TXTMAR   BYT 'MARCH',0
+TXTAPR   BYT 'APRIL',0
+TXTMAY   BYT 'MAY',0
+TXTJUN   BYT 'JUNE',0
+TXTJUL   BYT 'JULY',0
+TXTAUG   BYT 'AUGUST',0
+TXTSEP   BYT 'SEPTEMBER',0
+TXTOCT   BYT 'OCTOBER',0
+TXTNOV   BYT 'NOVEMBER',0
+TXTDEC   BYT 'DECEMBER',0
+;-----------
+;
+; Given YEARTEXT, compute CDYRLO.HI
+; If SEC, then not a valid year.
+;
+MINYEAR  =   1753
+;
+CALCYEAR LDY #0
+         STY CDYRLO
+         STY CDYRHI
+^0       LDA YEARTEXT,Y
+         CMP #'0'
+         BCC >2
+         CMP #'9'+1
+         BCS >2
+         AND #$0F
+         PHA 
+;
+; Multiply by 10
+;
+         LDX CDYRHI
+         LDA CDYRLO
+         ASL 
+         ROL CDYRHI
+         ASL 
+         ROL CDYRHI
+         ADC CDYRLO
+         STA CDYRLO
+         TXA 
+         ADC CDYRHI
+         STA CDYRHI
+         ASL CDYRLO
+         ROL CDYRHI
+;
+; Add in new digit
+;
+         PLA 
+         ADC CDYRLO
+         STA CDYRLO
+         BCC *+4
+         INC CDYRHI
+         INY 
+         CPY #4
+         BLT <0
+;
+         LDY CDYRLO
+         LDA CDYRHI
+         CMP /MINYEAR
+         BNE >1
+         CPY #MINYEAR
+^1       BLT >2
+         CLC 
+         RTS 
+;
+^2       SEC 
+         RTS 
+;-----------
+;
+; Given YEARTEXT:1753-9999
+;          MONTH:0-11
+;              Y:date 1-31
+;
+; Calculate which day of the week this
+; month starts on and # days in month.
+;
+; 0:Sunday    1:Monday    2:Tuesday
+; 3:Wednesday 4:Thursday  5:Friday
+; 6:Saturday
+;
+; Uses the following weird formula
+; invented by Roland
+;
+; DAY= (YEAR
+;      +INT((YEAR-1)/4)
+;      -INT((YEAR-1)/100)
+;      +INT((YEAR-1)/400)
+;      +(#days in previous months) (0 for JAN, 31 for FEB)
+;      +(DATE-1)
+;      ) MOD 7
+;---
+CDZ      EPZ $70
+;
+CDDAYLO  EPZ CDZ
+CDDAYHI  EPZ CDZ+1
+CDYRLO   EPZ CDZ+2
+CDYRHI   EPZ CDZ+3
+CDLPFLG  EPZ CDZ+4
+;
+ACCUMLO  EPZ CDZ+5
+ACCUMHI  EPZ CDZ+6
+ACCUM2LO EPZ CDZ+7
+ACCUM2HI EPZ CDZ+8
+REMAINLO EPZ CDZ+9
+REMAINHI EPZ CDZ+10
+;---
+CALCDAY  DEY 
+         STY DATE
+         JSR CALCYEAR
+         LDY CDYRLO
+         LDA CDYRHI
+         STY CDDAYLO
+         STA CDDAYHI
+;
+; Modify February if leap year
+;
+         JSR CDLEAP?
+         LDA #28
+         ADC #0
+         STA DYSINMON+1
+;
+; Set YR=(YEAR-1)
+;
+         LDX CDYRLO
+         BNE >0
+         DEC CDYRHI
+^0       DEC CDYRLO
+;
+; Now do mathematics
+;
+         JSR DIVYR4
+         JSR CDDAYADD
+;
+         JSR DIVYR100
+         JSR CDDAYSUB
+;
+         JSR DIVYR400
+         JSR CDDAYADD
+;
+; Add in days for previous months
+;
+         LDY #0
+         LDX MONTH
+         LDA DYSINMON,X
+         STA MNLAST
+^0       DEX 
+         BMI >1
+         LDA DYSINMON,X
+         JSR CDDAYADD
+         BCC <0
+;
+; Add in current date
+;
+^1       LDA DATE
+         JSR CDDAYADD
+;
+         LDY CDDAYLO
+         LDA CDDAYHI
+         STY ACCUMLO
+         STA ACCUMHI
+;
+; Get DAY modulus 7
+;
+         LDA #7
+         LDY #0
+         JSR DIV16
+         LDA REMAINLO
+         STA MNFDAY
+         RTS 
+;---
+;
+; Days in month
+;
+DYSINMON BYT 31,28,31,30,31,30
+         BYT 31,31,30,31,30,31
+;---
+;
+; Subtract Y,A from DAY
+;
+CDDAYSUB EOR #$FF
+         PHA 
+         TYA 
+         EOR #$FF
+         TAY 
+         PLA 
+         SEC 
+         HEX 24
+;
+; Add Y,A to DAY
+;
+CDDAYADD CLC 
+         ADC CDDAYLO
+         STA CDDAYLO
+         TYA 
+         ADC CDDAYHI
+         STA CDDAYHI
+         RTS 
+;---
+;
+; Return SEC if leap year
+;
+CDLEAP?  ASL CDLPFLG
+         JSR DIVYR4
+         BCS >0
+         INC CDLPFLG
+^0       JSR DIVYR100
+         BCS >1
+         DEC CDLPFLG
+^1       JSR DIVYR400
+         BCS >2
+         INC CDLPFLG
+^2       ROR CDLPFLG
+         RTS 
+;---
+;
+; Divide year routines:
+; for 4,100 and 400
+;
+DIVYR4   LDA #4
+         HEX 2C
+;
+DIVYR100 LDA #100
+         LDY #0
+         BEQ >0
+;
+DIVYR400 LDA #400
+         LDY /400
+;
+; Divide YR by Y,A
+;
+^0       LDX CDYRLO
+         STX ACCUMLO
+         LDX CDYRHI
+         STX ACCUMHI
+;
+; Divide ACCUM by Y,A
+;
+; Return result in Y,A
+;  SEC means there was a remainder
+;
+DIV16    STA ACCUM2LO
+         STY ACCUM2HI
+         LDA #0
+         STA REMAINLO
+         STA REMAINHI
+;
+         LDY #16
+^0       ASL ACCUMLO
+         ROL ACCUMHI
+         ROL REMAINLO
+         ROL REMAINHI
+         SEC 
+         LDA REMAINLO
+         SBC ACCUM2LO
+         TAX 
+         LDA REMAINHI
+         SBC ACCUM2HI
+         BCC >1
+         STX REMAINLO
+         STA REMAINHI
+         INC ACCUMLO
+^1       DEY 
+         BNE <0
+         SEC 
+         LDA REMAINLO
+         ORA REMAINHI
+         BNE >2
+         CLC 
+^2       LDA ACCUMLO
+         LDY ACCUMHI
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:UCAL3"

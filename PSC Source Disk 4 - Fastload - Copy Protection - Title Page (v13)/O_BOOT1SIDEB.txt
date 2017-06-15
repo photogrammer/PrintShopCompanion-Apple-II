@@ -1,0 +1,70 @@
+0800-   01 A9       ORA   ($A9,X)
+0802-   60          RTS
+0803-   8D 01 08    STA   $0801
+0806-   A2 00       LDX   #$00
+0808-   B5 00       LDA   $00,X
+080A-   9D 00 10    STA   $1000,X
+080D-   E8          INX
+080E-   D0 F8       BNE   $0808
+0810-   8D 08 C0    STA   $C008    w:SETSTDZP
+0813-   BD 00 10    LDA   $1000,X
+0816-   95 00       STA   $00,X
+0818-   E8          INX
+0819-   D0 F8       BNE   $0813
+081B-   A9 FF       LDA   #$FF
+081D-   8D FB 04    STA   $04FB
+0820-   8D F3 03    STA   $03F3
+0823-   8D F4 03    STA   $03F4
+0826-   8D 00 C0    STA   $C000    r:KBD  w:CLR80COL
+0829-   8D 0C C0    STA   $C00C    w:CLR80VID
+082C-   8D 0E C0    STA   $C00E    w:CLRALTCHAR
+082F-   8D 5F C0    STA   $C05F    rw:CLRAN3
+0832-   8D 81 C0    STA   $C081    rw:ROMIN
+0835-   20 2F FB    JSR   $FB2F    F8ROM:INIT
+0838-   20 58 FC    JSR   $FC58    F8ROM:HOME
+083B-   20 84 FE    JSR   $FE84    F8ROM:SETNORM
+083E-   20 93 FE    JSR   $FE93    F8ROM:SETVID
+0841-   20 89 FE    JSR   $FE89    F8ROM:SETKBD
+0844-   A9 14       LDA   #$14
+0846-   85 22       STA   $22
+0848-   A6 2B       LDX   $2B
+084A-   8A          TXA
+084B-   4A          LSR
+084C-   4A          LSR
+084D-   4A          LSR
+084E-   4A          LSR
+084F-   09 C0       ORA   #$C0
+0851-   8D 68 08    STA   $0868
+0854-   A9 0F       LDA   #$0F
+0856-   85 50       STA   $50
+0858-   A4 50       LDY   $50
+085A-   B9 75 08    LDA   $0875,Y
+085D-   85 3D       STA   $3D
+085F-   B9 85 08    LDA   $0885,Y
+0862-   F0 05       BEQ   $0869
+0864-   85 27       STA   $27
+0866-   20 5C 00    JSR   $005C
+0869-   C6 50       DEC   $50
+086B-   D0 EB       BNE   $0858
+086D-   A6 2B       LDX   $2B
+086F-   BD 88 C0    LDA   $C088,X
+0872-   4C 00 10    JMP   $1000
+0875-   00          BRK
+0876-   0D 0B 09    ORA   $090B
+0879-   07          ???
+087A-   05 03       ORA   $03
+087C-   01 0E       ORA   ($0E,X)
+087E-   0C 0A 08    TSB   $080A
+0881-   06 04       ASL   $04
+0883-   02          ???
+0884-   0F          ???
+0885-   00          BRK
+0886-   10 11       BPL   $0899
+0888-   12 60       ORA   ($60)
+088A-   61 62       ADC   ($62,X)
+088C-   63          ???
+088D-   64 65       STZ   $65
+088F-   66 67       ROR   $67
+0891-   68          PLA
+0892-   69 6A       ADC   #$6A
+0894-   6B          ???

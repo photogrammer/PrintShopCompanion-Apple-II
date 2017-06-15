@@ -1,0 +1,267 @@
+D000-   4C 4B D0    JMP   $D04B
+D003-   AA          TAX
+D004-   A0 3F       LDY   #$3F
+D006-   B9 19 D0    LDA   $D019,Y
+D009-   99 C0 02    STA   $02C0,Y
+D00C-   88          DEY
+D00D-   10 F7       BPL   $D006
+D00F-   A9 3F       LDA   #$3F
+D011-   48          PHA
+D012-   A9 FF       LDA   #$FF
+D014-   48          PHA
+D015-   8A          TXA
+D016-   4C C0 02    JMP   $02C0
+D019-   48          PHA
+D01A-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+D01D-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+D020-   A2 08       LDX   #$08
+D022-   A0 07       LDY   #$07
+D024-   A9 D2       LDA   #$D2
+D026-   84 3A       STY   $3A
+D028-   85 3B       STA   $3B
+D02A-   A0 00       LDY   #$00
+D02C-   A9 40       LDA   #$40
+D02E-   84 3C       STY   $3C
+D030-   85 3D       STA   $3D
+D032-   B1 3A       LDA   ($3A),Y
+D034-   48          PHA
+D035-   B1 3C       LDA   ($3C),Y
+D037-   91 3A       STA   ($3A),Y
+D039-   68          PLA
+D03A-   91 3C       STA   ($3C),Y
+D03C-   C8          INY
+D03D-   D0 F3       BNE   $D032
+D03F-   E6 3B       INC   $3B
+D041-   E6 3D       INC   $3D
+D043-   CA          DEX
+D044-   D0 EC       BNE   $D032
+D046-   2C 81 C0    BIT   $C081    rw:ROMIN
+D049-   68          PLA
+D04A-   60          RTS
+D04B-   A9 00       LDA   #$00
+D04D-   A0 DE       LDY   #$DE
+D04F-   AE 00 83    LDX   $8300
+D052-   E0 01       CPX   #$01
+D054-   D0 01       BNE   $D057
+D056-   C8          INY
+D057-   85 86       STA   $86
+D059-   84 87       STY   $87
+D05B-   20 64 D1    JSR   $D164
+D05E-   A5 88       LDA   $88
+D060-   0A          ASL
+D061-   69 20       ADC   #$20
+D063-   85 83       STA   $83
+D065-   A9 00       LDA   #$00
+D067-   85 82       STA   $82
+D069-   A0 24       LDY   #$24
+D06B-   91 82       STA   ($82),Y
+D06D-   88          DEY
+D06E-   10 FB       BPL   $D06B
+D070-   A9 25       LDA   #$25
+D072-   85 82       STA   $82
+D074-   A6 88       LDX   $88
+D076-   E4 89       CPX   $89
+D078-   F0 2C       BEQ   $D0A6
+D07A-   CA          DEX
+D07B-   E4 89       CPX   $89
+D07D-   F0 27       BEQ   $D0A6
+D07F-   A2 02       LDX   #$02
+D081-   A9 00       LDA   #$00
+D083-   20 31 D1    JSR   $D131
+D086-   A9 00       LDA   #$00
+D088-   20 DE D0    JSR   $D0DE
+D08B-   A9 C3       LDA   #$C3
+D08D-   85 82       STA   $82
+D08F-   E6 83       INC   $83
+D091-   A9 02       LDA   #$02
+D093-   20 DE D0    JSR   $D0DE
+D096-   A0 0A       LDY   #$0A
+D098-   A9 00       LDA   #$00
+D09A-   91 82       STA   ($82),Y
+D09C-   88          DEY
+D09D-   10 FB       BPL   $D09A
+D09F-   E6 88       INC   $88
+D0A1-   C6 8A       DEC   $8A
+D0A3-   D0 B9       BNE   $D05E
+D0A5-   60          RTS
+D0A6-   A9 01       LDA   #$01
+D0A8-   A6 89       LDX   $89
+D0AA-   E0 18       CPX   #$18
+D0AC-   F0 02       BEQ   $D0B0
+D0AE-   A9 00       LDA   #$00
+D0B0-   85 3C       STA   $3C
+D0B2-   A2 00       LDX   #$00
+D0B4-   A5 3C       LDA   $3C
+D0B6-   20 31 D1    JSR   $D131
+D0B9-   20 DC D0    JSR   $D0DC
+D0BC-   A2 01       LDX   #$01
+D0BE-   A5 3C       LDA   $3C
+D0C0-   20 31 D1    JSR   $D131
+D0C3-   A2 11       LDX   #$11
+D0C5-   20 DC D0    JSR   $D0DC
+D0C8-   CA          DEX
+D0C9-   D0 FA       BNE   $D0C5
+D0CB-   E6 3C       INC   $3C
+D0CD-   E6 3C       INC   $3C
+D0CF-   A2 00       LDX   #$00
+D0D1-   A5 3C       LDA   $3C
+D0D3-   20 31 D1    JSR   $D131
+D0D6-   20 DC D0    JSR   $D0DC
+D0D9-   4C 96 D0    JMP   $D096
+D0DC-   A5 3C       LDA   $3C
+D0DE-   A0 00       LDY   #$00
+D0E0-   84 3A       STY   $3A
+D0E2-   31 86       AND   ($86),Y
+D0E4-   4A          LSR
+D0E5-   66 3D       ROR   $3D
+D0E7-   4A          LSR
+D0E8-   90 02       BCC   $D0EC
+D0EA-   A0 16       LDY   #$16
+D0EC-   84 3B       STY   $3B
+D0EE-   A4 3A       LDY   $3A
+D0F0-   B1 84       LDA   ($84),Y
+D0F2-   24 3D       BIT   $3D
+D0F4-   10 04       BPL   $D0FA
+D0F6-   A8          TAY
+D0F7-   B9 80 90    LDA   $9080,Y
+D0FA-   A4 3B       LDY   $3B
+D0FC-   31 82       AND   ($82),Y
+D0FE-   8D 0E D1    STA   $D10E
+D101-   A4 3A       LDY   $3A
+D103-   B1 80       LDA   ($80),Y
+D105-   24 3D       BIT   $3D
+D107-   10 04       BPL   $D10D
+D109-   A8          TAY
+D10A-   B9 80 90    LDA   $9080,Y
+D10D-   09 00       ORA   #$00
+D10F-   A4 3B       LDY   $3B
+D111-   91 82       STA   ($82),Y
+D113-   B0 02       BCS   $D117
+D115-   C8          INY
+D116-   C8          INY
+D117-   E6 3A       INC   $3A
+D119-   88          DEY
+D11A-   84 3B       STY   $3B
+D11C-   A5 3A       LDA   $3A
+D11E-   49 17       EOR   #$17
+D120-   D0 CC       BNE   $D0EE
+D122-   A9 17       LDA   #$17
+D124-   18          CLC
+D125-   65 82       ADC   $82
+D127-   85 82       STA   $82
+D129-   90 02       BCC   $D12D
+D12B-   E6 83       INC   $83
+D12D-   60          RTS
+D12E-   04 34       TSB   $34
+D130-   64 A0       STZ   $A0
+D132-   00          BRK
+D133-   31 86       AND   ($86),Y
+D135-   45 88       EOR   $88
+D137-   4A          LSR
+D138-   B0 02       BCS   $D13C
+D13A-   A0 18       LDY   #$18
+D13C-   A5 86       LDA   $86
+D13E-   85 80       STA   $80
+D140-   A5 87       LDA   $87
+D142-   85 81       STA   $81
+D144-   98          TYA
+D145-   18          CLC
+D146-   7D 2E D1    ADC   $D12E,X
+D149-   8D 5B D1    STA   $D15B
+D14C-   18          CLC
+D14D-   65 80       ADC   $80
+D14F-   85 80       STA   $80
+D151-   90 02       BCC   $D155
+D153-   E6 81       INC   $81
+D155-   A9 00       LDA   #$00
+D157-   A0 BB       LDY   #$BB
+D159-   18          CLC
+D15A-   69 00       ADC   #$00
+D15C-   85 84       STA   $84
+D15E-   90 01       BCC   $D161
+D160-   C8          INY
+D161-   84 85       STY   $85
+D163-   60          RTS
+D164-   20 FC D1    JSR   $D1FC
+D167-   A0 00       LDY   #$00
+D169-   B1 86       LDA   ($86),Y
+D16B-   29 04       AND   #$04
+D16D-   D0 01       BNE   $D170
+D16F-   60          RTS
+D170-   A2 02       LDX   #$02
+D172-   A0 00       LDY   #$00
+D174-   20 3C D1    JSR   $D13C
+D177-   20 81 D1    JSR   $D181
+D17A-   20 CB D1    JSR   $D1CB
+D17D-   CA          DEX
+D17E-   10 F2       BPL   $D172
+D180-   60          RTS
+D181-   E0 02       CPX   #$02
+D183-   F0 41       BEQ   $D1C6
+D185-   A0 2E       LDY   #$2E
+D187-   84 3B       STY   $3B
+D189-   A0 16       LDY   #$16
+D18B-   84 3A       STY   $3A
+D18D-   A9 7F       LDA   #$7F
+D18F-   85 3C       STA   $3C
+D191-   31 80       AND   ($80),Y
+D193-   F0 07       BEQ   $D19C
+D195-   A5 3C       LDA   $3C
+D197-   0A          ASL
+D198-   29 7F       AND   #$7F
+D19A-   10 F3       BPL   $D18F
+D19C-   A5 3C       LDA   $3C
+D19E-   91 84       STA   ($84),Y
+D1A0-   D0 04       BNE   $D1A6
+D1A2-   E0 00       CPX   #$00
+D1A4-   F0 20       BEQ   $D1C6
+D1A6-   C9 7F       CMP   #$7F
+D1A8-   D0 15       BNE   $D1BF
+D1AA-   A9 7F       LDA   #$7F
+D1AC-   A4 3B       LDY   $3B
+D1AE-   85 3C       STA   $3C
+D1B0-   31 80       AND   ($80),Y
+D1B2-   F0 07       BEQ   $D1BB
+D1B4-   A5 3C       LDA   $3C
+D1B6-   0A          ASL
+D1B7-   29 7F       AND   #$7F
+D1B9-   10 F3       BPL   $D1AE
+D1BB-   A5 3C       LDA   $3C
+D1BD-   91 84       STA   ($84),Y
+D1BF-   C6 3B       DEC   $3B
+D1C1-   A4 3A       LDY   $3A
+D1C3-   88          DEY
+D1C4-   10 C5       BPL   $D18B
+D1C6-   60          RTS
+D1C7-   31 84       AND   ($84),Y
+D1C9-   29 FF       AND   #$FF
+D1CB-   E0 01       CPX   #$01
+D1CD-   F0 F7       BEQ   $D1C6
+D1CF-   BD C7 D1    LDA   $D1C7,X
+D1D2-   8D ED D1    STA   $D1ED
+D1D5-   BD C8 D1    LDA   $D1C8,X
+D1D8-   8D EE D1    STA   $D1EE
+D1DB-   A0 2E       LDY   #$2E
+D1DD-   A9 7F       LDA   #$7F
+D1DF-   85 3C       STA   $3C
+D1E1-   B1 80       LDA   ($80),Y
+D1E3-   25 3C       AND   $3C
+D1E5-   F0 04       BEQ   $D1EB
+D1E7-   45 3C       EOR   $3C
+D1E9-   85 3C       STA   $3C
+D1EB-   A5 3C       LDA   $3C
+D1ED-   11 84       ORA   ($84),Y
+D1EF-   91 84       STA   ($84),Y
+D1F1-   88          DEY
+D1F2-   30 07       BMI   $D1FB
+D1F4-   C0 17       CPY   #$17
+D1F6-   D0 E9       BNE   $D1E1
+D1F8-   88          DEY
+D1F9-   D0 E2       BNE   $D1DD
+D1FB-   60          RTS
+D1FC-   A0 90       LDY   #$90
+D1FE-   A9 00       LDA   #$00
+D200-   88          DEY
+D201-   99 00 BB    STA   $BB00,Y
+D204-   D0 FA       BNE   $D200
+D206-   60          RTS

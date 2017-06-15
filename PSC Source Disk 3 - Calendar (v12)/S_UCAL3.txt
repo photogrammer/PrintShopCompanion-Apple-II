@@ -1,0 +1,578 @@
+;
+; S:UCAL3
+;
+; More menus
+;
+; SELTYPE :select calendar type
+; SELGR   :select graphic
+; SELFONT :select font
+; CREDIT2 :type in credit line
+; PRINMENU:print menu
+; SELCOLOR:select colors
+;
+;-----------
+;
+TXTCHOO  BYT 'CHOOSE ',0
+TXTFROM  BYT 'FROM ',0
+TXTPS    BYT 'PRINT SHOP',0
+TXTC     BYT 'COMPANION',0
+;
+TXTFOD   BYT 'FROM OTHER'
+TXTSD    BYT ' '
+TXTD     BYT 'DISK',0
+;
+TXTGTMM  BYT 'GO TO MAIN MENU',0
+TXTRET   BYT '<RETURN>',0
+;-----------
+STY      =   64
+;
+; Select type of calendar
+;
+SELTYPE  JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#STY
+         BYT PRCNTR
+         .DA #PRSTR,TXTCHOO
+         .DA #PRSTR,TXTCAL,':',#CR
+         BYT CR,CR
+         BYT 'MONTHLY',CR
+         BYT 'WEEKLY',CR
+         .DA #PRSTR,TXTFOD,#CR
+         BRK 
+^0       LDY CLTYPE
+;
+         JSR SELECT
+         BYT 10,20,STY+23,3
+         ADR RTS
+;
+         BCS >2
+;
+; If we are switching type
+; of calendar, then you better
+; erase the COBUFFER
+;
+         TYA 
+         PHA 
+         CMP CLTYPE
+         BEQ >1
+         JSR CLRCOBUF
+^1       CLC 
+         PLA 
+         STA CLTYPE
+         TAY 
+;
+         JSR JMPVECTS
+         ADR RTS
+         ADR RTS
+         ADR LOADCAL
+^2       RTS 
+;---
+;
+; Load calendar from disk
+;
+LOADCAL  JSR SETCAL
+         SEC 
+         JSR GETFILE
+         JSR TPTITLE2
+         BCC <2
+         JMP SELTYPE
+;-----------
+SLMY     =   50
+;
+; Select graphic
+;
+SELGR    JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#SLMY
+         BYT PRCNTR
+         .DA #PRSTR,TXTCHOO,'A '
+         .DA #PRSTR,TXTGR,':',#CR
+         BYT CR,CR
+         .DA #PRSTR,TXTFROM,#PRSTR,TXTPS,#PRSTR,TXTSD,#CR
+         .DA #PRSTR,TXTFROM,#PRSTR,TXTC,#PRSTR,TXTSD,#CR
+         .DA #PRSTR,TXTFOD,#CR
+         .DA 'NO ',#PRSTR,TXTGR,#CR
+         BRK 
+         LDY GRSEL
+         JSR SELECT
+         BYT 6,28,SLMY+23,4
+         ADR RTS
+         STY GRSEL
+         BCS >0
+;
+         LDX #1
+         JSR FIXCOLOR
+;
+         JSR JMPVECTS
+         ADR SGPSD
+         ADR SGCD
+         ADR SGOD
+         ADR RTS
+^0       RTS 
+;
+; From Print Shop disk
+;
+SGPSD    LDA GRNUM
+         LDX #GRBUFF
+         LDY /GRBUFF
+         JSR GETPDISK
+         BCS >1
+         STA GRNUM
+^0       RTS 
+;
+; From Companion disk
+;
+SGCD     LDA #2
+         CLC 
+         HEX 24
+;
+; From other disk
+;
+SGOD     SEC 
+         PHP 
+         JSR SETTYPE
+TXTGR    BYT 'GRAPHIC',0
+TXTCAL   BYT 'CALENDAR',0
+         BYT 0
+         BYT 4
+         ADR GRBUFF
+         ADR $240
+         PLP 
+         JSR GETFILE
+         JSR TPTITLE2
+         BCC <0
+^1       JMP SELGR
+;-----------
+;
+; Select Font
+;
+SELFONT  LDY FONTSEL
+         CLC 
+         JSR FGETMAIN
+         STY FONTSEL
+         BCS >0
+;
+         LDX #0
+         JSR FIXCOLOR
+;
+         JSR >1
+         BCS SELFONT
+^0       RTS 
+;
+^1       JSR JMPVECTS
+         ADR SFPSD
+         ADR SFCD
+         ADR SFOD
+         ADR RTS
+;
+; Font from Print Shop disk
+;
+SFPSD    LDY FONTPSD
+         JSR FGETPSD
+         STY FONTPSD
+         RTS 
+;
+; Font from Companion disk
+;
+SFCD     LDY FONTCD
+         JSR FGETCD
+         STY FONTCD
+         RTS 
+;
+; Font from other disk
+;
+SFOD     JSR SETTYPE
+TXTFONT  BYT 'FONT',0
+         BYT 'CALENDAR FONT',0
+         BYT 'FONT.',0
+         BYT 0
+         ADR FONTBUFF
+         ADR 0
+         SEC 
+         JSR GETFILE
+;
+; Turn off list indicators from
+; the Font Editor
+;
+         LDY #'Z'-$20
+^0       LDA FONTBUFF+12,Y
+         AND #$7F
+         STA FONTBUFF+12,Y
+         DEY 
+         BPL <0
+;
+         JMP TPTITLE2
+;-----------
+;
+; Credit line
+;
+CREDIT2  JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140
+         BYT CRY1-22
+         BYT 'TYPE ONE-LINER FOR',CR
+         BYT 'BOTTOM OF '
+         .DA #PRSTR,TXTCAL
+         BYT CR,0
+         LDX #CRXB-1
+         LDY #CRY1
+         LDA #19
+         JSR DRAWBOX
+         JMP CREDIT
+;-----------
+PRMY     =   32
+;
+; Print menu
+;
+PRINMENC CLC 
+         HEX B0
+PRINMENU SEC 
+         JSR PRTITLE
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#PRMY
+         BYT 'MAKE SURE PRINTER IS READY',CR
+         BYT 'AND CHOOSE OPTION(S):',CR
+         BYT CR,CR,CR
+         BYT 'SET NUMBER OF COPIES',CR
+         BYT 'TEST PAPER POSITION',CR
+         BYT '****   PRINT   ****',CR
+         .DA 'SAVE THIS ',#PRSTR,TXTCAL,#CR
+         BYT 'START FROM SCRATCH',CR
+         .DA 'GOODBYE: ',#PRSTR,TXTGTMM,#CR
+         BRK 
+;
+PRINMEN2 LDY PRSEL
+         JSR SELECT
+         BYT 5,30,PRMY+39,6
+         ADR RTS
+         STY PRSEL
+         BCS >0
+;
+         JSR JMPVECTS
+         ADR PRSETNUM
+         ADR PRTESTP
+         ADR PRPRINT
+         ADR PRSAVE
+         ADR PSCRATCH
+         ADR PRGOMENU
+;
+^0       RTS 
+;---
+;
+; Set number of copies
+;
+PRSETNUM JSR PRINT
+         .DA #PRLOC,44,#136
+         BYT 'HOW MANY COPIES DO YOU',CR
+         BYT 'WISH TO PRINT?',CR,0
+;
+         LDA #99
+         STA TMP0
+         LDX #165
+         LDY #144
+         LDA PRCOPIES
+         JSR GETANUMB
+         BCS >0
+         STA PRCOPIES
+         INC PRSEL
+;
+^0       JSR PRINT
+         BYT RTOSBLAK,1,136,38,16,0
+         JMP PRINMEN2
+;---
+;
+; Test paper position
+;
+PRTESTP  JSR DEVICEOF
+         JSR TESTPAPR
+         JSR DEVICEON
+         JMP PRINMEN2
+;---
+;
+; Print the calendar
+;
+PRPRINT  JSR DEVICEOF
+;
+         LDA PRCOPIES
+         STA COPYCONT
+         JSR DOCALEN
+;
+         JSR DEVICEON
+         JMP PRINMENC
+;---
+;
+; Save calendar to data disk
+;
+PRSAVE   JSR SETCAL
+         LDA #0
+         STA PRSEL
+         JSR SAVEFILE
+         LDA #3
+         STA PRSEL
+         JMP PRINMENC
+;---
+;
+; Go back to main menu
+;
+PRGOMENU JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#167
+         .DA #PRSTR,TXTRET
+         BYT ' TO '
+         .DA #PRSTR,TXTGTMM,#CR
+         BYT 'OR',CR,0
+         JSR GETKEY
+         CMP #CR
+         BEQ >1
+^0       JSR PRINT
+         BYT RTOSBLAK,1,167,38,16,0
+         JMP PRINMEN2
+;
+^1       JMP MAINMENU
+;---
+;
+; Start from scratch
+;
+PSCRATCH JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#167
+         .DA #PRSTR,TXTRET
+         BYT ' TO START OVER',CR
+         BYT 'OR',CR,0
+         JSR GETKEY
+         CMP #CR
+         BNE <0
+         CLC 
+         RTS 
+;-----------
+;
+; Set file info for calendar
+;
+SETCAL   LDY DBUFENDL
+         LDA DBUFENDH
+         SEC 
+         SBC /COBUFF
+         STY SETCALEN
+         STA SETCALEN+1
+         JSR SETTYPE
+         BYT 'CALENDAR',0
+         BYT 'CALENDAR',0
+         BYT 'CALE.',0
+         BYT 0
+         ADR COBUFF
+SETCALEN ADR 0
+^9       RTS 
+;-----------
+;
+; FIX color selections for
+; graphics and fonts.
+;
+FIXCOLOR PHP 
+         LDA COLORFLG
+         CMP #$FF
+         BNE >1
+         LDA #8
+         CPY #NOGR                     ; NOFONT
+         BEQ >0
+         EOR DCOLOR0,X
+         BNE >1
+^0       STA DCOLOR0,X
+^1       PLP 
+         RTS 
+;-----------
+;
+; Color selection menu
+;
+SELCOLOR JSR PRTITLE
+;
+; Is this menu available???
+;
+         LDY COLORPR
+         BEQ <9
+         LDY COLORFLG
+         INY 
+         BNE <9
+;
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#32
+         .DA #PRSTR,TXTCHOO
+         BYT 'COLORS:',CR
+;
+         BYT PRLEFT
+         .DA #PRLOC,69,#56
+         .DA #PRSTR,TXTFONT,#CR
+         .DA #PRSTR,TXTGR,#CR
+         BYT 'LINES',CR
+         BYT 'NOTES',CR
+         BRK 
+;
+; Display colors
+;
+         LDA #3
+^0       PHA 
+         STA TMP0
+         JSR SLRSHOW
+         PLA 
+         SEC 
+         SBC #1
+         BPL <0
+;
+         JSR SLRAROWS
+         JSR PRINT
+         .DA #PRLOC,44,#128
+         BYT 'USE',PRRTAB,68
+         BYT ' TO SELECT ITEM',CR
+         BYT CR
+         BYT 'PRESS <SPACE> TO CHANGE',CR
+         BYT 'COLORS OF SELECTED ITEM',CR
+         BYT CR
+         BYT 'PRESS '
+         .DA #PRSTR,TXTRET
+         BYT ' WHEN DONE',CR
+         BRK 
+;
+^0       LDX #0
+^1       STX TMP0
+^2       JSR SLRHILIT
+         JSR GETKEY
+         PHA 
+         JSR SLRHILIT
+         PLA 
+         LDX TMP0
+         LDY DCOLOR0,X
+         JSR PARSE
+         .DA #CR,SLRDONE
+         .DA #ESC,SLRESC
+         .DA #$08,SLRUP
+         .DA #$0B,SLRUP
+         .DA #$15,SLRDOWN
+         .DA #$0A,SLRDOWN
+         .DA #$20,SLRSPACE
+         BRK 
+         JMP <2
+;
+SLRUP    DEX 
+         BPL <1
+         LDX #2
+SLRDOWN  INX 
+         CPX #4
+         BLT <1
+         BEQ <0
+;
+SLRSPACE CPY #8
+         BEQ <2
+         INY 
+         TYA 
+         CMP #8
+         BLT *+4
+         LDA #0
+         STA DCOLOR0,X
+         JSR SLRSHOW
+         JMP <2
+;---
+;
+; Highlite current color item
+;
+SLRHILIT LDA TMP0
+         ASL 
+         ASL 
+         ASL 
+         ADC #55
+         STA >0+2
+         JSR PRINT
+^0       BYT RTOSINV,9,00,14,9
+         BRK 
+SLRESC   SEC 
+         RTS 
+SLRDONE  CLC 
+         RTS 
+;---
+;
+; Given A=color#, show current setting
+;
+SLRSHOW  LDA TMP0
+         TAY 
+         ASL 
+         ASL 
+         ASL 
+         ADC #56
+         STA SCMOD0+2
+         STA SCMOD1+3
+;
+; Point to text
+;
+         LDX DCOLOR0,Y
+         LDY #$FF
+^0       DEX 
+         BMI >2
+^1       INY 
+         LDA COLORTXT,Y
+         BNE <1
+         BEQ <0
+^2       INY 
+         TYA 
+         CLC 
+         ADC #COLORTXT
+         STA SCMOD2+1
+         LDA /COLORTXT
+         ADC #0
+         STA SCMOD2+2
+;
+; Erase and show color
+;
+         JSR PRINT
+SCMOD0   BYT RTOSBLAK,24,00,15,7
+SCMOD1   .DA #PRLOC,169,#00
+SCMOD2   .DA #PRSTR,$FFFF,#NOCR
+         BRK 
+         RTS 
+;---
+COLORTXT BYT 'BLACK',0
+         BYT 'RED',0
+         BYT 'ORANGE',0
+         BYT 'YELLOW',0
+         BYT 'GREEN',0
+         BYT 'BLUE',0
+         BYT 'PURPLE',0
+         BYT 'RAINBOW',0
+         BYT ' ----',0
+;-----------
+AROWX    =   12
+AROWY    =   128
+;
+SLRAROWS LDA $FA68
+         CMP #$C0
+         BEQ ARROW2E
+         LDA $FBB3
+         CMP #$06
+         BEQ ARROW2E
+;---
+; LEFT
+         JSR PICDRAW
+         BYT AROWX,AROWY+1,1,5
+         HEX 0C06C1060C
+; RIGHT
+         JSR PICDRAW
+         BYT AROWX+2,AROWY+1,1,5
+         HEX 1830C13018
+         RTS 
+;---
+; DOWN
+ARROW2E  JSR PICDRAW
+         BYT AROWX,AROWY,1,7
+         HEX 0808086B3E1C08
+; UP
+         JSR PICDRAW
+         BYT AROWX+2,AROWY,1,7
+         HEX 081C3E6B080808
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:UCAL4"

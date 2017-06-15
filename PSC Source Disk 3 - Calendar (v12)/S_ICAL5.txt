@@ -1,0 +1,191 @@
+;
+; S:ICAL5
+;
+; GTWTEXT
+;
+; Get text for weekly calendar
+;
+WCXOFF   =   21
+WCYOFF   =   76
+WCWIDTH  =   238
+;
+WBOXX    =   2
+WBOXY    =   WCYOFF-5
+WBOXH    =   9+4*8
+;
+; Initialize everything!
+;
+; Compute string offset
+;
+GTWTEXT  TXA 
+         ASL 
+         ASL 
+         STA GTWSBOFF
+;
+; Compute day of week
+;
+         CLC 
+         TXA 
+         ADC MNFDAY
+         CMP #7
+         BLT >0
+         SBC #7
+^0       TAY 
+;
+; Compute date
+;
+         TXA 
+         CLC 
+         ADC MNDATE
+         CMP MNLAST
+         BLT >1
+         BEQ >1
+         SBC MNLAST
+         NOP 
+         NOP 
+^1       STA DATE
+         JSR MAKEWTXT
+         JSR MAKEDTXT
+;
+         JSR TEINIT
+         ADR GTWBLAK
+         ADR RTS
+         ADR GTWDRAW
+         BYT WCWIDTH,100,1,1
+;
+; Draw the initial screen
+;
+         JSR GTTOP
+;
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#WCYOFF-18
+         .DA #PRSTR,WEEKTEXT,' '
+         .DA #PRSTR,DATETEXT,#CR
+         BRK 
+         LDX #WBOXX
+         LDY #WBOXY
+         LDA #WBOXH
+         JSR DRAWBOX
+;
+         JSR ERASMES2
+;
+; Draw all four strings
+;
+         LDY #3
+^0       STY ILINE
+         JSR GTWGET
+         JSR GTWBLAK
+         JSR GTWDRAW
+         LDY ILINE
+         DEY 
+         BNE <0
+;
+; Now edit one of the strings
+;
+GTWDNEXT STY ILINE
+         JSR GTWGET
+^0       JSR TEDIT
+         JSR PARSE
+         .DA #1,GTWCR
+         .DA #2,GTWESC
+         BRK 
+         JMP <0
+;---
+GTWCR    CLC 
+         HEX 24
+;---
+GTWESC   SEC 
+         PHP 
+         JSR GTWPUT
+         PLP 
+         LDY ILINE
+         BCC >0
+         DEY 
+         BPL GTWDNEXT
+         RTS 
+;
+^0       INY 
+         CPY #4
+         BLT GTWDNEXT
+         CLC 
+         RTS 
+;---
+;
+; Get text from buffer
+;
+GTWGET   CLC 
+         HEX 24
+;
+; Put text into buffer
+;
+GTWPUT   SEC 
+         PHP 
+         LDA #00
+GTWSBOFF =   *-1
+         CLC 
+         ADC ILINE
+         TAY 
+         PLP 
+         BCS >0
+         JMP GETTEXT
+^0       JMP PUTTEXT
+;---
+;
+; Routine to erase current line
+;
+GTWBLAK  JSR GTWYCALC
+GTWBLAK2 STA >0+2
+         JSR PRINT
+^0       BYT RTOSBLAK,3,0,34,7
+         BYT PRKERN,1
+         BYT PRCSPACE,1
+         BRK 
+;
+SETTMP2  LDY #TEXTBUFF
+         LDA /TEXTBUFF
+         STY TMP2
+         STA TMP3
+         RTS 
+;-----------
+;
+; Calculate Y position
+;
+GTWYCALC LDA ILINE
+         ASL 
+         ASL 
+         ASL 
+         ADC #WCYOFF
+         RTS 
+;-----------
+;
+; Draw current string
+;
+GTWDRAW  JSR GTWYCALC
+         LDX #WCXOFF
+         LDY #0
+;---
+;
+; Common draw routine
+;   X:X-coordinate
+;   Y:XOPTION
+;   A:Y-coordinate
+; TMP2.3:string address
+;
+COMMDRAW STX SPARM+2
+         LDX #0
+         STX SPARM+3
+         INX 
+         STX SPARM+7
+         STY SPARM+1
+         STA SPARM+4
+         LDY TMP2
+         LDA TMP3
+         STY SPARM+9
+         STA SPARM+10
+         JMP STROUT
+;-----------
+;
+;
+;
+         ICL "S:ICAL6"

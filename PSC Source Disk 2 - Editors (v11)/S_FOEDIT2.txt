@@ -1,0 +1,602 @@
+;
+; S:FOEDIT2
+;
+; Routines necessary to edit
+; single character.
+;
+; Main Editor loop
+;
+EDITCHAR JSR EDITLOOP
+         JSR >1
+         JMP EDITCHAR
+;
+^1       JSR PARSE
+         .DA #'L',CMDLINES
+         .DA #'R',CMDRAYS
+         .DA #'B',CMDBOX
+         .DA #'O',CMDOVAL
+;
+         .DA #'C'-$40,CMDCLEAR
+         .DA #'P'-$40,CMDPRINT
+         .DA #'D'-$40,CMDDEVIC
+         .DA #'I'-$40,CMDREFLN
+         .DA #'A'-$40,CMDADJST
+         .DA #'R'-$40,CMDRESTR
+         .DA #' ',CMDSPACE
+         .DA #ESC,EDITDESC
+         .DA #'S'-$40,EDITDCR
+         BRK 
+         RTS 
+;-----------
+;
+; Restore old character
+;
+CMDRESTR JSR BUFFSAVE
+         JSR LOADCHAR
+         JMP SHOWGR
+;-----------
+;
+; Leave the EDIT mode
+;
+EDITDESC SEC 
+         HEX 24
+EDITDCR  CLC 
+         PLA 
+         PLA 
+         RTS 
+;-----------
+;
+; Toggle reference lines
+;
+CMDREFLN LDA REFFLAGS
+         EOR #$80
+         STA REFFLAGS
+         JMP SHOWGR
+;-----------
+;
+; Adjust reference lines
+;
+ARY1     =   34
+ARY2     =   ARY1+80
+;
+; Save ref lines and X,Y
+;
+CMDADJST JSR BLAKDONE
+         LDA XCOOR
+         PHA 
+         LDA YCOOR
+         PHA 
+         LDX #2
+^0       LDA REFX1,X
+         PHA 
+         DEX 
+         BPL <0
+;
+         BIT REFFLAGS
+         BMI >1
+         JSR CMDREFLN
+;
+^1       JSR BLAKRIT2
+         LDX #26
+         LDY #ARY1
+         LDA #0
+         JSR SHOWAROW
+         JSR PRINT
+         BYT PRSPC,9
+         .DA #PRLOC,227,#ARY1+3
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         BYT 'TO',CR
+         BYT 'ADJUST',CR
+         BYT PRCNTR
+         .DA #PRHTAB,XCENT
+         BYT 'INDEX',CR
+         .DA #PRSTR,TXTLINES,#CR
+;
+         BYT PRVTAB,ARY2
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         .DA #PRSTR,TXTWD,#CR
+         BRK 
+         JSR SHOWCOOR
+;
+         LDX #1
+         JSR ADJUST1
+         BCS >0
+         LDX #0
+         JSR ADJUST1
+;
+; If SEC then restore ref lines
+;
+^0       ROR TMP0
+         LDX #0
+^1       PLA 
+         BIT TMP0
+         BPL >2
+         STA REFX1,X
+^2       INX 
+         CPX #3
+         BLT <1
+         PLA 
+         STA YCOOR
+         PLA 
+         STA XCOOR
+         JSR SHOWGR
+         JMP SCR2RITE
+;---
+;
+; Enter with X=0 or 1, move the
+; reference lines.
+;
+ADJUST1  STX MOVERFY
+         LDA REFY1,X
+         STA YCOOR
+         LDA REFX1
+         STA XCOOR
+         LDX #6
+         CLC 
+         JMP DOSHAPE
+;
+; DOSHAPE calls this routine which
+; erases the old reference lines.
+; DOSHAPE will plot the new lines
+; automatically upon return.
+;
+MOVEREFS STX >8+1
+         STY >9+1
+;
+; Erase horizontal line
+;
+         LDX #00
+MOVERFY  =   *-1
+         LDY REFY1,X
+         LDX #FONTW-1
+^0       JSR MOVEREF1
+         DEX 
+         BPL <0
+;
+; Erase vertical line
+;
+         LDX REFX1
+         LDY #FONTH-1
+^1       JSR MOVEREF1
+         DEY 
+         BPL <1
+;
+^8       LDX #00
+         STX REFX1
+^9       LDA #00
+         LDX MOVERFY
+         STA REFY1,X
+         RTS 
+;---
+;
+; Reset bit at X,Y
+;
+MOVEREF1 STX XCOOR
+         STY YCOOR
+         JSR RESETBIT
+         LDX XCOOR
+         LDY YCOOR
+         RTS 
+;-----------
+;
+; Clear work area
+;
+CMDCLEAR JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BYT PRCNTR
+         .DA #PRSTR,TXTRET
+         .DA #PRSTR,TXTTOCLR
+         .DA #PRSTR,TXTCHAR,#CR,#0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR BUFFSAVE
+         JSR CLRBUFF
+         JSR SHOWGR
+^0       JMP SCR2BOTM
+TXTCHAR  BYT 'CHARACTER',0
+;-----------
+;
+; Check SETUP
+;
+CKPRINT  JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#184
+         BRK 
+         LDA #'-'
+         JMP CHKPRINT
+;-----------
+;
+; Print character
+;
+CMDPRINT JSR CKPRINT
+         BCS >0
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET
+         .DA #PRSTR,TXTTOPRN
+         .DA #PRSTR,TXTCHAR
+         BYT CR,0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR PRINTGR
+^0       JMP SCR2BOTM
+;-----------
+;
+; Change input device
+;
+CMDDEVIC JSR DEVICECH
+         JMP SCR2BOTM
+;-----------
+;
+; Shape handlers
+;
+CMDLINES LDA #0
+         HEX 2C
+CMDRAYS  LDA #1
+         HEX 2C
+CMDBOX   LDA #2
+         HEX 2C
+CMDOVAL  LDA #3
+         JSR SHAPHELP
+         JSR SHOWCOOR
+;
+         LDA SHAPETYP
+         AND #7
+         STA >0+1
+         CLC 
+;
+^0       LDX #00
+         JSR DOSHAPE
+         BCS >1
+         LDA #00
+SHAPETYP =   *-1
+         ASL 
+         BMI <0
+;
+; Fix up screen when done
+;
+^1       JMP SCR2RITE
+;-----------
+;
+; Print help screen
+;
+HY1      =   2
+HY2      =   36
+HY3      =   105
+HY4      =   164
+;
+SHAPHELP STA TMP0
+         ASL 
+         ADC TMP0
+         ASL 
+         TAX 
+         LDY SHAPHLP9+0,X
+         LDA SHAPHLP9+1,X
+         STY >0+1
+         STA >0+2
+         LDA SHAPHLP9+2,X
+         STA SHAPETYP
+;
+         LDY SHAPHLP9+3,X
+         LDA SHAPHLP9+4,X
+         STY >4+1
+         STA >4+2
+;
+         LDA SHAPHLP9+5,X
+         STA HELPTEMP
+;
+         JSR SETPLOTX
+         JSR BUFFSAVE
+;
+         JSR BLAKDONE
+         JSR BLAKRIT2
+         JSR PRINT
+         BYT PRBIG,PRCNTR
+         .DA #PRLOC,XCENT,#HY1
+^0       .DA #PRSTR,$FFFF,#NOCR,#0
+;
+         LDX #26
+         LDY #HY2
+         LDA #0
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,227,#HY2+3
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         BYT 'TO',CR
+         BYT 'DRAW',CR
+         .DA #PRLOC,XCENT,#HY2+48
+         BYT PRCNTR
+         BYT PRCSPACE,1
+         .DA 'N ',#PRSTR,TXTNEGA,#CR
+         BYT PRCSPACE,2
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#HY3
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         BYT 'TO PLACE',CR
+         BYT PRCNTR
+^4       .DA #PRSTR,$FFFF,#CR
+         BYT RTOSWITE,26,HY4-6,14,2
+         BYT PRVTAB,HY4
+         BYT 'PRESS <ESC>',CR,0
+;
+         LDA #00
+HELPTEMP =   *-1
+         BPL >5
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTWD,#CR,#0
+         JMP >6
+;
+^5       JSR PRINT
+         BYT PRCNTR
+         BYT 'TO GO BACK',CR,0
+;
+^6       RTS 
+;
+TXTWD    BYT 'WHEN DONE',0
+;
+; 64 means stay in shape routine
+; until ESC is pressed. 128 means
+; don't re-initialize X1,Y1 each time
+; the remaining number is the shape
+; number used by DOSHAPE
+;
+SHAPHLP9 .DA TXTLINES,#0+64
+         .DA TXTLINE,#$80
+;
+         .DA TXTRAYS,#0+64+128
+         .DA TXTLINE,#$80
+;
+         .DA TXTBOX,#2
+         .DA TXTBOX,#$00
+;
+         .DA TXTOVAL,#4
+         .DA TXTOVAL,#$00
+;
+TXTLINE  BYT 'LINE',0
+TXTLINES BYT 'LINES',0
+TXTRAYS  BYT 'RAYS',0
+TXTBOX   BYT 'BOX',0
+TXTOVAL  BYT 'OVAL',0
+;-----------
+;
+; Show next page
+;
+CMDSPACE INC PAGENUM
+         LDA PAGENUM
+         EOR #4
+         BNE SHOWPAGE
+         STA PAGENUM
+;
+; Show help screen
+;
+SHOWPAGE JSR BLAKPAGE
+;
+         LDY #0
+PAGENUM  =   *-1
+         JSR JMPVECTS
+         ADR PAGE1
+         ADR PAGE2
+         ADR PAGE3
+         ADR PAGE4
+;
+XCENT    =   231
+XEDGE    =   182
+XR1      =   13
+XR2      =   24
+P1SPC    =   13
+;
+PG1Y     =   69
+PAGE1    JSR PRINT
+         BYT PRCSPACE,1
+         BYT PRSPC,P1SPC
+         .DA #PRLOC,XEDGE,#PG1Y
+         .DA #PRSTR,TXTCTRL,'P',#CR
+         .DA #PRSTR,TXTCTRL,'C',#CR
+         .DA #PRSTR,TXTCTRL,'D',#CR
+         .DA #PRSTR,TXTCTRL,'L',#CR
+         .DA #PRSTR,TXTCTRL,'I'
+         BYT PRSPC,8+P1SPC,CR
+         .DA #PRSTR,TXTCTRL,'A'
+         BYT PRSPC,8+P1SPC,CR
+         .DA #PRSTR,TXTCTRL,'R',#CR
+;
+         BYT PRRITE,PRSPC,P1SPC
+         .DA #PRLOC,279,#PG1Y
+         BYT 'PRINT',CR
+         BYT 'CLEAR',CR
+         BYT 'DEVICE',CR
+         BYT 'LOCK',CR
+         BYT PRSPC,8
+         BYT 'INDEX',CR
+         BYT PRSPC,P1SPC
+         BYT 'LINES',CR
+         BYT PRSPC,8
+         BYT 'ADJUST',CR
+         BYT PRSPC,P1SPC
+         BYT 'INDEX LINES',CR
+         BYT 'REDO',CR
+;
+         BRK 
+         RTS 
+;-----------
+PAGE2    JSR PRINT
+         BYT PRSPC,14
+         BYT PRCSPACE,1
+         .DA #PRLOC,XEDGE,#66
+;
+         BYT 'D - DRAW',CR
+         BYT 'E',PRRTAB,XR1,'- ERASE',CR
+         BYT '1',PRRTAB,XR1,'- INSERT ROW',CR
+         BYT '2',PRRTAB,XR1,'- DELETE ROW',CR
+;
+         BYT PRSPC,8
+         BYT '3',PRRTAB,XR1,'- INSERT',CR
+         BYT PRSPC,14,PRRTAB,XR2
+         .DA #PRSTR,PAGE2COL,#CR
+;
+         BYT PRSPC,8
+         BYT '4',PRRTAB,XR1,'- DELETE',CR
+         BYT PRSPC,14,PRRTAB,XR2
+         .DA #PRSTR,PAGE2COL,#CR
+;
+         BYT 'F',PRRTAB,XR1,'- FLOOD FILL',CR
+         BRK 
+         RTS 
+;
+PAGE2COL BYT 'COLUMN',0
+;-----------
+PAGE3    JSR PRINT
+         BYT PRCSPACE,1
+         .DA #PRLOC,XEDGE,#66
+;
+         BYT PRSPC,8
+         BYT 'H - FLIP',CR
+         BYT PRSPC,12,PRRTAB,XR2
+         BYT 'HORIZONTAL',CR
+;
+         BYT PRSPC,8
+         BYT 'V',PRRTAB,XR1,'- FLIP',CR
+         BYT PRSPC,12,PRRTAB,XR2
+         BYT 'VERTICAL',CR
+;
+         BYT 'N',PRRTAB,XR1
+         .DA #PRSTR,TXTNEGA,#CR
+         BYT 'ESC - GO BACK',CR
+         BRK 
+         LDX #26
+         LDY #133
+         LDA #1
+         JSR SHOWAROW
+         JSR PRINT
+         BYT PRRITE
+         .DA #PRLOC,279,#148
+         BYT 'SCROLL',CR,0
+         RTS 
+TXTNEGA  BYT '- NEGATIVE',0
+;-----------
+PAGE4Y   =   105
+Z1       =   17
+Z2       =   PAGE4Y-1
+;
+PAGE4    JSR PRINT
+         .DA #PRLOC,XCENT,#66
+         BYT PRCNTR
+         BYT 'POSITION',CR
+         BYT 'CURSOR',CR
+         BYT '& PRESS:',CR
+;        BYT RTOSWITE,26,92,14,2
+         BYT PRLEFT,PRSPC,Z1
+         BYT PRVTAB,PAGE4Y
+         .DA #PRHTAB,XEDGE
+;
+         BYT 'L',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTLINES,#CR
+         BYT PRPIC,37,Z2,2,9
+         HEX 813E70230F2081208123602018200620
+         HEX C13F
+;
+         BYT 'R',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTRAYS,#CR
+         BYT PRPIC,37,Z2+Z1,2,9
+         HEX 218131811181191809064D0135810F81
+         HEX C13F
+;
+         BYT 'B',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTBOX,#CR
+         BYT PRPIC,37,Z2+Z1*2,2,9
+         HEX C13F0120012001200120012001200120
+         HEX C13F
+;
+         BYT 'O',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTOVAL,#CR
+         BYT PRPIC,37,Z2+Z1*3,2,9
+         HEX 70030C0C021001200120012002100C0C
+         HEX 7003
+         BRK 
+         RTS 
+;-----------
+;
+; Erase the top of the right side
+; used by EDIT screen.
+;
+BLAKRIT2 JSR PRINT
+         BYT RTOSBLAK,26,0,14,16
+         BRK 
+;
+; Erase right side of screen
+;
+BLAKRITE JSR PRINT
+         BYT RTOSBLAK,26,16,14,176
+         BRK 
+;
+; Erase bottom of screen
+;
+BLAKBOTM JSR PRINT
+         BYT RTOSBLAK,0,181,40,11,0
+         CLC 
+         RTS 
+;
+; Erase help page area
+;
+BLAKPAGE JSR PRINT
+         BYT RTOSBLAK,26,63,14,114,0
+         RTS 
+;-----------
+;
+; Show right part of screen
+;
+SCR2RITE JSR TOP2
+         JSR BLAKRIT2
+         LDX #26
+         LDY #0
+         TYA 
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,227,#11
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         .DA #PRLOC,182,#39
+         BYT PRSPC,11
+         BYT PRCSPACE,1
+         BYT 'P - PATTERN',CR
+         BYT 'X',PRRTAB,XR1,'- MIRRORS',CR
+         BYT RTOSWITE,26,61,14,2
+         BYT RTOSWITE,26,177,14,2
+         BRK 
+         JSR SHOWBOXS
+         JSR SHOWPAGE
+;
+; Display bottom help stuff
+;
+SCR2BOTM JSR BLAKBOTM
+         JSR SHOWCOOR
+         JSR PRINT
+         .DA #PRHTAB,169
+         BYT PRRITE,PRCSPACE,1
+         BYT 'U - UNDO',NOCR,0
+;
+         LDA #XEDGE/7
+         JMP SPACEBAR
+;-----------
+;
+; Show coordinates X=  Y=
+;
+SHOWCOOR JSR PRINT
+         .DA #PRLOC,7,#185
+         BYT 'X=',NOCR
+         .DA #PRHTAB,49
+         BYT 'Y=',NOCR,0
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:FOEDIT3"

@@ -1,0 +1,90 @@
+0800-   01 A6       ORA   ($A6,X)
+0802-   2B          ???
+0803-   BD 88 C0    LDA   $C088,X
+0806-   8D 00 C0    STA   $C000    r:KBD  w:CLR80COL
+0809-   8D 0C C0    STA   $C00C    w:CLR80VID
+080C-   8D 0E C0    STA   $C00E    w:CLRALTCHAR
+080F-   8D 54 C0    STA   $C054    rw:TXTPAGE1
+0812-   20 2F FB    JSR   $FB2F    F8ROM:INIT
+0815-   20 84 FE    JSR   $FE84    F8ROM:SETNORM
+0818-   20 58 FC    JSR   $FC58    F8ROM:HOME
+081B-   20 89 FE    JSR   $FE89    F8ROM:SETKBD
+081E-   20 93 FE    JSR   $FE93    F8ROM:SETVID
+0821-   A0 00       LDY   #$00
+0823-   B9 50 08    LDA   $0850,Y
+0826-   F0 06       BEQ   $082E
+0828-   20 F0 FD    JSR   $FDF0    F8ROM:COUT1
+082B-   C8          INY
+082C-   D0 F5       BNE   $0823
+082E-   8D F3 03    STA   $03F3
+0831-   8D F4 03    STA   $03F4
+0834-   AD 00 C0    LDA   $C000    r:KBD  w:CLR80COL
+0837-   C9 A0       CMP   #$A0
+0839-   D0 F9       BNE   $0834
+083B-   2C 10 C0    BIT   $C010    r:KBDSTRB
+083E-   20 58 FC    JSR   $FC58    F8ROM:HOME
+0841-   A5 2B       LDA   $2B
+0843-   4A          LSR
+0844-   4A          LSR
+0845-   4A          LSR
+0846-   4A          LSR
+0847-   09 C0       ORA   #$C0
+0849-   E9 00       SBC   #$00
+084B-   48          PHA
+084C-   A9 FF       LDA   #$FF
+084E-   48          PHA
+084F-   60          RTS
+0850-   8D 8D 8D    STA   $8D8D
+0853-   8D 8D 8D    STA   $8D8D
+0856-   14 08       TRB   $08
+0858-   09 13       ORA   #$13
+085A-   20 09 13    JSR   $1309
+085D-   20 01 20    JSR   $2001
+0860-   10 12       BPL   $0874
+0862-   09 0E       ORA   #$0E
+0864-   14 20       TRB   $20
+0866-   13          ???
+0867-   08          PHP
+0868-   0F          ???
+0869-   10 20       BPL   $088B
+086B-   04 01       TSB   $01
+086D-   14 01       TRB   $01
+086F-   20 04 09    JSR   $0904
+0872-   13          ???
+0873-   0B          ???
+0874-   8D 8D 8D    STA   $8D8D
+0877-   87          ???
+0878-   A0 A0       LDY   #$A0
+087A-   D0 CC       BNE   $0848
+087C-   C5 C1       CMP   $C1
+087E-   D3          ???
+087F-   C5 A0       CMP   $A0
+0881-   C9 CE       CMP   #$CE
+0883-   D3          ???
+0884-   C5 D2       CMP   $D2
+0886-   D4          ???
+0887-   A0 C1       LDY   #$C1
+0889-   CE CF D4    DEC   $D4CF
+088C-   C8          INY
+088D-   C5 D2       CMP   $D2
+088F-   A0 C4       LDY   #$C4
+0891-   C9 D3       CMP   #$D3
+0893-   CB          ???
+0894-   8D 8D A0    STA   $A08D
+0897-   A0 C1       LDY   #$C1
+0899-   CE C4 A0    DEC   $A0C4
+089C-   D0 D2       BNE   $0870
+089E-   C5 D3       CMP   $D3
+08A0-   D3          ???
+08A1-   A0 D4       LDY   #$D4
+08A3-   C8          INY
+08A4-   C5 A0       CMP   $A0
+08A6-   D3          ???
+08A7-   D0 C1       BNE   $086A
+08A9-   C3          ???
+08AA-   C5 A0       CMP   $A0
+08AC-   C2          ???
+08AD-   C1 D2       CMP   ($D2,X)
+08AF-   AE AE AE    LDX   $AEAE
+08B2-   60          RTS
+08B3-   00          BRK

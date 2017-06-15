@@ -1,0 +1,459 @@
+         TTL "S:BOEDIT"
+; S:BOEDIT1
+         NOG 
+ORG      =   $4000
+;
+; 06/03/85
+; 07/24/85 last mod
+;
+; The Print Shop COMPANION
+;
+;       Border Editor
+;
+;    Copyright 1985
+; by Roland Gustafsson
+;
+DAT      EPZ $00
+;
+BORDER   EPZ DAT
+XCOOR    EPZ DAT+2
+YCOOR    EPZ DAT+3
+SECTION  EPZ DAT+4
+BUTTON   EPZ DAT+5
+OLDXCOOR EPZ DAT+6
+OLDYCOOR EPZ DAT+7
+MINICNT  EPZ DAT+8
+CNSTRAIN EPZ DAT+9
+;
+; Temporary z-page for use within
+; subroutines
+;
+HIRES1   EPZ $40
+HIRES2   EPZ $42
+HIRES3   EPZ $44
+;
+; Absolute references:
+;
+BORDBASE =   $7800
+BORDLEN  =   $94
+UNDOBUFF =   $7900
+FFBUFFER =   $7A00
+FFSTACK  =   $7B00
+;
+; Constants:
+;
+XMAX     =   23
+YMAX     =   14
+;
+XOFFSET  =   5
+YOFFSET  =   45
+;
+MINIX1   =   1
+MINIY1   =   23
+MINIW1   =   11
+MINIH1   =   11
+;
+MINIX2   =   28
+MINIY2   =   79
+MINIW2   =   4
+MINIH2   =   4
+;
+INFO1Y   =   123
+;
+XCENT    =   223
+XEDGE    =   170
+XEDGEB   =   XEDGE/7
+XR1      =   13
+XR2      =   24
+;
+LOCKX    =   37
+LOCKY    =   9
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JSR SETTYPE
+TXTBORD  BYT 'BORDER',0
+BETEXT   BYT 'BORDER EDITOR',0
+         BYT 'BORD.',0
+         BYT 2
+         ADR BORDBASE
+         ADR BORDLEN
+;
+         JSR ZEROBORD
+         LDA #0
+         STA MINICNT
+;-----------------------
+;
+; Draw Border Editor main screen
+;
+         JSR SCREEN1
+         JSR BUFFSAVE
+         JMP MAINLOOP
+;
+         ASC "(C) 1985"
+         ASC "R GUSTAFSSON"
+;---
+TXTCTRL  BYT 'CTRL-',0
+TXTEB    BYT 'EDIT BOX',0
+;-----------
+;
+; Get a border
+;
+BRGET    JSR GETTEXT
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#60
+         .DA #PRSTR,CABTEXT,#CR
+         BYT CR,CR
+         BYT 'FROM PRINT SHOP DISK',CR
+         BYT 'FROM COMPANION DISK',CR
+         BYT 'FROM OTHER DISK',CR,0
+;
+^0       LDY #00
+         JSR SELECT
+         BYT 6,28,83,3
+         ADR RTS
+         BCS >1
+;
+         STY <0+1
+         JSR >2
+         BCS BRGET
+         JSR BUFFSAVE
+^1       JMP SCREEN1
+;
+^2       JSR JMPVECTS
+         ADR GETPSDSK
+         ADR GETCPDSK
+         ADR GETOTDSK
+;
+CABTEXT  BYT 'CHOOSE A BORDER:',0
+;
+GETCPDSK LDA #0
+         CLC 
+         HEX 24
+GETOTDSK SEC 
+         JMP GETFILE
+;-----------
+;
+; "GET" text window
+;
+GETTEXT  JSR WITEBORD
+         JSR PRINT
+         BYT PRINVR,PRRITE
+         .DA #PRLOC,149,#4
+         .DA #PRSTR,BETEXT
+         BYT ':',CR
+         BYT PRBIG,PRLEFT
+         .DA #PRLOC,160,#1
+         BYT 'GET',CR,0
+         JMP ESCBACK
+;-----------
+;
+; Save a border
+;
+BRSAVE   JSR SAVEFILE
+         JMP SCREEN1
+;-----------
+;
+; Print the border
+;
+BRPRINT  JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BRK 
+         LDA #'-'
+         JSR CHKPRINT
+         BCS >0
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET
+         BYT ' TO PRINT '
+         .DA #PRSTR,TXTBORD,#CR,#0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR PRINTBR
+^0       JMP SHOWBOTM
+;-----------
+;
+; Clear the border
+;
+CMDCLEAR JSR BLAKBOTM
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#185
+         .DA #PRSTR,TXTRET
+         BYT ' TO CLEAR '
+         .DA #PRSTR,TXTBORD
+         BYT CR,0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR BUFFSAVE
+         JSR BRINIT
+         JSR MINITURE
+^0       JMP SHOWBOTM
+;-----------
+;
+; Quit?
+;
+QUIT     JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET
+         BYT ' TO '
+         BYT 'GO TO MAIN MENU',NOCR,0
+         JSR GETKEY
+         CMP #CR
+         BEQ >0
+         JMP SHOWBOTM
+^0       JMP MAINMENU
+;
+TXTPRET  BYT 'PRESS '
+TXTRET   BYT '<RETURN>',0
+;-----------
+;
+; Draw starup screen
+;
+SCREEN1  JSR CLSCREEN
+         JSR PRINT
+         BYT RTOSWITE,0,0,24,16
+         BYT PRINVR,PRCNTR
+         .DA #PRLOC,84,#4
+         .DA #PRSTR,BETEXT,#CR
+;
+         BYT RTOSANY,$70,MINIX1-1,MINIY1-3
+         BYT 1,6+14*MINIH1
+         BYT RTOSWITE,MINIX1,MINIY1-3
+         BYT 2*MINIW1,6+14*MINIH1
+         BYT RTOSANY,$07,MINIX1+2*MINIW1,MINIY1-3
+         BYT 1,6+14*MINIH1
+         BRK 
+;
+; Draw border window
+;
+MX1      =   XOFFSET*7
+MY1      =   YOFFSET
+;
+         JSR LINES
+         BYT 'H'
+;        BYT BLAK,MX1-4,MY1-4,102,BLAK,MX1-4,MY1-3,102
+         BYT GRAY,MX1-2,MY1-2,98,GRAY,MX1-2,MY1-1,98
+         BYT GRAY,MX1-2,MY1+42,98,GRAY,MX1-2,MY1+43,98
+;        BYT BLAK,MX1+48,MY1+44,50,BLAK,MX1+48,MY1+45,50
+         BYT GRAY,MX1-2,MY1+86,48,GRAY,MX1-2,MY1+87,48
+;        BYT BLAK,MX1-4,MY1+88,54,BLAK,MX1-4,MY1+89,54
+         BYT 1
+;
+         JSR LINES
+         BYT 'V'
+;        BYT BLAK,MX1-4,MY1-4,94,BLAK,MX1-3,MY1-4,94
+         BYT GRAY,MX1-2,MY1-2,90,GRAY,MX1-1,MY1-2,90
+         BYT GRAY,MX1+46,MY1-2,90,GRAY,MX1+47,MY1-2,90
+;        BYT BLAK,MX1+48,MY1+44,46,BLAK,MX1+49,MY1+44,46
+         BYT GRAY,MX1+94,MY1-2,46,GRAY,MX1+95,MY1-2,46
+;        BYT BLAK,MX1+96,MY1-4,50,BLAK,MX1+97,MY1-4,50
+         BYT 1
+;
+         JSR PRINT
+         BYT PRINVR
+         BYT PRSPC,44
+         .DA #PRLOC,MX1-9,#MY1+17
+         BYT '1',NOCR
+         BYT PRRTAB2,107
+         BYT '2',CR
+         .DA #PRHTAB,MX1-10
+         BYT '3',NOCR
+         BRK 
+;
+; Draw miniature greeting card border
+;
+         JSR MINITURE
+         JSR SHOWRITE
+         JMP BRCENTER
+;-----------
+BLAKRITE JSR PRINT
+         BYT RTOSBLAK,XEDGEB,0,40-XEDGEB,192
+         BYT RTOSWITE,XEDGEB,61,40-XEDGEB,2
+         BYT RTOSWITE,XEDGEB,177,40-XEDGEB,2
+         BRK 
+         RTS 
+;
+BLAKBOTM JSR PRINT
+         BYT RTOSBLAK,0,181,40,11,0
+         RTS 
+;
+BLAKPAGE JSR PRINT
+         BYT RTOSBLAK,XEDGEB,63,40-XEDGEB,114,0
+         RTS 
+;-----------
+;
+; Display help info on right side
+; of screen
+;
+SHOWRITE JSR BLAKRITE
+         LDX #XEDGEB
+         LDY #0
+         TYA 
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,XEDGE+45,#11
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         .DA #PRLOC,XCENT,#41
+         BYT PRCNTR
+         BYT PRCSPACE,1
+         BYT 'USE 1, 2 OR 3 TO',CR
+         BYT 'SELECT '
+         .DA #PRSTR,TXTEB,#CR
+;
+         BRK 
+;
+         JSR SHOWPAGE
+;
+; Display bottom
+;
+SHOWBOTM JSR BLAKBOTM
+         JSR SHOWCOOR
+         JSR PRINT
+         .DA #PRHTAB,164
+         BYT PRRITE,PRCSPACE,1
+         BYT 'U - UNDO',NOCR
+         BRK 
+         LDA #XEDGEB+1
+         JSR SPACEBAR
+         CLC 
+         RTS 
+;-----------
+;
+; Show coor X=  Y=
+;
+SHOWCOOR JSR PRINT
+         .DA #PRLOC,7,#185
+         BYT 'X=',NOCR
+         BYT PRRTAB,42
+         BYT 'Y=',NOCR,0
+         RTS 
+;-----------
+;
+; Show next help page
+;
+CMDSPACE INC PAGENUM
+         LDA PAGENUM
+         EOR #4
+         BNE SHOWPAGE
+         STA PAGENUM
+;
+; Show current help page
+;
+SHOWPAGE JSR BLAKPAGE
+         JSR >0
+         CLC 
+         RTS 
+;
+^0       LDY #00
+PAGENUM  =   *-1
+         JSR JMPVECTS
+         ADR PAGE1
+         ADR PAGE2
+         ADR PAGE3
+         ADR PAGE4
+;-----------
+PAGE1    JSR PRINT
+         BYT PRSPC,15
+         .DA #PRLOC,XEDGE,#71
+         .DA #PRSTR,TXTCTRL,'S',#CR
+         .DA #PRSTR,TXTCTRL,'G',#CR
+         .DA #PRSTR,TXTCTRL,'P',#CR
+         .DA #PRSTR,TXTCTRL,'C',#CR
+         .DA #PRSTR,TXTCTRL,'D',#CR
+         .DA #PRSTR,TXTCTRL,'Q',#CR
+         .DA #PRSTR,TXTCTRL,'L',#CR
+         .DA #PRLOC,277,#71
+         BYT PRRITE
+         BYT 'SAVE',CR
+         BYT 'GET',CR
+         BYT 'PRINT',CR
+         BYT 'CLEAR',CR
+         BYT 'DEVICE',CR
+         BYT 'QUIT',CR
+         BYT 'LOCK',CR
+         BRK 
+         RTS 
+;-----------
+P2SPC    =   11
+;
+PAGE2    JSR PRINT
+         BYT PRCSPACE,1
+         BYT PRSPC,P2SPC
+         .DA #PRLOC,XEDGE,#67
+         BYT 'D - DRAW',CR
+         BYT 'E',PRRTAB,XR1,'- ERASE',CR
+;
+         BYT PRSPC,8
+         BYT 'H - FLIP',CR
+         BYT PRSPC,P2SPC,PRRTAB,XR2
+         BYT 'HORIZONTAL',CR
+;
+         BYT PRSPC,8
+         BYT 'V',PRRTAB,XR1,'- FLIP',CR
+         BYT PRSPC,P2SPC,PRRTAB,XR2
+         BYT 'VERTICAL',CR
+;
+         BYT 'N',PRRTAB,XR1,'- NEGATIVE',CR
+         BRK 
+         LDX #XEDGEB
+         LDY #136
+         LDA #1
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,XEDGE+45,#151
+         BYT 'SCROLL',CR
+         BRK 
+         RTS 
+;-----------
+P3Y      =   66
+PAGE3    JSR PRINT
+         .DA #PRLOC,XCENT,#P3Y
+         BYT PRCNTR,PRCSPACE,1
+         .DA #PRSTR,TXTBORD
+         BYT ' LAYOUT:',CR
+         BYT PRLEFT
+         .DA #PRLOC,XEDGE,#MINIY2+6+MINIH2*14
+         BYT 'B - FLIP BOTTOM',CR
+         BYT 'R - FLIP RIGHT',CR
+         BYT 'T',PRRTAB,XR1,'- TILE',CR
+         BYT PRRTAB,XR2,'BOUNDARY',CR
+         BRK 
+         JMP PAG3DIAG
+;-----------
+P4Y      =   83
+;
+FFXLOC   =   37
+FFYLOC   =   131
+;
+PAGE4    JSR PRINT
+         .DA #PRLOC,XEDGE,#P4Y
+         BYT 'C',PRRTAB,XR1,'-',PRRTAB,XR2,'COPY THE',CR
+         BYT PRRTAB2,XR2
+         BYT 'CURRENT',CR
+         .DA #PRSTR,TXTEB,' TO',#CR
+         BYT 'THE OTHER',CR
+         .DA #PRSTR,TXTEB,'ES',#CR
+         BYT CR
+         .DA #PRHTAB,XEDGE
+         BYT 'P',PRRTAB,XR1,'-',PRRTAB,XR2,'PATTERN',CR
+         BYT RTOSANY,$70,FFXLOC,FFYLOC-1,1,10
+         BYT RTOSWITE,FFXLOC+1,FFYLOC-1,1,10
+         BYT RTOSANY,$03,FFXLOC+2,FFYLOC-1,1,10
+         BYT CR
+         BYT 'F',PRRTAB,XR1,'-',PRRTAB,XR2,'FLOOD FILL',CR
+         BRK 
+         JMP SHOWFILL
+;-----------
+;
+;
+;
+         ICL "S:BOEDIT2"

@@ -1,0 +1,505 @@
+;
+; S:BOEDIT3
+; ---------
+; Low-level screen stuff
+;
+;
+; Draw Miniature greeting card border
+; on hires page, complete with
+; right and bottom flipping.
+;
+MNZ      EPZ $80
+;
+MINIX    EPZ MNZ
+MINIY    EPZ MNZ+1
+MINIWITH EPZ MNZ+2
+MINIHITE EPZ MNZ+3
+;
+; Temporary table where miniature
+; is built.
+;
+MINITEMP =   $BB00
+MINIBUFF =   MINITEMP
+TEMPTBL  =   MINITEMP+28*3
+;
+MINITURE LDX #MINIX1
+         LDY #MINIY1
+         STX MINIX
+         STY MINIY
+         LDX #MINIW1
+         LDY #MINIH1
+         CLC 
+;-----------
+;
+; Enter with X=width
+;            Y=height
+;
+; z-page MINIX=x position
+;        MINIY=y position
+;
+MINITUR2 DEX 
+         STX MINIWITH
+         DEY 
+         STY MINIHITE
+;
+; If carry set, then don't do
+; the compression, data is all
+; ready at MINIBUFF.
+;
+         BCS *+5
+         JSR MINICALC
+;
+; Top line
+;
+         LDY #0
+         JSR MINILINE
+;
+; Do left and right edges
+;
+^1       INY 
+         CPY MINIHITE
+         BEQ MINILINE
+         LDX #0
+         JSR MINISTR2
+         LDX MINIWITH
+         JSR MINISTR2
+         JMP <1
+;
+; Given Y, do one line
+;
+MINILINE LDX MINIWITH
+         JSR MINISTR0
+^0       DEX 
+         BEQ >1
+         JSR MINISTR1
+         JMP <0
+^1       JMP MINISTR0
+;
+; Interpolate from 23x14 to 14x14
+; for each of the 3 sections.
+;
+; TMP0.1 points into BORDBASE
+; TMP2.3 points into MINIBUFF
+;
+MINICALC LDY #BORDBASE+4
+         LDA /BORDBASE+4
+         STY TMP0
+         STA TMP1
+         LDY #MINIBUFF
+         LDA /MINIBUFF
+         STY TMP2
+         STA TMP3
+;
+; Now squish the three sections
+;
+         LDA #3
+^0       PHA 
+;
+; Do top part then bottom part
+;
+         LDY #24
+         JSR MINISQSH
+         LDY #0
+         JSR MINISQSH
+;
+         LDA TMP0
+         CLC 
+         ADC #48
+         STA TMP0
+;
+         PLA 
+         SBC #0
+         BNE <0
+         RTS 
+;
+; Squish 23 vertically oriented bytes
+; to 14 horizontally oriented bytes.
+;
+MINISQSH LDX #0
+^0       LDA MINIORTB,X
+         STA TMP4
+;
+         LDA #0
+^1       ORA (TMP0),Y
+         INY 
+         DEC TMP4
+         BNE <1
+;
+         STX >3+1
+         ASL 
+         STA TMP4
+         LDX #12
+;
+^2       LSR TEMPTBL,X
+         LSR TEMPTBL+1,X
+         LDA #0
+         ROR 
+         ROR 
+         ORA TEMPTBL,X
+         STA TEMPTBL,X
+         LDA #0
+         ASL TMP4
+         ROR 
+         ROR 
+         ORA TEMPTBL+1,X
+         STA TEMPTBL+1,X
+         DEX 
+         DEX 
+         BPL <2
+;
+^3       LDX #00
+         INX 
+         CPX #14
+         BLT <0
+;
+         LDY #13
+^4       LDA TEMPTBL,Y
+         EOR #$7F
+         STA (TMP2),Y
+         DEY 
+         BPL <4
+         LDA TMP2
+         CLC 
+         ADC #14
+         STA TMP2
+         RTS 
+;
+; Table which tells how many
+; bytes to OR together
+;
+MINIORTB HEX 02010202010202
+         HEX 01020102020102
+;
+; Draw a section given:
+;
+;  A=section to use
+;  X,Y=position
+;
+;  Computed:
+;  TMP0.1= MINIBUFF pointer
+;
+MINISTR0 LDA #0
+         HEX 2C
+MINISTR1 LDA #28
+         HEX 2C
+MINISTR2 LDA #56
+         STA TMP0
+         LDA /MINIBUFF
+         STA TMP1
+         STX MINIXSAV
+         STY MINIYSAV
+         LDA #0
+         CPX MINIWITH
+         BNE *+4
+         ORA #2
+         CPY MINIHITE
+         BNE *+4
+         ORA #1
+         AND BORDBASE
+         PHA 
+;
+; Compute X and Y screen addresses
+;
+; X= X*2+MINIX
+;
+         TXA 
+         ASL 
+         ADC MINIX
+         STA MINIXPOS
+;
+; Y= Y*14+MINIY
+;
+         TYA 
+         ASL 
+         STA TMP2
+         ASL 
+         ASL 
+         ASL 
+         ADC MINIY
+         SEC 
+         SBC TMP2
+         STA MINIYPOS
+;
+         PLA 
+         LSR 
+         AND #1
+         STA MINIFLIP
+;
+; If flipping bottom, then start from
+; end of MINIBUFF data.
+;
+         LDY #$E6                      ; INC
+         LDA #0
+         BCC >0
+         LDA #26
+         LDY #$C6                      ; DEC
+^0       CLC 
+         ADC TMP0
+         STA TMP0
+         STY MINIBMD0
+         STY MINIBMD1
+         LDX #14
+;
+; Miniature border section store loop
+;
+MINISLOP LDY #00
+MINIYPOS =   *-1
+         LDA YBASELO,Y
+         CLC 
+         ADC #00
+MINIXPOS =   *-1
+         STA HIRES1
+         LDA YBASEHI,Y
+         STA HIRES1+1
+;
+; Now do a single row
+;
+         LDY #0
+         LDA #00
+MINIFLIP =   *-1
+         BNE >0
+;
+; Standard
+;
+         LDA (TMP0),Y
+         STA (HIRES1),Y
+         INY 
+         LDA (TMP0),Y
+         JMP >1
+;
+; Flip horizontally
+;
+^0       LDA (TMP0),Y
+         TAY 
+         LDA FLIPPER,Y
+         LDY #1
+         STA (HIRES1),Y
+         LDA (TMP0),Y
+         TAY 
+         LDA FLIPPER,Y
+         LDY #0
+;
+^1       STA (HIRES1),Y
+MINIBMD0 INC TMP0
+MINIBMD1 INC TMP0
+;
+         INC MINIYPOS
+         DEX 
+         BNE MINISLOP
+;
+         LDX #00
+MINIXSAV =   *-1
+         LDY #00
+MINIYSAV =   *-1
+         RTS 
+;-----------
+;
+; Plot routine entry points
+;
+PLOTON   JSR PLOTINIT
+         EOR #$7F
+         STA TMP0
+         AND (HIRES1),Y
+         STA (HIRES1),Y
+         STA (HIRES3),Y
+         LDA TMP0
+         AND (HIRES2),Y
+         STA (HIRES2),Y
+         TXA 
+         BNE >0
+         RTS 
+;
+^0       INY 
+         EOR #$7F
+         TAX 
+         AND (HIRES1),Y
+         STA (HIRES1),Y
+         STA (HIRES3),Y
+         TXA 
+         AND (HIRES2),Y
+         STA (HIRES2),Y
+         RTS 
+;
+PLOTOFF  JSR PLOTINIT
+         STA TMP0
+         ORA (HIRES1),Y
+         STA (HIRES1),Y
+         STA (HIRES3),Y
+         LDA TMP0
+         ORA (HIRES2),Y
+         STA (HIRES2),Y
+         TXA 
+         BNE >0
+         RTS 
+;
+^0       INY 
+         ORA (HIRES1),Y
+         STA (HIRES1),Y
+         STA (HIRES3),Y
+         TXA 
+         ORA (HIRES2),Y
+         STA (HIRES2),Y
+         RTS 
+;
+BRFLASH  JSR PLOTINIT
+         EOR (HIRES2),Y
+         STA (HIRES2),Y
+         INY 
+         TXA 
+         EOR (HIRES2),Y
+         STA (HIRES2),Y
+         RTS 
+;
+; Init plot routine
+;
+; Multiply Y by 3 and add
+; section offset.
+;
+PLOTINIT LDA YCOOR
+         ASL 
+         ADC YCOOR
+         LDY SECTION
+         ADC YBYTEOFF,Y
+         TAX 
+;
+         LDA YBASELO+YOFFSET,X
+         STA HIRES1
+         LDA YBASEHI+YOFFSET,X
+         STA HIRES1+1
+         LDA YBASELO+YOFFSET+1,X
+         STA HIRES2
+         LDA YBASEHI+YOFFSET+1,X
+         STA HIRES2+1
+         LDA YBASELO+YOFFSET+2,X
+         STA HIRES3
+         LDA YBASEHI+YOFFSET+2,X
+         STA HIRES3+1
+;
+; Get bit pattern
+;
+         LDA XCOOR
+         ADC XBITOFF,Y
+         TAX 
+;
+         LDA XLOOK,X
+         AND #$0F
+         ASL 
+         TAY 
+         LDA XDATA,Y
+         STA >0+1
+         LDA XDATA+1,Y
+         STA >1+1
+;
+; Get X byte offset
+;
+         LDA XLOOK,X
+         LSR 
+         LSR 
+         LSR 
+         LSR 
+         LDY SECTION
+         ADC XBYTEOFF,Y
+         TAY 
+;
+^0       LDA #00
+^1       LDX #00
+         RTS 
+;
+; X lookup table
+;
+XLOOK    HEX 0001020314151620
+         HEX 2122233435364041
+         HEX 4243545556606162
+         HEX 63747576
+;
+XDATA    HEX 0300
+         HEX 0C00
+         HEX 3000
+         HEX 4001
+         HEX 0600
+         HEX 1800
+         HEX 6000
+;
+; Offsets for the 3 border sections
+;
+XBITOFF  BYT 0
+         BYT 3
+         BYT 0
+;
+XBYTEOFF BYT XOFFSET
+         BYT XOFFSET+6
+         BYT XOFFSET
+;
+YBYTEOFF BYT 0
+         BYT 0
+         BYT 44
+;-----------
+;
+; If page 3 is being displayed, then
+; update "border layout"
+;
+PAG3DIAG LDA PAGENUM
+         CMP #2
+         BEQ >0
+         RTS 
+;
+^0       JSR PRINT
+         BYT RTOSWITE,MINIX2+2,MINIY2+14
+         BYT 2*MINIW2-2,14*MINIH2-2,0
+;
+         LDA BORDBASE
+         PHA 
+         LDY #>1
+         LDA />1
+         STY TMP0
+         STA TMP1
+         LDA #28
+         STA TMP4
+         LDY #MINIBUFF
+         LDA /MINIBUFF
+         LDX #0
+         JSR GETPSUNP
+         LDX #MINIX2
+         LDY #MINIY2
+         STX MINIX
+         STY MINIY
+         LDX #MINIW2
+         LDY #MINIH2
+         SEC 
+         PLA 
+         STA BORDBASE
+         JSR MINITUR2
+;
+; Display tile boundary info
+;
+         LDA BORDBASE
+         AND #%100
+         BEQ >0
+         LDX #MINIX2+2
+         LDY #MINIY2-8-MINIH2*7
+         JMP TILEAROW
+;
+^0       JSR LINES
+         BYT "H",MINIX2
+         BYT GRAY2,14,MINIY2+14,14*MINIW2-2
+         BYT GRAY2,14,MINIY2+13+14*MINIH2-2,14*MINIW2-2
+         BYT 1
+         JSR LINES
+         BYT "V",MINIX2
+         BYT GRAY2,14,MINIY2+14,14*MINIH2-2
+         BYT GRAY2,13+14*MINIW2-2,MINIY2+14,14*MINIH2-2
+         BYT 1
+         RTS 
+;
+^1       HEX 877F7E3F7E1F7E3F
+         HEX 7E3F7E3F7E1F7C8E
+         HEX 7F0F7E677C7F7C3F
+         HEX 7E1F7F4F7F077C8E
+         HEX 7F1F7C4F797F793F
+         HEX 7C7F794F791F7C88
+         HEX 7F
+;-----------
+;
+;
+;
+         ICL "S:BOEDIT4"

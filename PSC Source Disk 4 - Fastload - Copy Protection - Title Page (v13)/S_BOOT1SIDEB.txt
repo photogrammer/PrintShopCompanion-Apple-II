@@ -1,0 +1,104 @@
+         NLS 
+         TTL "S:BOOT1SIDEB"
+ORG      =   $800
+;
+; Print Shop Companion
+; BACK SIDE
+; $800 TS (0,0) Boot sector
+;
+;   by Roland Gustafsson
+;
+SLOT     EPZ $2B
+;
+SECTOR   EPZ $50
+;
+; MONITOR routines:
+;
+TEXT     EQU $FB2F
+HOME     EQU $FC58
+NORMAL   EQU $FE84
+PR0      EQU $FE93
+IN0      EQU $FE89
+;
+         ORG ORG
+         OBJ $800
+;
+         BYT 1
+;
+ENTRY    LDA #$60
+         STA ENTRY
+;
+; Dazzle Draw leaves the alternate
+; zero page on, so transfer it
+; over to main zero page
+;
+         LDX #0
+^0       LDA $00,X
+         STA $1000,X
+         INX 
+         BNE <0
+         STA $C008
+^0       LDA $1000,X
+         STA $00,X
+         INX 
+         BNE <0
+;
+         LDA #$FF
+         STA $4FB
+         STA $3F3
+         STA $3F4
+         STA $C000
+         STA $C00C
+         STA $C00E
+         STA $C05F
+         STA $C081
+         JSR TEXT
+         JSR HOME
+         JSR NORMAL
+         JSR PR0
+         JSR IN0
+         LDA #20
+         STA $22
+         LDX SLOT
+         TXA 
+         LSR 
+         LSR 
+         LSR 
+         LSR 
+         ORA #$C0
+         STA READSECT+2
+         LDA #$0F
+         STA SECTOR
+;
+; Now read in sectors
+;
+^0       LDY SECTOR
+         LDA SKEWTBL,Y
+         STA $3D
+         LDA SECTADDR,Y
+         BEQ >1
+         STA $27
+READSECT JSR $005C
+^1       DEC SECTOR
+         BNE <0
+;
+; Now load in next stage of boot
+;
+         LDX $2B
+         LDA $C088,X
+         JMP $1000
+;
+; Sector interleaving table
+;
+SKEWTBL  HEX 000D0B0907050301
+         HEX 0E0C0A080604020F
+;
+; Address where to load sector
+;
+SECTADDR HEX 0010111260616263
+         HEX 6465666768696A6B
+;
+;
+;
+         USR "O:BOOT1SIDEB",ORG
+         END 

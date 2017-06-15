@@ -1,0 +1,80 @@
+7800-   18          CLC
+7801-   B0 38       BCS   $783B
+7803-   A0 00       LDY   #$00
+7805-   B9 00 5D    LDA   $5D00,Y
+7808-   99 00 78    STA   $7800,Y
+780B-   C8          INY
+780C-   D0 F7       BNE   $7805
+780E-   4C 11 78    JMP   $7811
+7811-   B0 6E       BCS   $7881
+7813-   8C F0 B7    STY   $B7F0
+7816-   8C EB B7    STY   $B7EB
+7819-   8C EC B7    STY   $B7EC
+781C-   A2 0F       LDX   #$0F
+781E-   A0 63       LDY   #$63
+7820-   8E ED B7    STX   $B7ED
+7823-   8C F1 B7    STY   $B7F1
+7826-   20 E3 03    JSR   $03E3
+7829-   20 D9 03    JSR   $03D9
+782C-   B0 F8       BCS   $7826
+782E-   AE ED B7    LDX   $B7ED
+7831-   AC F1 B7    LDY   $B7F1
+7834-   88          DEY
+7835-   CA          DEX
+7836-   E0 09       CPX   #$09
+7838-   B0 E6       BCS   $7820
+783A-   2C 7F 02    BIT   $027F
+783D-   10 56       BPL   $7895
+783F-   A0 00       LDY   #$00
+7841-   8D 05 C0    STA   $C005    w:WRCARDRAM
+7844-   B9 00 5D    LDA   $5D00,Y
+7847-   99 00 18    STA   $1800,Y
+784A-   B9 00 5E    LDA   $5E00,Y
+784D-   99 00 19    STA   $1900,Y
+7850-   B9 00 5F    LDA   $5F00,Y
+7853-   99 00 1A    STA   $1A00,Y
+7856-   B9 00 60    LDA   $6000,Y
+7859-   99 00 1B    STA   $1B00,Y
+785C-   B9 00 61    LDA   $6100,Y
+785F-   99 00 1C    STA   $1C00,Y
+7862-   B9 00 62    LDA   $6200,Y
+7865-   99 00 1D    STA   $1D00,Y
+7868-   B9 00 63    LDA   $6300,Y
+786B-   99 00 1E    STA   $1E00,Y
+786E-   C8          INY
+786F-   D0 D3       BNE   $7844
+7871-   8D 04 C0    STA   $C004    w:WRMAINRAM
+7874-   8D 09 C0    STA   $C009    w:SETALTZP
+7877-   A9 02       LDA   #$02
+7879-   8D 01 E0    STA   $E001
+787C-   8D 08 C0    STA   $C008    w:SETSTDZP
+787F-   D0 14       BNE   $7895
+7881-   8D 09 C0    STA   $C009    w:SETALTZP
+7884-   A0 35       LDY   #$35
+7886-   B9 98 78    LDA   $7898,Y
+7889-   99 00 01    STA   $0100,Y
+788C-   88          DEY
+788D-   10 F7       BPL   $7886
+788F-   20 00 01    JSR   $0100
+7892-   8D 08 C0    STA   $C008    w:SETSTDZP
+7895-   4C 03 40    JMP   $4003
+7898-   8D 03 C0    STA   $C003    w:RDCARDRAM
+789B-   A0 00       LDY   #$00
+789D-   B9 00 18    LDA   $1800,Y
+78A0-   99 00 5D    STA   $5D00,Y
+78A3-   B9 00 19    LDA   $1900,Y
+78A6-   99 00 5E    STA   $5E00,Y
+78A9-   B9 00 1A    LDA   $1A00,Y
+78AC-   99 00 5F    STA   $5F00,Y
+78AF-   B9 00 1B    LDA   $1B00,Y
+78B2-   99 00 60    STA   $6000,Y
+78B5-   B9 00 1C    LDA   $1C00,Y
+78B8-   99 00 61    STA   $6100,Y
+78BB-   B9 00 1D    LDA   $1D00,Y
+78BE-   99 00 62    STA   $6200,Y
+78C1-   B9 00 1E    LDA   $1E00,Y
+78C4-   99 00 63    STA   $6300,Y
+78C7-   C8          INY
+78C8-   D0 D3       BNE   $789D
+78CA-   8D 02 C0    STA   $C002    w:RDMAINRAM
+78CD-   60          RTS

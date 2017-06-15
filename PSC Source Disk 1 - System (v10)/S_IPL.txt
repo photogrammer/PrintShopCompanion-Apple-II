@@ -1,0 +1,145 @@
+         NLS 
+         TTL "S:IPL"
+ORG      =   $4000
+;
+; The Print Shop Companion
+;  Initial program loader
+;
+; Sets up: SUBPAK,SYSLIB2,HELLO
+;
+; also moves hires page to RAMcard
+;
+TEXT     =   $FB2F
+HOME     =   $FC58
+NORMAL   =   $FE84
+COUT     =   $FDED
+VTAB     =   $FB5B
+PR0      =   $FE93
+IN0      =   $FE89
+;
+SRCLO    EPZ $3A
+SRCHI    EPZ $3B
+DSTLO    EPZ $3C
+DSTHI    EPZ $3D
+LENLO    EPZ $3E
+LENHI    EPZ $3F
+;
+SP       =   $E000
+DEVICENW =   SP+15
+;
+         ORG ORG
+         OBJ $800
+;
+         JSR CHECK64K
+         JSR MOVEROM
+         JSR MOVEPROG
+         JSR DEVICENW
+         JMP $0800
+;-----------
+;
+; Move programs to their homes
+;
+MOVEPROG BIT $C083
+         BIT $C083
+         LDY #PROGRAMS
+         LDA /PROGRAMS
+         STY SRCLO
+         STA SRCHI
+         LDY #0
+;
+^0       JSR MOVEGET
+         STA DSTLO
+         JSR MOVEGET
+         STA DSTHI
+         ORA DSTLO
+         BEQ MOVERTS
+         JSR MOVEGET
+         TAX 
+         JSR MOVEGET
+         STA LENHI
+;
+^1       JSR MOVEGET
+         STA (DSTLO),Y
+         INC DSTLO
+         BNE >2
+         INC DSTHI
+^2       TXA 
+         BNE >3
+         DEC LENHI
+^3       DEX 
+         BNE <1
+         TXA 
+         ORA LENHI
+         BNE <1
+         BEQ <0
+;
+; Get a byte from program data
+;
+MOVEGET  LDA (SRCLO),Y
+         INC SRCLO
+         BNE MOVERTS
+         INC SRCHI
+MOVERTS  RTS 
+;-----------
+;
+; Check for 64k
+;
+CHECK64K BIT $C083
+         BIT $C083
+         LDX #0
+^0       STX $E000
+         CPX $E000
+         BNE >1
+         INX 
+         BNE <0
+         RTS 
+;
+^1       BIT $C081
+         JSR TEXT
+         JSR HOME
+         JSR NORMAL
+         JSR PR0
+         JSR IN0
+         LDA #8
+         JSR VTAB
+         LDY #0
+^2       LDA TEXT64K,Y
+         BEQ *
+         JSR COUT
+         CMP #$8D
+         BNE >3
+         LDA #7
+         STA $24
+^3       INY 
+         BNE <2
+;
+; Need 64k message
+;
+TEXT64K  BYT $8D
+         BYT "THE PRINT SHOP COMPANION",$8D,$8D
+         BYT " REQUIRES 64K OF MEMORY",0
+;-----------
+;
+; Move monitor ROM into RAMcard
+;
+MOVEROM  LDY #$00
+         LDA #$F8
+         STY SRCLO
+         STA SRCHI
+         BIT $C081
+         BIT $C081
+^0       LDA (SRCLO),Y
+         STA (SRCLO),Y
+         INY 
+         BNE <0
+         INC SRCHI
+         BNE <0
+         RTS 
+;-----------
+;
+; Append programs here:
+;
+PROGRAMS: 
+;
+         USR "IPL",ORG
+         END 

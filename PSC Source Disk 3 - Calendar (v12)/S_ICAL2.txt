@@ -1,0 +1,160 @@
+;
+; S:ICAL2
+;
+; String Edit routines
+;
+;
+; SHOWEIAM: Show EI available message
+;
+; SHOWEI  : Show EI screen
+;
+;-----------
+TXTEI    BYT 'EDIT INSTRUCTIONS',0
+;
+TXTOLINE BYT ' OF'
+TXTLINE  BYT ' LINE ',0
+;-----------
+;
+; Show that CTRL-I for help is
+; available. The "I" used here is
+; not the normal "I" in UFONT. This
+; "I" has a hat and shoes on.
+;
+SHOWEIAM JSR PRINT
+         .DA #PRLOC,12,#166
+         BYT '<CTRL-  > TO SEE '
+         .DA #PRSTR,TXTEI,#CR
+         BYT PRPIC
+         BYT 9,166,1,7
+         HEX 0F06060606060F
+;
+         BRK 
+         RTS 
+;-----------
+;
+; Show help screen
+;
+; SEC:top text
+; CLC:monthly date text
+;
+EIY      =   22
+EIY1     =   58
+EIY2     =   68
+EIY3     =   160
+;
+SHOWEI   PHP 
+         JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,76,#EIY
+         .DA #PRSTR,TXTEI,#CR
+         BRK 
+         PLP 
+         BCS >0
+;---
+;
+; Position message and size message
+;
+         JSR PRINT
+         .DA #PRLOC,16,#EIY1
+         BYT '<CTRL-P>',NOCR
+         BYT PRRTAB,91
+         BYT 'POSITION'
+         .DA #PRSTR,TXTLINE
+         BYT 'OF TEXT',CR
+         .DA #PRLOC,122,#EIY1+11
+         BYT 'L',CR,'C',CR,'R',CR
+         .DA #PRLOC,148,#EIY1+11
+         BYT 'LEFT',CR
+         BYT 'CENTER',CR
+         BYT 'RIGHT',CR
+;
+         .DA #PRLOC,16,#EIY1+42
+         BYT '<CTRL-S>',NOCR
+         BYT PRRTAB,91
+         BYT 'CHANGE SIZE'
+         .DA #PRSTR,TXTOLINE,#CR
+         BRK 
+         JMP >1
+;---
+;
+; Form message
+;
+^0       JSR PRINT
+         .DA #PRLOC,16,#EIY2
+         BYT '<CTRL-F>',NOCR
+         BYT PRRTAB,91
+         BYT 'CHANGE FORM'
+         .DA #PRSTR,TXTOLINE,#CR
+         .DA #PRLOC,148,#EIY2+11
+         BYT 'SOLID',CR
+         BYT 'OUTLINE',CR
+         BYT '3-D',CR
+         BRK 
+         LDX #17
+         LDY #EIY2+11
+         JSR FSOLID
+         LDX #17
+         LDY #EIY2+19
+         JSR FOUTLINE
+         LDX #17
+         LDY #EIY2+27
+         JSR F3D
+;---
+;
+; Erase message
+;
+^1       JSR ERASMESS
+         JMP ANYKEY
+;---
+;
+ERASMES2 LDA #PRCNTR
+         LDX #140
+         BNE >0
+;
+ERASMESS LDA #PRLEFT
+         LDX #16
+^0       STA >1+0
+         STX >2+1
+         JSR PRINT
+^1       BYT PRLEFT
+^2       .DA #PRLOC,0,#144
+;
+         BYT '<CTRL-E>     ERASE LINE',CR
+         BRK 
+         RTS 
+;-----------
+;
+; Solid form
+;
+FSOLID   STX >0+0
+         STY >0+1
+         JSR PICDRAW
+^0       BYT 0,0,2,7
+         HEX 7C1F7C1F7C1F7C1F
+         HEX 7C1F7C1F7C1F
+         RTS 
+;
+; Outline form
+;
+FOUTLINE STX >0+0
+         STY >0+1
+         JSR PICDRAW
+^0       BYT 0,0,2,7
+         HEX 7C1F0C180C180C18
+         HEX 0C180C187C1F
+         RTS 
+;
+; 3-D form
+;
+F3D      STX >0+0
+         STY >0+1
+         JSR PICDRAW
+^0       BYT 0,0,2,7
+         HEX 1C1F363330331833
+         HEX 303336331C1F
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:ICAL3"

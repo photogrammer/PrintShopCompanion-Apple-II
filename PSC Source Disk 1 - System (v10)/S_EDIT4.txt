@@ -1,0 +1,998 @@
+;
+; S:EDIT4
+;
+; Miscellaneous junk
+;
+; Save coordinates
+;
+SAVECOOR LDX XCOOR
+         LDY YCOOR
+         STX RESTCOOR+1
+         STY RESTCOOR+3
+         RTS 
+;
+; Restore coordinates
+;
+RESTCOOR LDX #00
+         LDY #00
+         STX XCOOR
+         STY YCOOR
+         RTS 
+;-----------
+;
+; Special shape routine
+;
+; X=0:draw line
+;   2:draw box (rectangle)
+;   4:draw oval (elipse)
+;   6:move reference lines
+;
+; The initial corner of the shape
+; is XCOOR,YCOOR which is stored
+; in X1,Y1. Then XCOOR,YCOOR is
+; "rubber-banded" around to form
+; a rectangle in which the shape
+; is drawn. This second coordinate
+; is X2,Y2. (XCOOR,YCOOR)
+;
+^9       ADR DRAWLINE
+         ADR DRAWBOX
+         ADR DRAWOVAL
+         ADR REFMOVER
+;
+DOSHAPE  LDA <9+0,X
+         STA SHAPEMOD+1
+         LDA <9+1,X
+         STA SHAPEMOD+2
+;
+         BCS >0
+         LDX XCOOR
+         LDY YCOOR
+         STX X1
+         STY Y1
+;
+; Save graphic in TEMPBUFF
+; for later reference
+;
+^0       LDY #0
+         LDX #4
+         JSR BUFFMOVE
+;
+; Main frame loop
+;
+SHAPLOOP LDX XCOOR
+         LDY YCOOR
+         JSR DEVICEST
+;
+SHAPLOP2 JSR SETFLASH
+;
+^0       LDY #2
+         JSR DEVICERD
+         BCS >2
+         ASL 
+         BMI >1
+         BCS SHAPCR
+^1       JSR SHAPEDEV
+;
+^2       JSR POLEKEY
+         BMI >3
+;
+         DEC FLASHLO
+         BNE <0
+         DEC FLASHHI
+         BPL <0
+         BMI SHAPLOP2
+;
+^3       PHA 
+         JSR RESETBIT
+         PLA 
+         LDX XCOOR
+         LDY YCOOR
+         JSR PARSE
+         .DA #'I',SHAPUP
+         .DA #$0B,SHAPUP
+         .DA #'M',SHAPDOWN
+         .DA #$0A,SHAPDOWN
+         .DA #'J',SHAPLEFT
+         .DA #$08,SHAPLEFT
+         .DA #'K',SHAPRITE
+         .DA #$15,SHAPRITE
+         .DA #'N',SHAPNEG
+         .DA #'O',SHAPOVMD
+         .DA #CR,SHAPCR
+         .DA #ESC,SHAPESC
+         BRK 
+         JMP SHAPLOP2
+;-----------
+SHAPESC  JSR SHAPEREM
+         SEC 
+         HEX 90
+SHAPCR   CLC 
+         RTS 
+;-----------
+SHAPUP   DEY 
+         BPL SHAPDONE
+;
+SHAPDOWN INY 
+         CPY YMAX
+         BLT SHAPDONE
+         BGE SHAPUP
+;
+SHAPDONE JSR SHAPENEW
+         JMP SHAPLOOP
+;
+SHAPLEFT DEX 
+         BPL SHAPDONE
+;
+SHAPRITE INX 
+         CPX XMAX
+         BLT SHAPDONE
+         BGE SHAPLEFT
+;-----------
+;
+; See if device moved
+;
+SHAPEDEV CPX XCOOR
+         BNE >0
+         CPY YCOOR
+         BNE >0
+         RTS 
+;
+^0       PLA 
+         PLA 
+         JSR SHAPENEW
+         JMP SHAPLOP2
+;
+SHAPENEW STX >1+1
+         STY >2+1
+         JSR RESETBIT
+         JSR SHAPEREM
+^1       LDX #00
+^2       LDY #00
+         JSR DEVCLAMP
+;
+; Fall into put new shape
+;
+; Put or Remove shape from graphic
+;
+SHAPEPUT LDX PLOTX
+         HEX 2C
+SHAPEREM LDX #PLTEMP
+         JSR SETPLOT
+         LDA PLOT
+         PHA 
+         LDA #$4C
+         STA PLOT
+         LDX X1
+         LDY Y1
+         STX OLDXCOOR
+         STY OLDYCOOR
+         LDX XCOOR
+         LDY YCOOR
+         STX X2
+         STY Y2
+SHAPEMOD JSR $FFFF
+         LDX X2
+         LDY Y2
+         STX XCOOR
+         STY YCOOR
+         PLA 
+         STA PLOT
+         JMP DOFONTRF
+;-----------
+;
+; Line handler
+;
+DRAWLINE JSR LINENORM
+         JSR >0
+         JSR LINE
+;
+LINEMIRR LDY #MRPLOT
+         LDA /MRPLOT
+         BNE >0
+;
+LINENORM LDY #PLOT
+         LDA /PLOT
+;
+^0       STY LINETYPE+1
+         STA LINETYPE+2
+         RTS 
+;-----------
+;
+; Box handler (rectangle)
+;
+DRAWBOX  JSR LINENORM
+         LDX X2
+         LDY Y1
+         JSR >0
+         LDY Y2
+         JSR >0
+         LDX X1
+         JSR >0
+         LDY Y1
+         JSR >0
+         JMP LINEMIRR
+;
+^0       STX XCOOR
+         STY YCOOR
+         JSR LINE
+         LDX XCOOR
+         LDY YCOOR
+         STX OLDXCOOR
+         STY OLDYCOOR
+         RTS 
+;-----------
+;
+; Toggle black/white
+;
+SHAPNEG  JSR SHAPEREM
+         LDA PLOTX
+         EOR #PLSET^PLCLR
+         TAX 
+         JSR SETPLTX2
+         JMP >0
+;-----------
+;
+; Toggle oval mode
+;
+SHAPOVMD JSR SHAPEREM
+         LDA OVALMOD
+         EOR #$80
+         STA OVALMOD
+^0       JSR SHAPEPUT
+         JMP SHAPLOP2
+;
+; Oval handler (elipse)
+;
+DRAWOVAL LDA X1
+         LDX X2
+         JSR DRAWOVL2
+         STA OVXC
+         STX OVXR
+         LDA Y1
+         LDX Y2
+         JSR DRAWOVL2
+         STA OVYC
+         STX OVYR
+         JMP OVAL
+;
+; Given A,X
+; return A=center, X=radius
+;
+DRAWOVL2 LDY #$80
+OVALMOD  =   *-1
+         BMI >1
+         STA TMP0
+         STX TMP1
+         CMP TMP1
+         BLT >0
+         STX TMP0
+         STA TMP1
+;
+^0       LDA TMP1
+         SEC 
+         SBC TMP0
+         TAY 
+         LSR 
+         TAX 
+         CLC 
+         ADC TMP0
+         RTS 
+;
+; Center oriented oval
+;
+^1       PHA 
+         STX TMP0
+         SEC 
+         SBC TMP0
+         BCS >2
+         EOR #$FF
+         ADC #1
+^2       TAX 
+         PLA 
+         RTS 
+;-----------
+;
+; Print Shop Companion
+; Graphic Editor+ "print" routine
+;
+CRLF     =   $1803
+SENDGC   =   $1806
+GCOUT    =   $1809
+;
+PRZ      EPZ $80
+;
+PRTYCOOR EPZ PRZ
+PRTBUILD EPZ PRZ+1
+PRTCOUNT EPZ PRZ+2
+;
+PRINTGR  JSR SAVECOOR
+;
+         LDA #0
+;
+; Output a single line of the graphic
+;
+PRTLOOP1 STA PRTYCOOR
+;
+; Tell printer how many bytes are
+; coming, then send out 32 zeros
+;
+         LDX #32+88
+         LDY /32+88
+         JSR SENDGC
+;
+         LDY #32
+^0       LDA #$00
+         JSR GCOUT
+         DEY 
+         BNE <0
+;
+         LDX #0
+;
+; Output a byte of the line
+;
+PRTLOOP2 STX XCOOR
+         LDY PRTYCOOR
+         LDX #0
+         STX PRTBUILD
+;
+^0       STX PRTCOUNT
+         STY YCOOR
+;
+         JSR BASECALC
+         AND (BUFLO),Y
+         BEQ >1
+         LDY PRTCOUNT
+         LDA BITS7,Y
+         ORA PRTBUILD
+         STA PRTBUILD
+^1       LDY YCOOR
+         INY 
+         LDX PRTCOUNT
+         INX 
+         CPY #52
+         BEQ >2
+         CPX #7
+         BLT <0
+;
+^2       STX PRTSPACE
+         LDA PRTBUILD
+         JSR GCOUT
+;
+         LDX XCOOR
+         INX 
+         CPX #88
+         BLT PRTLOOP2
+;
+         LDX #00
+PRTSPACE =   *-1
+         LDY #1
+         JSR CRLF
+         LDA PRTYCOOR
+         CLC 
+         ADC #7
+         CMP #52
+         BLT PRTLOOP1
+;
+; Be a nice guy and set the spacing
+; back to 6 chars per inch.
+;
+         LDX #12
+         LDY #0
+         JSR CRLF
+;
+         JMP RESTCOOR
+;
+BITS7    HEX 40201008040201
+;-----------
+;
+; Draw text on graphic
+; --------------------
+;
+; Spacing between characters
+;
+TXCSPACE =   2
+TXYSPACE =   8
+TXXMAX   =   86
+TXYMAX   =   45
+;
+TXZ      EPZ $80
+;
+TXFONTLO EPZ TXZ
+TXFONTHI EPZ TXZ+1
+TXCWIDTH EPZ TXZ+2
+TXCHITE  EPZ TXZ+3
+TXBYTE   EPZ TXZ+4
+TXBITS   EPZ TXZ+5
+TXXSTART EPZ TXZ+6
+TXPOINT  EPZ TXZ+7
+TXGKFLAG EPZ TXZ+8
+TXCHAR   EPZ TXZ+9
+;
+; Borrow buffers from fill routine
+;
+TXCHRBUF =   TEMPBUFF
+TXXBUF   =   XSTACK
+TXYBUF   =   YSTACK
+;
+DRAWTEXT JSR SAVECOOR
+;
+; Make sure X,Y are good values
+;
+         LDA XCOOR
+         CMP #TXXMAX+1
+         BLT *+4
+         LDA #TXXMAX
+         STA XCOOR
+         STA TXXSTART
+;
+         LDA YCOOR
+         CMP #TXYMAX+1
+         BLT *+4
+         LDA #TXYMAX
+         STA YCOOR
+;
+         LDX #0
+         STX TXPOINT
+;
+TEXTLOOP JSR GKTEXT
+;
+         STA TXCHAR
+         LDX TXPOINT
+         INC TXPOINT
+         STA TXCHRBUF,X
+         LDA XCOOR
+         STA TXXBUF,X
+         LDA YCOOR
+         STA TXYBUF,X
+         LDA TXCHAR
+;
+         CMP #CR
+         BEQ TEXTCR
+         CMP #ESC
+         BEQ TEXTESC
+         CMP #8
+         BEQ TEXTBS
+         CMP #127
+         BEQ TEXTBS
+;
+         CMP #' '
+         BLT TEXTERR
+         CMP #'@'
+         BEQ TEXTERR
+         CMP #'Z'+1
+         BGE TEXTERR
+;
+; Attempt to draw character
+;
+         JSR TEXTSET
+         BCC TEXTADDX
+;
+; Didn't fit, so do a CR
+;
+         JSR TEXTCR2
+         BCS TEXTERR
+;
+; Try again
+;
+         LDA TXCHAR
+         JSR TEXTSET
+         BCC TEXTADDX
+;
+TEXTERR  DEC TXPOINT
+         JSR BOOP
+         JMP TEXTLOOP
+;
+; Add width to XCOOR.
+;
+TEXTADDX ADC XCOOR
+         ADC #TXCSPACE
+         CMP #TXXMAX+1
+         STA XCOOR
+         BLT TEXTLOOP
+         JSR TEXTCR2
+         JMP TEXTLOOP
+;
+; Process backspace
+;
+TEXTBS   TXA 
+         BEQ TEXTERR
+         DEX 
+         STX TXPOINT
+         JSR TEXTBS2
+         BEQ >0
+         JSR TEXTUNDO
+         BCC >0
+         JSR TEXTCR2
+         LDA TXCHAR
+         JSR TEXTUNDO
+         JSR TEXTBS2
+^0       JMP TEXTLOOP
+;
+TEXTBS2  LDX TXPOINT
+         LDA TXXBUF,X
+         STA XCOOR
+         LDA TXYBUF,X
+         STA YCOOR
+         LDA TXCHRBUF,X
+         STA TXCHAR
+         CMP #CR
+         RTS 
+;
+; Quit the text routine
+;
+TEXTESC  JMP RESTCOOR
+;
+; Do CR when pressed.
+;
+TEXTCR   JSR TEXTCR2
+         BCS TEXTERR
+         JMP TEXTLOOP
+;
+; Do a CR, if too far then exit
+; with SEC, else, update XCOOR,YCOOR.
+;
+TEXTCR2  LDA YCOOR
+         CLC 
+         ADC #TXYSPACE
+         CMP #TXYMAX+1
+         BCS >0
+         STA YCOOR
+         LDA TXXSTART
+         STA XCOOR
+^0       RTS 
+;
+; GETKEY with flashing "I"
+;
+GKTEXT   ASL TXGKFLAG
+^0       INC TXGKFLAG
+         JSR TEXTCURS
+         JSR FLSHINIT
+;
+; Flash cursor half-fast
+;
+         ASL FLASHLO
+         ROL FLASHHI
+;
+^1       JSR POLEBTN
+         BMI >2
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+^2       PHA 
+         LSR TXGKFLAG
+         BCC >3
+         JSR TEXTCURS
+^3       PLA 
+         RTS 
+;
+; Draw cursor (letter I)
+;
+TEXTCURS INC XCOOR
+         INC XCOOR
+         JSR >0
+         DEC XCOOR
+         DEC XCOOR
+^0       LDA #'I'
+;
+         LDX #PLEOR
+         HEX 2C
+;
+; Given char in A, eor it into
+; the graphic.
+;
+; Return with SEC=too wide
+;    CLC=ok, A=width of this char
+;
+TEXTSET  LDX PLOTX
+         HEX 2C
+TEXTUNDO LDX #PLUNDO
+         PHA 
+         JSR SETPLOT
+         PLA 
+;
+         SEC 
+         SBC #$20
+         TAX 
+         LDA FONTADRL,X
+         STA TXFONTLO
+         LDA FONTADRH,X
+         STA TXFONTHI
+;
+; If this character goes over too
+; far to right, exit with SEC.
+;
+         LDA FONTWITH,X
+         STA TXCWIDTH
+         CLC 
+         ADC XCOOR
+         CMP #TXXMAX+2
+         BGE TEXTEOR9
+;
+; If SPACE, then exit now!
+;
+         TXA 
+         BEQ TEXTEOR8
+;
+         LDA FONTHITE,X
+         STA TXCHITE
+;
+         LDA YCOOR
+         PHA 
+;
+; Do one line of the char
+;
+^0       LDA XCOOR
+         PHA 
+         LDA TXCWIDTH
+         PHA 
+;
+; Get a byte from the FONT data
+;
+^1       LDY #0
+         LDA (TXFONTLO),Y
+         STA TXBYTE
+         INC TXFONTLO
+         BNE *+4
+         INC TXFONTHI
+         LDA #8
+         STA TXBITS
+;
+^2       ASL TXBYTE
+         BCC >3
+;
+         JSR PLOT
+;
+^3       INC XCOOR
+         DEC TXCWIDTH
+         BEQ >4
+         DEC TXBITS
+         BNE <2
+         BEQ <1
+;
+^4       PLA 
+         STA TXCWIDTH
+         PLA 
+         STA XCOOR
+         INC YCOOR
+         DEC TXCHITE
+         BNE <0
+;
+         PLA 
+         STA YCOOR
+TEXTEOR8 LDA TXCWIDTH
+         CLC 
+TEXTEOR9 RTS 
+;-----------
+;
+LZ       EPZ $80
+;
+LINEDIR  EPZ LZ
+LINECONT EPZ LZ+1
+;
+; Draw a line between
+; (OLDXCOOR,OLDYCOOR) - (XCOOR,YCOOR)
+;
+; Find delta X and delta Y
+;
+LINE     LDX #$7F
+         LDA XCOOR
+         SEC 
+         SBC OLDXCOOR
+         BCS >0
+         EOR #$FF
+         ADC #1
+         INX 
+^0       STX LINEDIR
+         STA DELTAX
+;
+         LDA YCOOR
+         CLC 
+         SBC OLDYCOOR
+         BCC >1
+         EOR #$FF
+         ADC #$FE
+^1       STA DELTAY
+         ROR LINEDIR
+         SEC 
+         SBC DELTAX
+         STA LINECONT
+         EOR #$FF
+         LSR 
+;
+         LDX OLDXCOOR
+         LDY OLDYCOOR
+         STX XCOOR
+         STY YCOOR
+;
+         SEC 
+         BCS >1
+;
+LINEMOVX BVC >0
+         DEC XCOOR
+         DEC XCOOR
+^0       INC XCOOR
+^1       ADC #00
+DELTAY   =   *-1
+;
+^2       PHA 
+         PHP 
+LINETYPE JSR MRPLOT
+         PLP 
+         PLA 
+;
+         INC LINECONT
+         BEQ >4
+;
+         BIT LINEDIR
+         BCS LINEMOVX
+         BMI >3
+         DEC YCOOR
+         DEC YCOOR
+^3       INC YCOOR
+         ADC #00
+DELTAX   =   *-1
+         BVC <2
+;
+^4       RTS 
+;-----------
+;
+; Modified Bresenham circle
+; draw routine.
+;
+; Modified to do ellipses.
+;
+; 06/18/85 Roland Gustafsson
+;
+OZ       EPZ $80
+;
+OVXC     EPZ OZ
+OVYC     EPZ OZ+1
+OVXR     EPZ OZ+2
+OVYR     EPZ OZ+3
+OVYADDLO EPZ OZ+4
+OVYADDHI EPZ OZ+5
+OVDLO    EPZ OZ+6
+OVDHI    EPZ OZ+7
+OVX      EPZ OZ+8
+OVY      EPZ OZ+9
+OVY1     EPZ OZ+10
+OVY1F    EPZ OZ+11
+OVY2     EPZ OZ+12
+OVY2F    EPZ OZ+13
+OVA1     EPZ OZ+14
+OVA2     EPZ OZ+15
+;
+; Divide routine
+;
+ACC1LO   EPZ OZ+16
+ACC1HI   EPZ OZ+17
+ACC2LO   EPZ OZ+18
+ACC2HI   EPZ OZ+19
+REMLO    EPZ OZ+20
+REMHI    EPZ OZ+21
+;
+; Draw an oval on the screen
+;
+; given: OVXR=X radius
+;        OVYR=Y radius
+;        OVXC=X center
+;        OVYC=Y center
+;
+OVAL     LDX OVXR
+         CPX OVYR
+         BCS >0
+         LDY OVYR
+         STY OVXR
+         STX OVYR
+^0       ROR OVSWAP
+;
+; Compute (YD*256)/XD
+;
+         LDY #0
+         LDA OVYR
+         LDX OVXR
+;
+         STY OVX
+         STY OVY2
+         STY OVY2F
+         STX OVY
+         STX OVDLO
+         STA OVY1
+         STY OVY1F
+;
+         STX ACC2LO
+         STY ACC2HI
+         JSR DIVIDE
+         STY OVYADDLO
+         STA OVYADDHI
+;
+; D = 3-2*Y
+;
+         ASL OVDLO
+         LDA #3
+         SEC 
+         SBC OVDLO
+         STA OVDLO
+         LDA #0
+         SBC #0
+         STA OVDHI
+;
+; Main oval loop
+;
+OVLOOP   LDA OVX
+         CMP OVY
+         BGE OVDONE
+         JSR OVPLOT
+         LDA OVX
+         BIT OVDHI
+         BPL >0
+;
+; D=D+4*X+6
+;
+         ASL 
+         ASL 
+         ADC #6
+         BNE OVADDD
+;
+; D=D+4*(X-Y)+10
+;
+^0       SEC 
+         SBC OVY
+         TAX 
+         LDA #0
+         SBC #0
+         TAY 
+         TXA 
+         ASL 
+         ASL 
+         CLC 
+         ADC OVDLO
+         STA OVDLO
+         TYA 
+         ADC OVDHI
+         STA OVDHI
+;
+         DEC OVY
+;
+         LDA OVY1F
+         SEC 
+         SBC OVYADDLO
+         STA OVY1F
+         LDA OVY1
+         SBC OVYADDHI
+         STA OVY1
+         JSR OVPLOT
+;
+         LDA #10
+;
+OVADDD   CLC 
+         ADC OVDLO
+         STA OVDLO
+         BCC *+4
+         INC OVDHI
+;
+         INC OVX
+;
+         LDA OVY2F
+         CLC 
+         ADC OVYADDLO
+         STA OVY2F
+         LDA OVY2
+         ADC OVYADDHI
+         STA OVY2
+         JMP OVLOOP
+;
+; If X=Y then plot points
+;
+OVDONE   BNE OVPLRTS
+;
+; Plot 8 points around oval
+;
+OVPLOT   LDX OVX
+         LDY OVY1
+         JSR OVPLOT1
+         LDX OVY
+         LDY OVY2
+;
+; If special flag set, then swap
+; coordinate offsets.
+;
+OVPLOT1  STX OVA1
+         STY OVA2
+         LDA #00
+OVSWAP   =   *-1
+         BMI >0
+         STY OVA1
+         STX OVA2
+;
+; (X,Y)
+;
+^0       CLC 
+         LDA OVXC
+         ADC OVA1
+         PHA 
+         TAX 
+         LDA OVYC
+         ADC OVA2
+         TAY 
+         JSR PLOTXY
+;
+; (-X,Y)
+;
+         LDA OVXC
+         SBC OVA1
+         TAX 
+         JSR PLOTXY
+;
+; (-X,-Y)
+;
+         LDA OVYC
+         SBC OVA2
+         TAY 
+         JSR PLOTXY
+;
+; (X,-Y)
+;
+         PLA 
+         TAX 
+;
+; Plot a point, ignoring values
+; that are too big.
+;
+PLOTXY   STX XCOOR
+         STY YCOOR
+         CPX XMAX
+         BGE >0
+         CPY YMAX
+         BGE >0
+         JSR PLOT
+^0       LDX XCOOR
+         LDY YCOOR
+         SEC 
+OVPLRTS  RTS 
+;-----------
+;
+; 16 bit divide routine
+;
+; ACC1=ACC1/ACC2, remainder in REM
+;
+; Enter with A=hi, Y=lo
+; ACC2LO,HI set
+;
+; Return with result in A=hi, Y=lo
+;
+DIVIDE   STY ACC1LO
+         STA ACC1HI
+         LDA #0
+         STA REMLO
+         STA REMHI
+         LDY #16
+^0       ASL ACC1LO
+         ROL ACC1HI
+         ROL REMLO
+         ROL REMHI
+         SEC 
+         LDA REMLO
+         SBC ACC2LO
+         TAX 
+         LDA REMHI
+         SBC ACC2HI
+         BCC >1
+         STX REMLO
+         STA REMHI
+         INC ACC1LO
+^1       DEY 
+         BNE <0
+         LDY ACC1LO
+         LDA ACC1HI
+         RTS 
+;-----------
+;
+;
+;
+         USR "EDIT,S4",ORG
+         END 

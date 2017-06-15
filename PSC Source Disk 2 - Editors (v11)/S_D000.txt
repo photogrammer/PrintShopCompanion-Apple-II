@@ -1,0 +1,449 @@
+         NLS 
+         TTL "S:D000"
+ORG      =   $D000
+;
+; 02/09/85
+;
+; Border routine that is used during
+; printing. It sits at $D000, $8B$8B
+;
+; by Roland Gustafsson
+;
+MASKBUFF =   $BB00
+SUPPGET  =   $4000
+SUPPBORD =   ORG
+SWAPRAM  =   $02C0
+;
+;
+TMP0     EPZ $3A
+TMP1     EPZ $3B
+TMP2     EPZ $3C
+TMP3     EPZ $3D
+;
+BORDER   EPZ $80
+BUFFER   EPZ $82
+MASK     EPZ $84
+BASELO   EPZ $86
+BASEHI   EPZ $87
+SCANLINE EPZ $88
+DOACROSS EPZ $89
+COUNTER  EPZ $8A
+;
+FLIPPER  =   $9080
+;
+BORDDATA =   $DE00
+;-----------
+         ORG ORG
+         OBJ $0800
+;-----------
+         JMP DRAWBORD
+;
+; Move swap routine down to its home
+; and call it.
+;
+         TAX 
+;
+         LDY #$3F
+^0       LDA SWPRAM,Y
+         STA SWAPRAM,Y
+         DEY 
+         BPL <0
+;
+         LDA /SUPPGET-1
+         PHA 
+         LDA #SUPPGET-1
+         PHA 
+         TXA 
+         JMP SWAPRAM
+;-----------
+;
+; Swap RAMcard with $4000, 8 pages.
+;
+SWPRAM   PHA 
+         BIT $C08B
+         BIT $C08B
+         LDX #8
+         LDY #END
+         LDA /END
+         STY TMP0
+         STA TMP1
+         LDY #0
+         LDA /SUPPGET
+         STY TMP2
+         STA TMP3
+^0       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+         BIT $C081
+         PLA 
+         RTS 
+;-----------
+;
+; Draw the border
+;
+; Point to the border data
+;
+DRAWBORD LDA #BORDDATA
+         LDY /BORDDATA
+         LDX $8300
+         CPX #1
+         BNE >0
+         INY 
+;
+^0       STA BASELO
+         STY BASEHI
+;
+         JSR SETMASKS
+;
+; Generate buffer address
+;
+BORDLOOP LDA SCANLINE
+         ASL 
+         ADC #$20
+         STA BUFFER+1
+         LDA #0
+         STA BUFFER
+;
+; Clear first bytes to zero
+;
+         LDY #$24
+^0       STA (BUFFER),Y
+         DEY 
+         BPL <0
+         LDA #$25
+         STA BUFFER
+;
+; Check for top or bottom
+;
+         LDX SCANLINE
+         CPX DOACROSS
+         BEQ DOLINE
+         DEX 
+         CPX DOACROSS
+         BEQ DOLINE
+;
+; Not top or bottom, so do edges
+;
+; Left side first
+;
+         LDX #2
+         LDA #0
+         JSR GETADR
+         LDA #0
+         JSR STORE
+;
+; Now skip to right side
+;
+         LDA #$C3
+         STA BUFFER
+         INC BUFFER+1
+;
+; Store right side
+;
+         LDA #2
+         JSR STORE
+;
+; Now go for nextline
+;
+NEXTLINE LDY #10
+         LDA #0
+^0       STA (BUFFER),Y
+         DEY 
+         BPL <0
+         INC SCANLINE
+         DEC COUNTER
+         BNE BORDLOOP
+         RTS 
+;-----------
+;
+; Do either top or bottom line
+;
+; Determine if top or bottom
+;
+DOLINE   LDA #1                        ; bottom
+         LDX DOACROSS
+         CPX #$18
+         BEQ >0
+         LDA #0
+;
+^0       STA TMP2
+;
+; First do left corner
+;
+         LDX #0
+         LDA TMP2
+         JSR GETADR
+         JSR STORTMP2
+;
+; Now fill in 17 borders
+;
+         LDX #1
+         LDA TMP2
+         JSR GETADR
+;
+         LDX #17
+^0       JSR STORTMP2
+         DEX 
+         BNE <0
+;
+; Next do right corner
+;
+         INC TMP2
+         INC TMP2
+         LDX #0
+         LDA TMP2
+         JSR GETADR
+         JSR STORTMP2
+         JMP NEXTLINE
+;
+STORTMP2 LDA TMP2
+;
+; Fall through to store
+;----------------------
+;
+; STORE border
+;
+;  A=mask, 0=normal
+;          1=bottom
+;          2=right
+;          3=bottom and right
+;
+YFLIP    EPZ TMP3
+;
+STORE    LDY #0
+         STY TMP0
+         AND (BASELO),Y
+         LSR 
+         ROR YFLIP
+         LSR 
+         BCC >0
+         LDY #22
+;
+^0       STY TMP1
+;
+^1       LDY TMP0
+         LDA (MASK),Y
+         BIT YFLIP
+         BPL >2
+         TAY 
+         LDA FLIPPER,Y
+;
+^2       LDY TMP1
+         AND (BUFFER),Y
+         STA >3+1
+         LDY TMP0
+         LDA (BORDER),Y
+         BIT YFLIP
+         BPL >3
+         TAY 
+         LDA FLIPPER,Y
+^3       ORA #00
+         LDY TMP1
+         STA (BUFFER),Y
+;
+         BCS >4
+         INY 
+         INY 
+^4       INC TMP0
+         DEY 
+         STY TMP1
+         LDA TMP0
+         EOR #23
+         BNE <1
+;
+         LDA #23
+;
+INCBUF   CLC 
+         ADC BUFFER
+         STA BUFFER
+         BCC >1
+         INC BUFFER+1
+^1       RTS 
+;-----------
+;
+; Generate BORDER and MASK addresses
+;  given A=00,ignore config
+;          01,use config (for right)
+;        X=border # 0-2
+;
+BORDLOC  HEX 043464
+;
+GETADR   LDY #0
+         AND (BASELO),Y
+         EOR SCANLINE
+         LSR 
+         BCS GETADR2
+         LDY #$18
+;
+GETADR2  LDA BASELO
+         STA BORDER
+         LDA BASEHI
+         STA BORDER+1
+;
+         TYA 
+         CLC 
+         ADC BORDLOC,X
+         STA >2+1
+;
+         CLC 
+         ADC BORDER
+         STA BORDER
+         BCC >1
+         INC BORDER+1
+;
+^1       LDA #MASKBUFF
+         LDY /MASKBUFF
+;
+         CLC 
+^2       ADC #00
+         STA MASK
+         BCC >3
+         INY 
+^3       STY MASK+1
+         RTS 
+;-----------
+;
+; Clear mask tables and if mask
+; generator bit is set, create
+; the MASKBUFF table.
+;
+SETMASKS JSR CLRMASKS
+         LDY #0
+         LDA (BASELO),Y
+         AND #4
+         BNE >0
+         RTS 
+;
+^0       LDX #2
+;
+^1       LDY #0
+         JSR GETADR2
+         JSR DOMASK1
+         JSR DOMASK2
+         DEX 
+         BPL <1
+         RTS 
+;-----------
+CURRENT  EPZ TMP2
+;
+; Create mask from bottom to top,
+; storing values into MASK
+;
+DOMASK1  CPX #2
+         BEQ QUITMASK
+;
+         LDY #46
+         STY TMP1
+         LDY #22
+;
+^0       STY TMP0
+         LDA #$7F
+^1       STA CURRENT
+         AND (BORDER),Y
+         BEQ >2
+         LDA CURRENT
+         ASL 
+         AND #$7F
+         BPL <1
+;
+^2       LDA CURRENT
+         STA (MASK),Y
+         BNE >3
+;
+; If the right to left scan up mask
+; hits zero, and we are doing a
+; corner, quit!
+;
+         CPX #0
+         BEQ QUITMASK
+;
+^3       CMP #$7F
+         BNE >6
+;
+         LDA #$7F
+         LDY TMP1
+^4       STA CURRENT
+         AND (BORDER),Y
+         BEQ >5
+         LDA CURRENT
+         ASL 
+         AND #$7F
+         BPL <4
+;
+^5       LDA CURRENT
+         STA (MASK),Y
+;
+^6       DEC TMP1
+         LDY TMP0
+         DEY 
+         BPL <0
+QUITMASK RTS 
+;-----------
+;
+; Create mask by scanning right
+; to left. If corner, then AND
+; data together to get correct
+; mask.
+;
+DOMASK2T AND (MASK),Y
+         AND #$FF
+;
+DOMASK2  CPX #1
+         BEQ QUITMASK
+;
+; X=0 means corner AND (MASK),Y
+; X=2 means left   AND #$FF
+;
+         LDA DOMASK2T,X
+         STA DOMASK2M
+         LDA DOMASK2T+1,X
+         STA DOMASK2M+1
+;
+         LDY #46
+;
+^0       LDA #$7F
+         STA CURRENT
+;
+^1       LDA (BORDER),Y
+         AND CURRENT
+         BEQ >2
+         EOR CURRENT
+         STA CURRENT
+;
+^2       LDA CURRENT
+DOMASK2M ORA (MASK),Y
+         STA (MASK),Y
+         DEY 
+         BMI >3
+         CPY #23
+         BNE <1
+         DEY 
+         BNE <0
+;
+^3       RTS 
+;-----------
+;
+; Clear mask tables to zero
+;
+CLRMASKS LDY #48*3
+         LDA #0
+^0       DEY 
+         STA MASKBUFF,Y
+         BNE <0
+         RTS 
+;-----------
+END:     
+;
+;
+;
+         USR "O:D000",ORG
+         END 

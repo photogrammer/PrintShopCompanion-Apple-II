@@ -1,0 +1,842 @@
+;
+; S:SUBPAK5
+;
+; Input device support routines
+; -----------------------------
+; The Print Shop Companion Disk
+;
+;
+; DEVICENW: Find current input device
+;           and intialize it, and set
+;           up the following vectors:
+;
+; DEVICEON: Turn on current input
+;           device and return flashing
+;           cursor delay in A,Y.
+;
+; DEVICEOF: Turn off current input
+;           device.
+;
+; DEVICERD: Read current input device.
+;           SEC=error, ignore values
+;           CLC=good values in X,Y
+;             A=button status
+;            bit 7:button is down
+;            bit 6:button was down at
+;                  last reading
+;
+; DEVICEST: Set X,Y coordinates, given
+;           X,Y. This is used for
+;           clamping.
+;
+; SCALING:  hi bit 0:graphic 88x52
+;           hi bit 1:full screen 192x140
+;
+; Read both paddles
+;
+READPDL  JSR FASTPDL
+         BCS PDLERROR
+;
+; First compute X-coor (paddle 0)
+;
+^1       LDX #3
+^2       LDA P0D0,X
+         BNE >3
+         DEX 
+         BPL <2
+         BMI PDLERROR
+;
+^3       CMP #$40
+         BLT >4
+         LDA #$40
+^4       SEC 
+         SBC #1
+         ASL 
+         ASL 
+         CLC 
+         ADC PDLADD,X
+         TAX 
+;
+; Last, compute Y-coor (paddle 1)
+;
+         LDY #3
+^0       LDA P1D0,Y
+         BNE >1
+         DEY 
+         BPL <0
+         BMI PDLERROR
+;
+^1       CMP #$40
+         BLT >2
+         LDA #$40
+^2       SEC 
+         SBC #1
+         ASL 
+         ASL 
+         CLC 
+         ADC PDLADD,Y
+         TAY 
+         CLC 
+         RTS 
+;
+; Return error code
+;
+PDLERROR SEC 
+         RTS 
+;
+PDLADD   BYT 0,1,2,3
+;
+P0D0     BRK 
+P0D1     BRK 
+P0D2     BRK 
+P0D3     BRK 
+P1D0     BRK 
+P1D1     BRK 
+P1D2     BRK 
+P1D3     BRK 
+;
+; Check for paddles
+;
+CHECKPDL LDA $C070
+         LDX #0
+         LDY #16
+^0       LDA $C064
+         ORA $C065
+         BPL >1
+         DEX 
+         BNE <0
+         DEY 
+         BNE <0
+;
+; If no paddle, then return to main
+;
+         PLA 
+         PLA 
+^1       RTS 
+;---------------------------
+;
+; Select input device to use
+;
+DEVICENW LDA $FBC0
+         BEQ >0
+;
+; If //c, check for paddles first
+;
+         JSR FINDMOUS
+^0       JSR FINDKOLA
+         JSR FINDJOYS
+         JSR FINDMOUS
+         JSR NODEVICE
+;
+; NODEVICE always installs
+;
+; Install vectors
+;
+; JSR INSTALL
+;
+; JMP DEVICEON
+; JMP DEVICEOF
+; JMP DEVICERD
+; JMP DEVICEST
+;
+; Installs the 4 jump vectors
+; following the JSR INSTALL.
+;
+INSTALL  PLA 
+         STA DTMPLO
+         PLA 
+         STA DTMPHI
+         LDY #12
+^0       LDA (DTMPLO),Y
+         STA DEVMODS-1,Y
+         DEY 
+         BNE <0
+         PLA 
+         PLA 
+;---
+;
+; Since the routine that scans
+; for a mouse turns on the $C800
+; rom behind either $C3 or another
+; card, turn it off!!!
+;
+         BIT $CFFF
+         JMP DEVICEON
+;-----------------
+;
+; Search for mouse
+;
+FINDMOUS LDY #$00
+         LDA #$C7
+         STY DTMPLO
+^0       STA DTMPHI
+         LDY #$0C
+         LDA (DTMPLO),Y
+         CMP #$20
+         BNE >1
+         LDY #$FB
+         LDA (DTMPLO),Y
+         CMP #$D6
+         BNE >1
+         LDA DTMPHI
+         STA MOUSECN
+         AND #$0F
+         STA MOUSEN
+         ASL 
+         ASL 
+         ASL 
+         ASL 
+         STA MOUSEN0
+         JSR MSINIT
+;
+         JSR INSTALL
+         JMP MSTURNON
+         JMP MSTURNOF
+         JMP MSREAD
+         JMP MSSET
+;
+^1       DEC DTMPHI
+         LDA DTMPHI
+         CMP #$C1
+         BGE <0
+         RTS 
+;
+; Initialize the mouse
+;
+MSINIT   LDY #$19
+MSINIT2  JSR DOMOUSE
+;
+; On the ][ and ][+, this routine
+; will clear hires page 1, so only
+; execute it once.
+;
+         LDA #$2C
+         STA MSINIT2
+; 
+; fall into...
+;
+; Turn on the mouse
+;
+MSTURNON LDY #$12
+         LDA #1
+         JSR DOMOUSE
+         LDY #100
+         LDA /100
+         LDX $FBC0
+         BNE SETFLASH
+;
+; The //c mouse routines are faster!
+;
+         LDY #600
+         LDA /600
+;
+SETFLASH STY FLSHINIT+1
+         STA >1+1
+         RTS 
+;-----------
+FLSHINIT LDY #00
+^1       LDA #00
+         STY FLASHLO
+         STA FLASHHI
+         RTS 
+;
+; Turn off the mouse
+;
+MSTURNOF SEI 
+         LDY #$12
+         LDA #0
+;
+; Do mouse routine given in Y
+; with parameter in A
+;
+DOMOUSE  PHA 
+         LDA $C400,Y
+MOUSECN  =   *-1
+         LDX MOUSECN
+         LDY #00
+MOUSEN0  =   *-1
+         STA >0+1
+         STX >0+2
+         PLA 
+^0       JMP $C400
+;
+; Read the mouse
+;
+MSREAD   PHP 
+         SEI 
+         LDY #$14
+         JSR DOMOUSE
+         LDY #00
+MOUSEN   =   *-1
+;
+; Get button status
+;
+         LDA $778,Y
+         PHA 
+;
+; X-coor
+;
+         LDA $478,Y
+         STA DTMPLO
+         LDA $578,Y
+         STA DTMPHI
+         BIT SCALING
+         BMI >0
+         LSR DTMPHI
+         ROR DTMPLO
+^0       LDX $FBC0
+         BEQ >1
+         LSR DTMPHI
+         ROR DTMPLO
+^1       LDX DTMPLO
+;
+; Y-coor
+;
+         LDA $4F8,Y
+         STA DTMPLO
+         LDA $5F8,Y
+         STA DTMPHI
+         LSR DTMPHI
+         ROR DTMPLO
+         BIT SCALING
+         BMI >2
+         LSR DTMPHI
+         ROR DTMPLO
+^2       LDA $FBC0
+         BEQ >3
+         LSR DTMPHI
+         ROR DTMPLO
+^3       LDY DTMPLO
+;
+         PLA 
+         PLP 
+         AND #$FF
+         CLC 
+         RTS 
+;
+; Compute actual mouse address given
+; A=either X or Y
+;
+MSDOX    CLC 
+         HEX 24
+MSDOY    SEC 
+         LDY #0
+         STY DTMPHI
+         BCC >0
+         ASL 
+         ROL DTMPHI
+^0       BIT SCALING
+         BMI >1
+         ASL 
+         ROL DTMPHI
+^1       LDX $FBC0
+         BEQ >2
+         ASL 
+         ROL DTMPHI
+^2       LDY MOUSEN
+         LDX DTMPHI
+         RTS 
+;
+; Set mouse to given coordinates
+;
+MSSET    PHP 
+         SEI 
+         STY >0+1
+         TXA 
+         JSR MSDOX
+         STA $478,Y
+         TXA 
+         STA $578,Y
+^0       LDA #00
+         JSR MSDOY
+         STA $4F8,Y
+         TXA 
+         STA $5F8,Y
+         LDY #$16
+         JSR DOMOUSE
+         PLP 
+         RTS 
+;-------------------
+;
+; Check for KoalaPad
+;
+FINDKOLA JSR CHECKPDL
+;
+; If X,Y is less than KPMIN
+; then assume KoalaPad.
+;
+         JSR KPONPAD
+         BCC >0
+         RTS 
+;
+^0       JSR INSTALL
+         JMP KPTURNON
+         JMP KPTURNOF
+         JMP KPREAD
+         JMP KPSET
+;
+KPMIN    =   16
+;
+; Tables to keep track of last
+; 8 coordinates
+;
+KPPOINT  HEX 00
+;
+KPXLAST  DFS 8,0
+KPYLAST  DFS 8,0
+;
+; Get coordinates from KoalaPad
+; If CLC then pen is off pad
+;    SEC then X,Y are adjusted values
+;
+KPONPAD  JSR READPDL
+         CPX #KPMIN
+         BGE >0
+         CPY #KPMIN
+         BLT KPONPADR
+;
+; Don't believe paddle readings unless
+; you get the same values twice.
+; (ignoring bit 0)
+;
+; compute X
+;
+^0       TXA 
+         AND #$FE
+         CMP LASTX
+         STA LASTX
+         BNE KPONPAD
+;
+         TXA 
+         SEC 
+         SBC #KPMIN
+         BCS *+4
+         LDA #0
+         BIT SCALING
+         BMI >1
+         LSR 
+^1       TAX 
+;
+; compute Y
+;
+         TYA 
+         AND #$FE
+         CMP LASTY
+         STA LASTY
+         BNE KPONPAD
+;
+         TYA 
+         SEC 
+         SBC #KPMIN
+         BCS *+4
+         LDA #0
+         BIT SCALING
+         BMI >2
+;
+; Y*.3125 (1/4+1/16)
+;
+         STA DTMPHI
+         LDA #0
+         LSR DTMPHI
+         ROR 
+         LSR DTMPHI
+         ROR 
+         LDY DTMPHI
+         STA DTMP0
+         STY DTMP1
+         LSR DTMPHI
+         ROR 
+         LSR DTMPHI
+         ROR 
+         ADC DTMP0
+         LDA DTMPHI
+         ADC DTMP1
+;
+^2       TAY 
+         SEC 
+KPONPADR RTS 
+;
+KPTURNON LDY #40
+         LDA /40
+         JMP SETFLASH
+;
+KPTURNOF =   RTS
+;
+; Read KoalaPad by averaging
+; the current reading with the
+; last 7 readings
+;
+KPREAD   JSR KPONPAD
+         BCC KPDONE
+         TXA 
+         LDX KPPOINT
+         STA KPXLAST,X
+         TYA 
+         STA KPYLAST,X
+         INX 
+         TXA 
+         AND #7
+         STA KPPOINT
+;
+         LDX #0
+         JSR KPAVG
+         STA XCOOR
+         LDX #8
+         JSR KPAVG
+         STA YCOOR
+KPDONE   LDX XCOOR
+         LDY YCOOR
+;
+; Read KoalaPad/Joystick buttons
+;
+READBTN  LDA $C061
+         ORA $C062
+         AND #$80
+LASTBTN  ORA #00
+         PHA 
+         LSR 
+         AND #$40
+         STA LASTBTN+1
+         PLA 
+         CLC 
+         RTS 
+;
+; Set KoalaPad averaging tables
+;
+KPSET    JSR JYSET
+         TXA 
+         LDX #7
+^0       STA KPXLAST,X
+         DEX 
+         BPL <0
+;
+         TYA 
+         LDY #7
+^1       STA KPYLAST,Y
+         DEY 
+         BPL <1
+         RTS 
+;
+; Compute average of last 8
+; readings and return result in A
+;
+KPAVG    LDY #0
+         TYA 
+         STY DTMPHI
+         CLC 
+^0       ADC KPXLAST,X
+         BCC >1
+         INC DTMPHI
+^1       INX 
+         INY 
+         CPY #8
+         BCC <0
+;
+         LSR DTMPHI
+         ROR 
+         LSR DTMPHI
+         ROR 
+         LSR DTMPHI
+         ROR 
+         RTS 
+;-------------------
+;
+; Check for Joystick
+;
+FINDJOYS JSR CHECKPDL
+;
+; If joystick is centered,
+; then assume joystick
+;
+         JSR JYREAD2
+         BEQ >0
+         RTS 
+;
+^0       JSR INSTALL
+         JMP JYTURNON
+         JMP JYTURNOF
+         JMP JYREAD
+         JMP JYSET
+;
+JYTIMER  BYT 20
+JYSPEEDU BYT 5
+;
+; "How fast to return values"
+; constants
+;
+JYSLOW   =   45
+JYFAST   =   10
+;
+JYTURNON =   KPTURNON
+;
+JYTURNOF =   RTS
+;
+JYTBL0   BYT JYFAST,JYSLOW,JYSLOW
+JYTBL1   BYT JYFAST,JYSLOW,JYFAST
+;
+JYREAD   LDA JYTBL0,Y
+         STA JYMOD0
+         LDA JYTBL1,Y
+         STA JYMOD1
+         JSR JYREAD2
+         BNE >0
+;
+; Joystick is centered, so reset all
+; the JY values
+;
+         LDX #8
+         STX JYSPEEDU
+         LDX #1
+         STX JYTIMER
+         LDX #JYSLOW
+JYMOD0   =   *-1
+         STX JYSPEED
+         BNE >3
+;
+^0       DEC JYTIMER
+         BNE >3
+;
+         DEC JYSPEEDU
+         BNE >1
+         LDX #JYFAST
+JYMOD1   =   *-1
+         STX JYSPEED
+;
+^1       LDX #00
+JYSPEED  =   *-1
+         STX JYTIMER
+         CLC 
+         ADC XCOOR
+         CMP #$FF
+         BEQ >2
+         STA XCOOR
+^2       TYA 
+         CLC 
+         ADC YCOOR
+         CMP #$FF
+         BEQ >3
+         STA YCOOR
+;
+^3       LDX XCOOR
+         LDY YCOOR
+         JMP READBTN
+;
+; Compute direction add value
+; in A for X, and Y for Y
+;
+JYREAD2  JSR READPDL
+         TXA 
+         JSR JYCALC
+         STA DTMP0
+         TYA 
+         JSR JYCALC
+         TAY 
+         ORA DTMP0
+         PHP 
+         LDA DTMP0
+         PLP 
+         CLC 
+         RTS 
+;
+; Calculate add value FF,00,01
+; based on position of joystick
+;
+JYCALC   TAX 
+         LDA #$FF
+         CPX #$30
+         ADC #0
+         CPX #$A0
+         ADC #0
+         RTS 
+;
+JYSET    STX XCOOR
+         STY YCOOR
+         RTS 
+;
+; No input device connected handler
+;
+NODEVICE JSR INSTALL
+         JMP >0
+         JMP >0
+         JMP >0
+         JMP >0
+;
+; Satisfy DEVICEON
+;
+^0       LDY #3000
+         LDA /3000
+;
+; Satisfy DEVICERD
+;
+         SEC 
+         JMP SETFLASH
+;
+; Scratch pad area:
+;
+XCOOR    BRK 
+YCOOR    BRK 
+LASTX    BRK 
+LASTY    BRK 
+;
+;
+; David Snider's
+; Fast paddle read routine
+;
+; Make sure on page boundary
+;
+         DFS $100-*&$FF,$EA
+;
+FASTPDL  LDA #0
+         LDY #7
+^0       STA P0D0,Y
+         DEY 
+         BPL <0
+         TAX 
+         CLC 
+         LDA $C070
+;
+; Both paddles loop
+;
+^1       INX 
+         BMI PDLERR2
+         BIT $C064
+         BPL P0X0
+         BIT $C065
+         BPL P1X0
+         BIT $C064
+         BPL P0X1
+         BIT $C065
+         BPL P1X1
+         BIT $C064
+         BPL P0X2
+         BIT $C065
+         BPL P1X2
+         BIT $C064
+         BPL P0X3
+         BIT $C065
+         BMI <1
+;
+; Paddle 1 exits
+;
+P1X3     BIT $C064
+         STX P1D3
+         BCC P0W3
+P1X0     BIT $C064
+         STX P1D0
+         BCC P0W0
+P1X1     BIT $C064
+         STX P1D1
+         BCC P0W1
+P1X2     BIT $C064
+         STX P1D2
+         BCC P0W2
+;
+; Paddle 0 exits
+;
+P0X0     BIT $C065
+         STX P0D0
+         BCC P1W0
+P0X1     BIT $C065
+         STX P0D1
+         BCC P1W1
+P0X2     BIT $C065
+         STX P0D2
+         BCC P1W2
+P0X3     BIT $C065
+         STX P0D3
+         BCC P1W3
+;
+PDLERR2  SEC 
+         RTS 
+;
+;
+; Wait for paddle 1 to time out
+;
+^0       BIT $C065
+P1W0     BPL P1F0
+         NOP 
+         NOP 
+         NOP 
+         BIT $C065
+P1W1     BPL P1F1
+         NOP 
+         NOP 
+         NOP 
+         BIT $C065
+P1W2     BPL P1F2
+         NOP 
+         NOP 
+         NOP 
+         BIT $C065
+P1W3     BPL P1F3
+         NOP 
+         NOP 
+         INX 
+         BPL <0
+         BMI PDLERR2
+;
+; Wait for paddle 0 to time out
+;
+^0       BIT $C064
+P0W0     BPL P0F0
+         NOP 
+         NOP 
+         NOP 
+         BIT $C064
+P0W1     BPL P0F1
+         NOP 
+         NOP 
+         NOP 
+         BIT $C064
+P0W2     BPL P0F2
+         NOP 
+         NOP 
+         NOP 
+         BIT $C064
+P0W3     BPL P0F3
+         NOP 
+         NOP 
+         INX 
+         BPL <0
+         BMI PDLERR2
+;
+; Final stuff
+;
+P1F0     STX P1D0
+         BCC >0
+P1F1     STX P1D1
+         BCC >0
+P1F2     STX P1D2
+         BCC >0
+P1F3     STX P1D3
+         BCC >0
+P0F0     STX P0D0
+         BCC >0
+P0F1     STX P0D1
+         BCC >0
+P0F2     STX P0D2
+         BCC >0
+P0F3     STX P0D3
+;
+; Make sure this routine always takes
+; the same amount of time.
+;
+; 51 microsecond loop until X=$40
+;
+^0       CPX #$40
+         BGE >1
+         JSR RTS
+         JSR RTS
+         JSR RTS
+         NOP 
+         NOP 
+         NOP 
+         INX 
+         BNE <0
+^1       CLC 
+         RTS 
+;
+;
+;
+         USR "SUBPAK",ORG
+         END 

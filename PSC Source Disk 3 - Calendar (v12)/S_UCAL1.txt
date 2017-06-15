@@ -1,0 +1,252 @@
+         TTL "S:UCAL"
+; S:UCAL1
+         NOG 
+ORG      =   $4000
+;
+; 09/13/85
+; 12/05/85
+;
+; Print Shop Companion Calendar
+;     by Roland Gustafsson
+;        Copyright 1985
+;
+; User interface module, menus,
+; screens, etc...
+;
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP START
+         JMP START
+;
+         JMP CRBLAK
+         JMP CRDRAW
+;-----------
+;
+         ASC "COPYRIGHT 1985 "
+         BYT "ROLAND GUSTAFSSON"
+;
+; Initialize external routines
+;
+START    BIT $C083
+         BIT $C083
+         JSR INITCAL
+;-----------
+;-----------
+;
+; Clear variables START FRESH
+;
+START1   JSR CLRCOBUF
+;-----------
+;
+; Enter here to leave data intact
+;
+START2   JSR TPTITLE2
+;
+; If no printer setup, then quit.
+;
+         JSR PRINT
+         .DA #PRLOC,140,#70
+         BRK 
+         LDA #CR
+         JSR CHKPRINT
+         BCC MENUSCT0
+         JMP MAINMENU
+;-----------
+;
+; Select calendar type
+;
+MENUSCT0 JSR SELTYPE
+         BCC MENUSGR0
+         JSR ESCMAIN
+         BCS MENUSCT0
+;-----------
+;
+; Select graphic
+;
+MENUSGR0 JSR SELGR
+         BCS MENUSCT0
+;
+; Graphic position
+;
+MENUSGR1 JSR SELGRPOS
+         BCS MENUSGR0
+;-----------
+;
+; Select YEAR
+;
+MENUSYR0 JSR SELYEAR
+         BCS MENUSGR1
+;-----------
+;
+; Select MONTH
+;
+MENUSMN0 JSR SELMONTH
+         BCS MENUSYR0
+;-----------
+;
+; Select FONT
+;
+MENUSFN0 JSR SELFONT
+         BCS MENUSMN0
+;
+; Enter text for top of page
+;
+MENUSFN1 JSR TPTITLE
+         JSR TOPTEXT
+         BCS MENUSFN0
+;-----------
+;
+; Enter data for CENTER of calendar
+;
+MENUCTR0 JSR CRTITLE
+         JSR CENTER
+         BCS MENUSFN1
+;-----------
+;
+; Credit line for bottom of page
+;
+MENUCRL0 JSR BMTITLE
+         JSR CREDIT2
+         BCS MENUCTR0
+;-----------
+;
+; Select colors
+;
+MENUCOLR JSR SELCOLOR
+         BCS MENUCRL0
+;-----------
+;
+; PRINT MENU
+;
+; SEC=<esc> pressed
+; CLC=start fresh
+;
+         JSR PRINMENU
+         BCS MENUCOLR
+         BCC START1
+;-----------
+;
+; TOP
+;
+TPTITLE  BCC >0
+TPTITLE2 PHP 
+         JSR TITLE
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'TOP',CR,0
+         PLP 
+^0       RTS 
+;
+; CENTER
+;
+CRTITLE  PHP 
+         JSR TITLE
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'CENTER',CR,0
+         PLP 
+         RTS 
+;
+; BOTTOM
+;
+BMTITLE  JSR TITLE
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'BOTTOM',CR,0
+         RTS 
+;---
+;
+; Print menu
+;
+PRTITLE  BCS >0
+PRTITLE2 PHP 
+         JSR TITLE
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'PRINT',CR
+         BRK 
+         PLP 
+^0       RTS 
+;---
+;
+; TITLE
+;
+TITLE    JSR WITEBORD
+         JSR ESCBACK
+         JSR PRINT
+         .DA #PRLOC,136,#4
+         BYT PRRITE,PRINVR
+         .DA #PRSTR,TXTCAL
+         BYT ':',CR
+         .DA #PRLOC,146,#1,#0
+         RTS 
+;-----------
+;
+; Center of calendar handler
+;
+CENTER   LDA CLTYPE
+         BNE GTWEEKLY
+;-----------
+;
+; Menus for monthly calendar.
+;
+GTMONTH  JSR SELDATE
+         BCS >9
+; DONE?
+         CPX MNLAST
+         BEQ >0
+         BGE >8
+;
+; Type in text for date
+;
+^0       JSR GTMTEXT
+         BCC GTMONTH
+;
+; Out of memory!
+;
+         JSR CLS1
+         JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#66
+         BYT 'SORRY, OUT OF MEMORY',CR
+         BYT CR
+         BYT 'UNABLE TO STORE...',CR
+         BRK 
+         JSR ANYKEY
+         JMP GTMONTH
+;
+^8       CLC 
+^9       RTS 
+;-----------
+;
+; Menus for weekly calendar.
+;
+; First, select starting date
+;
+GTWEEKLY BCS >1
+^0       JSR SELDATE
+         BCS <9
+;
+; Calculate day of week!
+;
+         LDY MNDATE
+         JSR CALCDAY
+;
+; Now select which day to edit
+;
+^1       JSR SELWDATE
+         BCS <0
+; DONE?
+         CPX #7
+         BEQ <8
+;
+         JSR GTWTEXT
+         JMP <1
+;-----------
+;
+;
+;
+         ICL "S:UCAL2"

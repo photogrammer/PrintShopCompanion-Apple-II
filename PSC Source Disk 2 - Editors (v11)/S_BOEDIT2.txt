@@ -1,0 +1,816 @@
+;
+; S:BOEDIT2
+;
+; Here is the Main Loop
+;
+MAINLOOP LDX XCOOR
+         LDY YCOOR
+         STX OLDXCOOR
+         STY OLDYCOOR
+         JSR DEVICEST
+;
+^0       JSR SETFLASH
+         LDX MINICNT
+         BEQ >1
+         DEX 
+         STX MINICNT
+         BNE >1
+         JSR MINITURE
+;
+^1       LDY #1
+         JSR DEVICERD
+         BCS >2
+;
+         STA BUTTON
+         JSR DODEVICE
+         BIT BUTTON
+         BMI >3
+         BVC >2
+         LDX #0
+         STX MINICNT
+         JSR MINITURE
+;
+^2       LDA #0
+         STA CNSTRAIN
+         JSR POLEKEY
+         BMI KEYPRESS
+;
+^3       DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+KEYPRESS STA >1+1
+         JSR BRRESET
+         LDY #$FC
+^0       INY 
+         INY 
+         INY 
+         INY 
+         LDA COMMANDS,Y
+         BEQ MAINLOOP
+^1       CMP #00
+         BNE <0
+;
+         CPY #LOCKSTOP-COMMANDS
+         BLT >1
+         JSR LOCKOFF
+;
+^1       CPY #MOVECOM?-COMMANDS
+         BGE >1
+         LDA #00
+LOCKMODE =   *-1
+         BPL >1
+         TYA 
+         PHA 
+         LDA #2
+         STA MINICNT
+         JSR PLOT
+         PLA 
+         TAY 
+;
+^1       LDA COMMANDS+1,Y
+         LDX #$20
+         LSR 
+         BCS *+4
+         LDX #$2C
+         STX >2+0
+;
+         LDX #$20
+         LSR 
+         BCS *+4
+         LDX #$2C
+         STX >4+0
+;
+         LDA COMMANDS+2,Y
+         STA >3+1
+         LDA COMMANDS+3,Y
+         STA >3+2
+;
+^2       JSR BUFFSAVE
+;
+         LDX XCOOR
+         LDY YCOOR
+         LDA SECTION
+;
+^3       JSR $FFFF
+^4       JSR MINITURE
+         JMP MAINLOOP
+;
+; #key,<buffsave,miniature>,<address>
+;
+; byte 1= bit 0:BUFFSAVE?
+;         bit 1:MINITURE?
+;
+COMMANDS .DA #'I',#0,MOVEUP
+         .DA #$0B,#0,MOVEUP
+         .DA #'M',#0,MOVEDOWN
+         .DA #$0A,#0,MOVEDOWN
+         .DA #'J',#0,MOVELEFT
+         .DA #$08,#0,MOVELEFT
+         .DA #'K',#0,MOVERITE
+         .DA #$15,#0,MOVERITE
+MOVECOM?: 
+         .DA #'L'-$40,#0,TOGGLOCK
+         .DA #'D',#3,BRSET
+         .DA #'E',#3,BRCLEAR
+LOCKSTOP: 
+         .DA #'C',#3,BRCOPY
+         .DA #'C'-$40,#0,CMDCLEAR
+         .DA #'F',#3,FLODFILL
+         .DA #'P',#0,NEXTPATT
+;
+         .DA #'W',#2,SCRLUP
+         .DA #'Z',#2,SCRLDOWN
+         .DA #'A',#2,SCRLLEFT
+         .DA #'S',#2,SCRLRITE
+;
+         .DA #'H',#2,FLIPHORI
+         .DA #'V',#2,FLIPVERT
+         .DA #'N',#2,BRNEGATI
+;
+         .DA #'1',#0,SECTION1
+         .DA #'2',#0,SECTION2
+         .DA #'3',#0,SECTION3
+;
+         .DA #$07,#0,BRGET
+         .DA #$13,#0,BRSAVE
+         .DA #$11,#0,QUIT
+;
+         .DA #'T',#2,TGLMASK
+         .DA #'R',#2,TGLRITE
+         .DA #'B',#2,TGLBOTT
+;
+         .DA #'U',#2,UNDO
+;
+         .DA #' ',#0,CMDSPACE
+         .DA #'D'-$40,#0,NWDEVICE
+         .DA #'P'-$40,#0,BRPRINT
+;
+         BRK 
+;-----------
+;
+; Input device handler
+;
+DODEVICE CPX XCOOR
+         BNE >0
+         CPY YCOOR
+         BEQ >3
+;
+; Device moved
+;
+^0       LDA CNSTRAIN
+         BPL >1
+;
+; Figure out which direction
+; to constrain
+;
+         LDA #1
+         CPX XCOOR
+         BEQ *+3
+         ASL 
+         STA CNSTRAIN
+;
+^1       STX >1+1
+         STY >2+1
+         JSR BRRESET
+         LDX XCOOR
+         LDY YCOOR
+         STX OLDXCOOR
+         STY OLDYCOOR
+^1       LDX #00
+^2       LDY #00
+         JSR DEVCONST
+;
+; If button down, plot new point
+; else, just plot cursor.
+;
+         BIT BUTTON
+         BMI DOBUTTON
+         BPL SETFLASH
+;
+; End up here if device didn't move.
+; If button is not down or if button
+; was down last time, then exit.
+;
+^3       STX OLDXCOOR
+         STY OLDYCOOR
+         BIT BUTTON
+         BPL DEVRTS
+         BVS DEVRTS
+;
+; Handle button press
+;
+DOBUTTON BVS >0
+;
+; Button down for first time, so
+; get bit and invert.
+;
+         LDA LOCKMODE
+         STA CNSTRAIN
+         JSR BUFFSAVE
+         JSR SETPLOTX
+;
+; Plot current position and
+; set new cursor.
+;
+^0       JSR PLOT
+;
+; After flashing cursor in the
+; same place 10 times, then
+; display the miniature.
+;
+         LDA #10
+         STA MINICNT
+;
+SETFLASH JSR BRFLASH
+         JSR FLSHINIT
+;
+; Display X,Y coordinates
+;
+SHOWXY   LDA XCOOR
+         LDX #4
+         LDY #185
+         JSR NUMBER
+         LDA YCOOR
+         LDX #10
+         LDY #185
+         JMP NUMBER
+;
+DEVRTS   RTS 
+;
+; Device input constrain
+; but only when the constrain
+; feature is selected.
+;
+DEVCONST BIT DEVRTS
+         LDA CNSTRAIN
+         BEQ DEVCLAMP
+;
+         LSR 
+         BCC >0
+;
+; Constrain X?
+;
+         CPX XCOOR
+         BEQ DEVCLMP2
+         LDX XCOOR
+         CLV 
+         BVC DEVCLMP2
+;
+; Constrain Y?
+;
+^0       CPY YCOOR
+         BEQ DEVCLMP2
+         LDY YCOOR
+         CLV 
+         BVC DEVCLMP2
+;
+; Input device clamping
+;
+DEVCLAMP BIT DEVRTS
+DEVCLMP2 CPX #XMAX
+         BLT >0
+         CLV 
+         LDX #XMAX-1
+^0       CPY #YMAX
+         BLT >1
+         CLV 
+         LDY #YMAX-1
+^1       STX XCOOR
+         STY YCOOR
+         BVS DEVRTS
+         JMP DEVICEST
+;-----------
+;
+; Given XCOOR,YCOOR set PLOT routine
+; to opposite of whatever is in this
+; coordinate
+;
+SETPLOTX JSR GETMASK
+         AND (BORDER),Y
+SETPLOT  PHP 
+         LDY #CLRBIT
+         LDX /CLRBIT
+         PLP 
+         BNE >0
+         LDY #SETBIT
+         LDX /SETBIT
+^0       STY PLOT+1
+         STX PLOT+2
+         RTS 
+;
+PLOT     JMP SETBIT
+;-----------
+;
+; Swap UNDO buffer and EDIT buffer
+;
+UNDO     JSR UNDO2
+         JMP BRDRAWAL
+;
+UNDO2    LDY #0
+^0       LDA BORDBASE,Y
+         PHA 
+         LDA UNDOBUFF,Y
+         STA BORDBASE,Y
+         PLA 
+         STA UNDOBUFF,Y
+         INY 
+         CPY #$94
+         BNE <0
+         RTS 
+;
+BUFFSAVE LDY #0
+^0       LDA BORDBASE,Y
+         STA UNDOBUFF,Y
+         INY 
+         CPY #$94
+         BNE <0
+         RTS 
+;-----------
+;
+; Scroll left/right
+;
+SCRLLEFT LDX #1
+         HEX 2C
+SCRLRITE LDX #22
+;
+^0       LDY #0
+^1       LDA (BORDER),Y
+         PHA 
+^2       INY 
+         LDA (BORDER),Y
+         DEY 
+         STA (BORDER),Y
+         INY 
+         CPY #22
+         BEQ >3
+         CPY #46
+         BNE <2
+^3       PLA 
+         STA (BORDER),Y
+         INY 
+         INY 
+         CPY #24
+         BEQ <1
+         DEX 
+         BNE <0
+         JMP BRDRAW
+;-----------
+;
+; Scroll up/down
+;
+SCRLUP   LDX #1
+         HEX 2C
+SCRLDOWN LDX #13
+;
+^0       LDY #0
+^1       LDA (BORDER),Y
+         LSR 
+         LDA #0
+         ROR 
+         STA TMP0
+         TYA 
+         PHA 
+         CLC 
+         ADC #24
+         TAY 
+         LDA TMP0
+         ORA (BORDER),Y
+         LSR 
+         STA (BORDER),Y
+         PLA 
+         TAY 
+         LDA #0
+         ROR 
+         ORA (BORDER),Y
+         LSR 
+         STA (BORDER),Y
+         INY 
+         CPY #23
+         BLT <1
+         DEX 
+         BNE <0
+         JMP BRDRAW
+;-----------
+;
+; Flip vertical
+;
+FLIPVERT LDY #0
+^0       LDA (BORDER),Y
+         TAX 
+         TYA 
+         PHA 
+         CLC 
+         ADC #24
+         TAY 
+         LDA (BORDER),Y
+         PHA 
+         LDA FLIPPER,X
+         STA (BORDER),Y
+         PLA 
+         TAX 
+         PLA 
+         TAY 
+         LDA FLIPPER,X
+         STA (BORDER),Y
+         INY 
+         CPY #23
+         BLT <0
+         JMP BRDRAW
+;-----------
+;
+; Flip horizontal
+;
+FLIPHORI LDA #0
+         HEX 2C
+FLIPHOR2 LDA #24
+         STA TMP0
+         CLC 
+         ADC #22
+         STA TMP1
+         LDX #11
+^0       LDY TMP0
+         LDA (BORDER),Y
+         PHA 
+         LDY TMP1
+         LDA (BORDER),Y
+         LDY TMP0
+         STA (BORDER),Y
+         PLA 
+         LDY TMP1
+         STA (BORDER),Y
+         INC TMP0
+         DEC TMP1
+         DEX 
+         BNE <0
+         LDA TMP0
+         CMP #24
+         BLT FLIPHOR2
+         JMP BRDRAW
+;-----------
+;
+; Move up
+;
+MOVEUP   DEY 
+         BPL MOVEDONE
+         LDY #YMAX-2
+;
+; Move down
+;
+MOVEDOWN INY 
+         CPY #YMAX
+         BLT MOVEDONE
+         LDY #0
+;
+; Set new coordinates
+;
+MOVEDONE STX XCOOR
+         STY YCOOR
+         RTS 
+;
+; Move left
+;
+MOVELEFT DEX 
+         BPL MOVEDONE
+         LDX #XMAX-2
+;
+; Move right
+;
+MOVERITE INX 
+         CPX #XMAX
+         BLT MOVEDONE
+         LDX #0
+         BEQ MOVEDONE
+;-----------
+;
+; Move cursor to section
+;
+SECTION1 LDA #0
+         HEX 2C
+SECTION2 LDA #1
+         HEX 2C
+SECTION3 LDA #2
+;
+; Given A=section, set BORDER pointer
+; and SECTION to correct values
+;
+SETBORD  STA SECTION
+         ASL 
+         ADC SECTION
+         ASL 
+         ASL 
+         ASL 
+         ASL 
+         ADC #4
+         STA BORDER
+         LDA /BORDBASE
+         STA BORDER+1
+         RTS 
+;-----------
+;
+; Zero out border area
+;
+ZEROBORD LDY #$94
+         LDA #0
+^0       DEY 
+         STA BORDBASE,Y
+         BNE <0
+^1       RTS 
+;-----------
+;
+; Initialize border data
+;
+BRINIT   JSR ZEROBORD
+;
+; Center the cursor
+;
+BRCENTER LDX #11
+         LDY #6
+         STX XCOOR
+         STY YCOOR
+;
+; Start with corner
+;
+         LDA #0
+         JSR SETBORD
+;
+; fall into re-draw routine
+;
+;-----------
+;
+; Draw all sections
+; restore old section
+;
+BRDRAWAL JSR SHOWMASK
+         LDA SECTION
+         PHA 
+         LDY #0
+^0       STY SECTION
+         TYA 
+         JSR SETBORD
+         JSR BRDRAW
+         LDY SECTION
+         INY 
+         CPY #3
+         BLT <0
+         PLA 
+         JMP SETBORD
+;-----------
+;
+; Copy from 0 to 1 and 2
+;
+BRCOPY   LDY #47
+^0       LDA (BORDER),Y
+         STA BORDBASE+$04,Y
+         STA BORDBASE+$34,Y
+         STA BORDBASE+$64,Y
+         DEY 
+         BPL <0
+         BMI BRDRAWAL
+;-----------
+;
+; Draw current section
+;
+BRDRAW   LDA XCOOR
+         PHA 
+         LDA YCOOR
+         PHA 
+         LDY #0
+         STY XCOOR
+^0       STY YCOOR
+         JSR BRRESET
+;
+         LDY YCOOR
+         INY 
+         CPY #14
+         BLT <0
+;
+         LDY #0
+         INC XCOOR
+         LDA XCOOR
+         CMP #23
+         BLT <0
+         PLA 
+         STA YCOOR
+         PLA 
+         STA XCOOR
+         RTS 
+;-----------
+;
+; Restore current location, use
+; after BRFLASH
+;
+BRRESET  JSR GETMASK
+         AND (BORDER),Y
+         BEQ >0
+         JMP PLOTON
+^0       JMP PLOTOFF
+;-----------
+;
+; Invert current section
+;
+BRNEGATI LDY #46
+^0       LDA (BORDER),Y
+         EOR #$7F
+         STA (BORDER),Y
+         DEY 
+;
+; When done, redraw section
+;
+         BMI BRDRAW
+         CPY #23
+         BNE <0
+         DEY 
+         BNE <0
+;-----------
+;
+; Clear bit in section and screen
+;
+BRCLEAR  LDA #$18
+         LDY #1
+         BNE >0
+;
+; Set bit in section and screen
+;
+BRSET    LDA #$16
+         LDY #0
+^0       PHA 
+         JSR SETPLOT
+         JSR PLOT
+         PLA 
+         TAY 
+;
+BRBEEP   LDX #7
+^0       LDA $C030
+         TYA 
+         JSR WAIT
+         DEX 
+         BNE <0
+         RTS 
+;
+CLRBIT   JSR GETMASK
+         EOR #$7F
+         AND (BORDER),Y
+         STA (BORDER),Y
+         JMP PLOTOFF
+;
+SETBIT   JSR GETMASK
+         ORA (BORDER),Y
+         STA (BORDER),Y
+         JMP PLOTON
+;
+; Get mask (in A) and offset (in Y)
+;
+GETMASK  LDY YCOOR
+         LDA GETMASKT,Y
+         PHA 
+         LDA XCOOR
+         CPY #7
+         BGE >0
+         ADC #24
+^0       TAY 
+         PLA 
+         RTS 
+;
+; Y-coor mask for border 0-13
+;
+GETMASKT BYT %0000001
+         BYT %0000010
+         BYT %0000100
+         BYT %0001000
+         BYT %0010000
+         BYT %0100000
+         BYT %1000000
+         BYT %0000001
+         BYT %0000010
+         BYT %0000100
+         BYT %0001000
+         BYT %0010000
+         BYT %0100000
+         BYT %1000000
+;-----------
+;
+; Toggle masking
+;
+TGLMASK  LDA BORDBASE
+         EOR #%100
+         STA BORDBASE
+         AND #%100
+         BEQ SHOWMASK
+         LDA BORDBASE
+         ORA #%111
+         STA BORDBASE
+;
+SHOWMASK JSR PAG3DIAG
+         LDX #WITE
+         JSR TGLMSK2
+         JSR PRINT
+         BYT RTOSWITE,15,132,4,17,0
+         LDX #GRAY2
+         LDA BORDBASE
+         AND #%100
+         BEQ TGLMSK2
+;
+; "Fill to edge" arrows
+;
+         LDX #15
+         LDY #132
+         JMP TILEAROW
+;
+; Tile boundary line
+;
+TGLMSK2  STX >0+0
+         STX >1+0
+         STX >2+0
+         STX >3+0
+         JSR LINES
+         BYT "H",MINIX1
+^0       BYT GRAY,14,MINIY1+14,14*MINIW1-2
+^1       BYT GRAY,14,MINIY1+13+14*MINIH1-2,14*MINIW1-2
+         BYT 1
+         JSR LINES
+         BYT "V",MINIX1
+^2       BYT GRAY,14,MINIY1+14,14*MINIH1-2
+^3       BYT GRAY,13+14*MINIW1-2,MINIY1+14,14*MINIH1-2
+         BYT 1
+         RTS 
+;-----------
+;
+; Toggle right side
+;
+TGLRITE  LDA BORDBASE
+         AND #%11111011
+         EOR #%00000010
+         STA BORDBASE
+         JMP SHOWMASK
+;-----------
+;
+; Toggle bottom
+;
+TGLBOTT  LDA BORDBASE
+         AND #%11111011
+         EOR #%00000001
+         STA BORDBASE
+         JMP SHOWMASK
+;-----------
+;
+; Tile boundary arrow
+;
+TILEAROW STX >0+0
+         STY >0+1
+         JSR PICDRAW
+^0       BYT 15,132,4,17
+         HEX C27EC23F7CC21F78C20F70C21F78C21B
+         HEX 58C20181C2827E3F827CC1827EC10181
+         HEX C21B58C21F78C20F70C21F78C23F7CC3
+         HEX 7E7F
+         RTS 
+;-----------
+;
+; Turn off lock mode
+;
+LOCKOFF  STX >0+1
+         STY >1+1
+         STA >2+1
+         LDA LOCKMODE
+         BPL >2
+;
+; Toggle lock mode
+;
+TOGGLOCK LDA LOCKMODE
+         EOR #$80
+         STA LOCKMODE
+         BPL SHOWLOCK
+;
+; If we are turning on lock mode,
+; then save border in UNDOBUFF.
+;
+         JSR BUFFSAVE
+         JSR SETPLOTX
+;
+; Show lock mode
+;
+SHOWLOCK JSR PRINT
+         BYT RTOSBLAK,LOCKX,LOCKY,1,9,0
+         LDA LOCKMODE
+         BPL >0
+         JSR PICDRAW
+         BYT LOCKX,LOCKY,1,9
+         HEX 1C222222C17777777F
+^0       LDX #00
+^1       LDY #00
+^2       LDA #00
+         RTS 
+;-----------
+;
+; Select input device
+;
+NWDEVICE JSR DEVICECH
+         JMP SHOWBOTM
+;-----------
+;
+;
+;
+         ICL "S:BOEDIT3"

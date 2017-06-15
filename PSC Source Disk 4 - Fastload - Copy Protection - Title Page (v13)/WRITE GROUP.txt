@@ -1,0 +1,52 @@
+0300-   A9 02       LDA   #$02
+0302-   8D EA B7    STA   $B7EA
+0305-   A2 05       LDX   #$05
+0307-   B5 3E       LDA   $3E,X
+0309-   95 00       STA   $00,X
+030B-   CA          DEX
+030C-   10 F9       BPL   $0307
+030E-   A9 00       LDA   #$00
+0310-   8D EB B7    STA   $B7EB
+0313-   A5 04       LDA   $04
+0315-   8D F0 B7    STA   $B7F0
+0318-   A5 05       LDA   $05
+031A-   8D F1 B7    STA   $B7F1
+031D-   A5 03       LDA   $03
+031F-   8D EC B7    STA   $B7EC
+0322-   A5 02       LDA   $02
+0324-   8D ED B7    STA   $B7ED
+0327-   A9 02       LDA   #$02
+0329-   8D F4 B7    STA   $B7F4
+032C-   20 E3 03    JSR   $03E3
+032F-   20 D9 03    JSR   $03D9
+0332-   B0 F8       BCS   $032C
+0334-   EE F1 B7    INC   $B7F1
+0337-   A4 02       LDY   $02
+0339-   A5 03       LDA   $03
+033B-   C4 00       CPY   $00
+033D-   D0 05       BNE   $0344
+033F-   C5 01       CMP   $01
+0341-   D0 01       BNE   $0344
+0343-   60          RTS
+0344-   C8          INY
+0345-   C0 10       CPY   #$10
+0347-   90 04       BCC   $034D
+0349-   E6 03       INC   $03
+034B-   A0 00       LDY   #$00
+034D-   84 02       STY   $02
+034F-   18          CLC
+0350-   90 CB       BCC   $031D
+0352-   00          BRK
+0353-   00          BRK
+0354-   00          BRK
+0355-   00          BRK
+0356-   00          BRK
+0357-   00          BRK
+0358-   00          BRK
+0359-   00          BRK
+035A-   00          BRK
+035B-   00          BRK
+035C-   00          BRK
+035D-   00          BRK
+035E-   00          BRK
+035F-   00          BRK

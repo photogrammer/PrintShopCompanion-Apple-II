@@ -1,0 +1,523 @@
+1000-   00          BRK
+1001-   00          BRK
+1002-   00          BRK
+1003-   00          BRK
+1004-   00          BRK
+1005-   00          BRK
+1006-   00          BRK
+1007-   00          BRK
+1008-   80 80       BRA   $0F8A
+100A-   80 80       BRA   $0F8C
+100C-   80 80       BRA   $0F8E
+100E-   80 80       BRA   $0F90
+1010-   00          BRK
+1011-   00          BRK
+1012-   00          BRK
+1013-   00          BRK
+1014-   00          BRK
+1015-   00          BRK
+1016-   00          BRK
+1017-   00          BRK
+1018-   80 80       BRA   $0F9A
+101A-   80 80       BRA   $0F9C
+101C-   80 80       BRA   $0F9E
+101E-   80 80       BRA   $0FA0
+1020-   00          BRK
+1021-   00          BRK
+1022-   00          BRK
+1023-   00          BRK
+1024-   00          BRK
+1025-   00          BRK
+1026-   00          BRK
+1027-   00          BRK
+1028-   80 80       BRA   $0FAA
+102A-   80 80       BRA   $0FAC
+102C-   80 80       BRA   $0FAE
+102E-   80 80       BRA   $0FB0
+1030-   00          BRK
+1031-   00          BRK
+1032-   00          BRK
+1033-   00          BRK
+1034-   00          BRK
+1035-   00          BRK
+1036-   00          BRK
+1037-   00          BRK
+1038-   80 80       BRA   $0FBA
+103A-   80 80       BRA   $0FBC
+103C-   80 80       BRA   $0FBE
+103E-   80 80       BRA   $0FC0
+1040-   28          PLP
+1041-   28          PLP
+1042-   28          PLP
+1043-   28          PLP
+1044-   28          PLP
+1045-   28          PLP
+1046-   28          PLP
+1047-   28          PLP
+1048-   A8          TAY
+1049-   A8          TAY
+104A-   A8          TAY
+104B-   A8          TAY
+104C-   A8          TAY
+104D-   A8          TAY
+104E-   A8          TAY
+104F-   A8          TAY
+1050-   28          PLP
+1051-   28          PLP
+1052-   28          PLP
+1053-   28          PLP
+1054-   28          PLP
+1055-   28          PLP
+1056-   28          PLP
+1057-   28          PLP
+1058-   A8          TAY
+1059-   A8          TAY
+105A-   A8          TAY
+105B-   A8          TAY
+105C-   A8          TAY
+105D-   A8          TAY
+105E-   A8          TAY
+105F-   A8          TAY
+1060-   28          PLP
+1061-   28          PLP
+1062-   28          PLP
+1063-   28          PLP
+1064-   28          PLP
+1065-   28          PLP
+1066-   28          PLP
+1067-   28          PLP
+1068-   A8          TAY
+1069-   A8          TAY
+106A-   A8          TAY
+106B-   A8          TAY
+106C-   A8          TAY
+106D-   A8          TAY
+106E-   A8          TAY
+106F-   A8          TAY
+1070-   28          PLP
+1071-   28          PLP
+1072-   28          PLP
+1073-   28          PLP
+1074-   28          PLP
+1075-   28          PLP
+1076-   28          PLP
+1077-   28          PLP
+1078-   A8          TAY
+1079-   A8          TAY
+107A-   A8          TAY
+107B-   A8          TAY
+107C-   A8          TAY
+107D-   A8          TAY
+107E-   A8          TAY
+107F-   A8          TAY
+1080-   50 50       BVC   $10D2
+1082-   50 50       BVC   $10D4
+1084-   50 50       BVC   $10D6
+1086-   50 50       BVC   $10D8
+1088-   D0 D0       BNE   $105A
+108A-   D0 D0       BNE   $105C
+108C-   D0 D0       BNE   $105E
+108E-   D0 D0       BNE   $1060
+1090-   50 50       BVC   $10E2
+1092-   50 50       BVC   $10E4
+1094-   50 50       BVC   $10E6
+1096-   50 50       BVC   $10E8
+1098-   D0 D0       BNE   $106A
+109A-   D0 D0       BNE   $106C
+109C-   D0 D0       BNE   $106E
+109E-   D0 D0       BNE   $1070
+10A0-   50 50       BVC   $10F2
+10A2-   50 50       BVC   $10F4
+10A4-   50 50       BVC   $10F6
+10A6-   50 50       BVC   $10F8
+10A8-   D0 D0       BNE   $107A
+10AA-   D0 D0       BNE   $107C
+10AC-   D0 D0       BNE   $107E
+10AE-   D0 D0       BNE   $1080
+10B0-   50 50       BVC   $1102
+10B2-   50 50       BVC   $1104
+10B4-   50 50       BVC   $1106
+10B6-   50 50       BVC   $1108
+10B8-   D0 D0       BNE   $108A
+10BA-   D0 D0       BNE   $108C
+10BC-   D0 D0       BNE   $108E
+10BE-   D0 D0       BNE   $1090
+10C0-   00          BRK
+10C1-   00          BRK
+10C2-   00          BRK
+10C3-   00          BRK
+10C4-   00          BRK
+10C5-   00          BRK
+10C6-   00          BRK
+10C7-   00          BRK
+10C8-   00          BRK
+10C9-   00          BRK
+10CA-   00          BRK
+10CB-   00          BRK
+10CC-   00          BRK
+10CD-   00          BRK
+10CE-   00          BRK
+10CF-   00          BRK
+10D0-   00          BRK
+10D1-   00          BRK
+10D2-   00          BRK
+10D3-   00          BRK
+10D4-   00          BRK
+10D5-   00          BRK
+10D6-   00          BRK
+10D7-   00          BRK
+10D8-   00          BRK
+10D9-   00          BRK
+10DA-   00          BRK
+10DB-   00          BRK
+10DC-   00          BRK
+10DD-   00          BRK
+10DE-   00          BRK
+10DF-   00          BRK
+10E0-   00          BRK
+10E1-   00          BRK
+10E2-   00          BRK
+10E3-   00          BRK
+10E4-   00          BRK
+10E5-   00          BRK
+10E6-   00          BRK
+10E7-   00          BRK
+10E8-   00          BRK
+10E9-   00          BRK
+10EA-   00          BRK
+10EB-   00          BRK
+10EC-   00          BRK
+10ED-   00          BRK
+10EE-   00          BRK
+10EF-   00          BRK
+10F0-   00          BRK
+10F1-   00          BRK
+10F2-   00          BRK
+10F3-   00          BRK
+10F4-   00          BRK
+10F5-   00          BRK
+10F6-   00          BRK
+10F7-   00          BRK
+10F8-   00          BRK
+10F9-   00          BRK
+10FA-   00          BRK
+10FB-   00          BRK
+10FC-   00          BRK
+10FD-   00          BRK
+10FE-   00          BRK
+10FF-   00          BRK
+1100-   20 24 28    JSR   $2824
+1103-   2C 30 34    BIT   $3430
+1106-   38          SEC
+1107-   3C 20 24    BIT   $2420,X
+110A-   28          PLP
+110B-   2C 30 34    BIT   $3430
+110E-   38          SEC
+110F-   3C 21 25    BIT   $2521,X
+1112-   29 2D       AND   #$2D
+1114-   31 35       AND   ($35),Y
+1116-   39 3D 21    AND   $213D,Y
+1119-   25 29       AND   $29
+111B-   2D 31 35    AND   $3531
+111E-   39 3D 22    AND   $223D,Y
+1121-   26 2A       ROL   $2A
+1123-   2E 32 36    ROL   $3632
+1126-   3A          DEC
+1127-   3E 22 26    ROL   $2622,X
+112A-   2A          ROL
+112B-   2E 32 36    ROL   $3632
+112E-   3A          DEC
+112F-   3E 23 27    ROL   $2723,X
+1132-   2B          ???
+1133-   2F          ???
+1134-   33          ???
+1135-   37          ???
+1136-   3B          ???
+1137-   3F          ???
+1138-   23          ???
+1139-   27          ???
+113A-   2B          ???
+113B-   2F          ???
+113C-   33          ???
+113D-   37          ???
+113E-   3B          ???
+113F-   3F          ???
+1140-   20 24 28    JSR   $2824
+1143-   2C 30 34    BIT   $3430
+1146-   38          SEC
+1147-   3C 20 24    BIT   $2420,X
+114A-   28          PLP
+114B-   2C 30 34    BIT   $3430
+114E-   38          SEC
+114F-   3C 21 25    BIT   $2521,X
+1152-   29 2D       AND   #$2D
+1154-   31 35       AND   ($35),Y
+1156-   39 3D 21    AND   $213D,Y
+1159-   25 29       AND   $29
+115B-   2D 31 35    AND   $3531
+115E-   39 3D 22    AND   $223D,Y
+1161-   26 2A       ROL   $2A
+1163-   2E 32 36    ROL   $3632
+1166-   3A          DEC
+1167-   3E 22 26    ROL   $2622,X
+116A-   2A          ROL
+116B-   2E 32 36    ROL   $3632
+116E-   3A          DEC
+116F-   3E 23 27    ROL   $2723,X
+1172-   2B          ???
+1173-   2F          ???
+1174-   33          ???
+1175-   37          ???
+1176-   3B          ???
+1177-   3F          ???
+1178-   23          ???
+1179-   27          ???
+117A-   2B          ???
+117B-   2F          ???
+117C-   33          ???
+117D-   37          ???
+117E-   3B          ???
+117F-   3F          ???
+1180-   20 24 28    JSR   $2824
+1183-   2C 30 34    BIT   $3430
+1186-   38          SEC
+1187-   3C 20 24    BIT   $2420,X
+118A-   28          PLP
+118B-   2C 30 34    BIT   $3430
+118E-   38          SEC
+118F-   3C 21 25    BIT   $2521,X
+1192-   29 2D       AND   #$2D
+1194-   31 35       AND   ($35),Y
+1196-   39 3D 21    AND   $213D,Y
+1199-   25 29       AND   $29
+119B-   2D 31 35    AND   $3531
+119E-   39 3D 22    AND   $223D,Y
+11A1-   26 2A       ROL   $2A
+11A3-   2E 32 36    ROL   $3632
+11A6-   3A          DEC
+11A7-   3E 22 26    ROL   $2622,X
+11AA-   2A          ROL
+11AB-   2E 32 36    ROL   $3632
+11AE-   3A          DEC
+11AF-   3E 23 27    ROL   $2723,X
+11B2-   2B          ???
+11B3-   2F          ???
+11B4-   33          ???
+11B5-   37          ???
+11B6-   3B          ???
+11B7-   3F          ???
+11B8-   23          ???
+11B9-   27          ???
+11BA-   2B          ???
+11BB-   2F          ???
+11BC-   33          ???
+11BD-   37          ???
+11BE-   3B          ???
+11BF-   3F          ???
+11C0-   A4 01       LDY   $01
+11C2-   B9 00 10    LDA   $1000,Y
+11C5-   85 3A       STA   $3A
+11C7-   B9 00 11    LDA   $1100,Y
+11CA-   85 3B       STA   $3B
+11CC-   A4 00       LDY   $00
+11CE-   B1 3A       LDA   ($3A),Y
+11D0-   49 7F       EOR   #$7F
+11D2-   91 3A       STA   ($3A),Y
+11D4-   60          RTS
+11D5-   44          ???
+11D6-   20 E3 03    JSR   $03E3
+11D9-   20 20 F4    JSR   $F420
+11DC-   11 F0       ORA   ($F0),Y
+11DE-   14 20       TRB   $20
+11E0-   A5 00       LDA   $00
+11E2-   4C DA FD    JMP   $FDDA    F8ROM:PRBYTE
+11E5-   20 61 20    JSR   $2061
+11E8-   66 6C       ROR   $6C
+11EA-   6F          ???
+11EB-   70 70       BVS   $125D
+11ED-   79 0A 0D    ADC   $0D0A,Y
+11F0-   00          BRK
+11F1-   A9 FF       LDA   #$FF
+11F3-   60          RTS
+11F4-   8D 71 12    STA   $1271
+11F7-   CA          DEX
+11F8-   8E 70 12    STX   $1270
+11FB-   CE 71 12    DEC   $1271
+11FE-   A2 62       LDX   #$62
+1200-   A0 00       LDY   #$00
+1202-   A9 40       LDA   #$40
+1204-   84 06       STY   $06
+1206-   85 07       STA   $07
+1208-   A6 01       LDX   $01
+120A-   20 7D 12    JSR   $127D
+120D-   20 63 12    JSR   $1263
+1210-   85 09       STA   $09
+1212-   24 08       BIT   $08
+1214-   30 3B       BMI   $1251
+1216-   24 0A       BIT   $0A
+1218-   10 08       BPL   $1222
+121A-   C9 00       CMP   #$00
+121C-   F0 0A       BEQ   $1228
+121E-   C9 7F       CMP   #$7F
+1220-   F0 06       BEQ   $1228
+1222-   20 53 12    JSR   $1253
+1225-   4C 0D 12    JMP   $120D
+1228-   8D 35 12    STA   $1235
+122B-   29 40       AND   #$40
+122D-   09 81       ORA   #$81
+122F-   85 09       STA   $09
+1231-   20 63 12    JSR   $1263
+1234-   C9 00       CMP   #$00
+1236-   D0 11       BNE   $1249
+1238-   E6 09       INC   $09
+123A-   24 08       BIT   $08
+123C-   30 13       BMI   $1251
+123E-   A5 09       LDA   $09
+1240-   29 3F       AND   #$3F
+1242-   D0 ED       BNE   $1231
+1244-   C6 09       DEC   $09
+1246-   AD 35 12    LDA   $1235
+1249-   48          PHA
+124A-   20 51 12    JSR   $1251
+124D-   68          PLA
+124E-   4C 10 12    JMP   $1210
+1251-   A5 09       LDA   $09
+1253-   8C 61 12    STY   $1261
+1256-   A0 00       LDY   #$00
+1258-   91 06       STA   ($06),Y
+125A-   E6 06       INC   $06
+125C-   D0 02       BNE   $1260
+125E-   E6 07       INC   $07
+1260-   A0 00       LDY   #$00
+1262-   60          RTS
+1263-   B1 04       LDA   ($04),Y
+1265-   49 7F       EOR   #$7F
+1267-   91 04       STA   ($04),Y
+1269-   49 7F       EOR   #$7F
+126B-   C8          INY
+126C-   C4 02       CPY   $02
+126E-   90 08       BCC   $1278
+1270-   48          PHA
+1271-   E8          INX
+1272-   20 7D 12    JSR   $127D
+1275-   68          PLA
+1276-   E4 03       CPX   $03
+1278-   66 08       ROR   $08
+127A-   29 7F       AND   #$7F
+127C-   60          RTS
+127D-   BD 00 10    LDA   $1000,X
+1280-   85 04       STA   $04
+1282-   BD 00 11    LDA   $1100,X
+1285-   85 05       STA   $05
+1287-   A4 00       LDY   $00
+1289-   60          RTS
+128A-   00          BRK
+128B-   00          BRK
+128C-   00          BRK
+128D-   00          BRK
+128E-   00          BRK
+128F-   00          BRK
+1290-   00          BRK
+1291-   00          BRK
+1292-   00          BRK
+1293-   00          BRK
+1294-   00          BRK
+1295-   00          BRK
+1296-   00          BRK
+1297-   00          BRK
+1298-   00          BRK
+1299-   00          BRK
+129A-   00          BRK
+129B-   00          BRK
+129C-   00          BRK
+129D-   00          BRK
+129E-   00          BRK
+129F-   00          BRK
+12A0-   00          BRK
+12A1-   00          BRK
+12A2-   00          BRK
+12A3-   00          BRK
+12A4-   00          BRK
+12A5-   00          BRK
+12A6-   00          BRK
+12A7-   00          BRK
+12A8-   00          BRK
+12A9-   00          BRK
+12AA-   00          BRK
+12AB-   00          BRK
+12AC-   00          BRK
+12AD-   00          BRK
+12AE-   00          BRK
+12AF-   00          BRK
+12B0-   00          BRK
+12B1-   00          BRK
+12B2-   00          BRK
+12B3-   00          BRK
+12B4-   00          BRK
+12B5-   00          BRK
+12B6-   00          BRK
+12B7-   00          BRK
+12B8-   00          BRK
+12B9-   00          BRK
+12BA-   00          BRK
+12BB-   00          BRK
+12BC-   00          BRK
+12BD-   00          BRK
+12BE-   00          BRK
+12BF-   00          BRK
+12C0-   00          BRK
+12C1-   00          BRK
+12C2-   00          BRK
+12C3-   00          BRK
+12C4-   00          BRK
+12C5-   00          BRK
+12C6-   00          BRK
+12C7-   00          BRK
+12C8-   00          BRK
+12C9-   00          BRK
+12CA-   00          BRK
+12CB-   00          BRK
+12CC-   00          BRK
+12CD-   00          BRK
+12CE-   00          BRK
+12CF-   00          BRK
+12D0-   00          BRK
+12D1-   00          BRK
+12D2-   00          BRK
+12D3-   00          BRK
+12D4-   00          BRK
+12D5-   00          BRK
+12D6-   00          BRK
+12D7-   00          BRK
+12D8-   00          BRK
+12D9-   00          BRK
+12DA-   00          BRK
+12DB-   00          BRK
+12DC-   00          BRK
+12DD-   00          BRK
+12DE-   00          BRK
+12DF-   00          BRK
+12E0-   00          BRK
+12E1-   00          BRK
+12E2-   00          BRK
+12E3-   00          BRK
+12E4-   00          BRK
+12E5-   00          BRK
+12E6-   00          BRK
+12E7-   00          BRK
+12E8-   00          BRK
+12E9-   00          BRK
+12EA-   00          BRK
+12EB-   00          BRK
+12EC-   00          BRK
+12ED-   00          BRK
+12EE-   00          BRK
+12EF-   00          BRK
+12F0-   00          BRK
+12F1-   00          BRK
+12F2-   00          BRK
+12F3-   00          BRK
+12F4-   00          BRK
+12F5-   00          BRK
+12F6-   00          BRK
+12F7-   00          BRK

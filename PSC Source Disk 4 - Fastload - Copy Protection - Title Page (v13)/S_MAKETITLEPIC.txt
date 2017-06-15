@@ -1,0 +1,133 @@
+         NLS 
+         TTL "S:MAKETITLEPIC"
+ORG      =   $1000
+;
+; Vertical hires screen compacter
+; by Roland Gustafsson
+;
+DAT      EPZ $00
+;
+DESTLO   EPZ DAT
+DESTHI   EPZ DAT+1
+XCOOR    EPZ DAT+2
+YCOOR    EPZ DAT+3
+LAST     EPZ DAT+4
+REPT     EPZ DAT+5
+HIRES    EPZ DAT+6
+;
+YLO      =   $1E00
+YHI      =   $1F00
+;
+DATA     =   $4000
+;
+         ORG ORG
+         OBJ $0800
+;
+; First make Ybase table
+;
+         LDA #$20
+         STA $E6
+         LDA $C081
+         LDY #0
+^0       STY DAT
+         TYA 
+         JSR $F417
+         LDY DAT
+         LDA $26
+         STA YLO,Y
+         LDA $27
+         STA YHI,Y
+         INY 
+         CPY #$C0
+         BLT <0
+;
+         LDA #DATA
+         CLC 
+         ADC $AA60
+         STA DESTLO
+         LDA /DATA
+         ADC $AA61
+         STA DESTHI
+;
+         LDA #0
+         STA XCOOR
+         STA YCOOR
+         JSR GETBYTE
+COMPLOOP STA LAST
+;
+         JSR GETBYTE
+         BCS ITSOVER
+         CMP LAST
+         BEQ REPEAT
+         PHA 
+         LDA LAST
+         JSR STORBYTE
+         PLA 
+         JMP COMPLOOP
+;
+; Count number of repeats
+;
+REPEAT   ORA #$80
+         JSR STORBYTE
+         LDA #2
+         STA REPT
+^0       JSR GETBYTE
+         BCS >2
+         CMP LAST
+         BNE >1
+         INC REPT
+         BNE <0
+         DEC REPT
+;
+^1       CLC 
+^2       PHA 
+         LDA REPT
+         JSR STORBYTE
+         PLA 
+         BCC COMPLOOP
+         BCS STORBYTE
+;
+; Last byte, so wrap up
+;
+ITSOVER  PHA 
+         LDA LAST
+         JSR STORBYTE
+         PLA 
+;
+; Store byte to destination buffer
+;
+STORBYTE LDY #0
+         STA (DESTLO),Y
+         INC DESTLO
+         BNE *+4
+         INC DESTHI
+         RTS 
+;
+; Get byte from hires page
+; If SEC then this is last byte
+;
+GETBYTE  LDX YCOOR
+         LDA YLO,X
+         STA HIRES
+         LDA YHI,X
+         STA HIRES+1
+         LDY XCOOR
+         LDA (HIRES),Y
+         EOR #$7F
+         STA (HIRES),Y
+         EOR #$7F
+         AND #$7F
+         INX 
+         CPX #$C0
+         BLT >1
+         LDX #0
+         INY 
+         CPY #$28
+^1       STY XCOOR
+         STX YCOOR
+         RTS 
+;
+;
+;
+         USR "O:MAKETITLEPIC",ORG
+         END 

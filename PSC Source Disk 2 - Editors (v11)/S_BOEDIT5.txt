@@ -1,0 +1,293 @@
+;
+; S:BOEDIT5
+;
+; Here is the nifty flood-fill
+; routine. (Same as in Dazzle Draw)
+;
+FLZ      EPZ $80
+;
+FLTMP0   EPZ FLZ
+FLINVERT EPZ FLZ+1
+FLXMIN   EPZ FLZ+2
+FLXMAX   EPZ FLZ+3
+FLMASK   EPZ FLZ+4
+FLSTACK1 EPZ FLZ+5
+FLSTACK2 EPZ FLZ+6
+;
+FLODFILL LDA XCOOR
+         PHA 
+         LDA YCOOR
+         PHA 
+;
+         LDY #47
+         LDA #0
+^0       STA FFBUFFER,Y
+         DEY 
+         BPL <0
+;
+         STA FLSTACK1
+         STA FLSTACK2
+         STA FLINVERT
+;
+         JSR FLODPUSH
+         JSR FLGETBIT
+         STA FLINVERT
+;
+; Main recursive routine:
+;
+FLODMAIN JSR FLODPULL
+;
+; If we've already been here,
+; then don't bother checking
+;
+         JSR FLGETBIT
+         LDA FLMASK
+         AND FFBUFFER,Y
+         BNE FLODRDON
+;
+; Fill left
+;
+         LDA XCOOR
+         PHA 
+^0       DEC XCOOR
+         BMI >1
+         JSR FLODCHEK
+         BEQ <0
+;
+;  Fill right
+;
+^1       LDX XCOOR
+         INX 
+         STX FLXMIN
+         PLA 
+         STA XCOOR
+;
+^2       JSR FLODCHEK
+         BNE >3
+         INC XCOOR
+         LDA XCOOR
+         CMP #XMAX
+         BLT <2
+;
+; Now scan above and below
+;
+^3       LDA XCOOR
+         STA FLXMAX
+;
+         INC YCOOR
+         JSR FLODSCAN
+         DEC YCOOR
+         DEC YCOOR
+         JSR FLODSCAN
+;
+; Is stack empty?
+;
+FLODRDON LDA FLSTACK1
+         CMP FLSTACK2
+         BNE FLODMAIN
+         PLA 
+         STA YCOOR
+         PLA 
+         STA XCOOR
+         RTS 
+;---
+;
+; Scan a line for new runs
+;
+FLODSCAN LDA YCOOR
+         CMP #YMAX
+         BGE >2
+         LDA FLXMAX
+         STA XCOOR
+;
+^0       JSR FLDECGET
+         BNE <0
+         LDA FLMASK
+         AND FFBUFFER,Y
+         BNE >1
+         JSR FLODPUSH
+;
+^1       JSR FLDECGET
+         BEQ <1
+         BNE <0
+;
+^2       RTS 
+;
+BITS8    HEX 8040201008040201
+;
+FLODCHEK JSR FLGETBIT
+         BNE >9
+;
+; Get bit from pattern
+;
+         LDA YCOOR
+         AND #7
+         STA FLTMP0
+         LDA CURRPATT
+         ASL 
+         ASL 
+         ASL 
+         ADC FLTMP0
+         TAX 
+         LDA FILLPATT,X
+         STA FLTMP0
+         LDA XCOOR
+         AND #7
+         TAX 
+         LDA BITS8,X
+         AND FLTMP0
+         BEQ >0
+         LDA FLMASK
+^0       STA FLTMP0
+;
+; Set bit in temp buffer
+;
+         LDA FLMASK
+         ORA FFBUFFER,Y
+         STA FFBUFFER,Y
+;
+; Set bit in edit buffer
+;
+         LDA FLMASK
+         EOR #$FF
+         AND (BORDER),Y
+;
+         ORA FLTMP0
+         STA (BORDER),Y
+         JSR PLOTOFF
+         LDA FLTMP0
+         BEQ >8
+         JSR PLOTON
+^8       LDA #0
+^9       RTS 
+;
+; Push current point on stack
+;
+FLODPUSH LDY FLSTACK1
+         LDA XCOOR
+         STA FFSTACK,Y
+         LDA YCOOR
+         STA FFSTACK+1,Y
+         INC FLSTACK1
+         INC FLSTACK1
+         RTS 
+;
+; Pull next point from stack
+;
+FLODPULL LDY FLSTACK2
+         LDA FFSTACK,Y
+         STA XCOOR
+         LDA FFSTACK+1,Y
+         STA YCOOR
+         INC FLSTACK2
+         INC FLSTACK2
+         RTS 
+;
+; Decrement X, check for min
+;
+FLDECGET LDA XCOOR
+         CMP FLXMIN
+         BNE >0
+         PLA 
+         PLA 
+         RTS 
+;
+^0       DEC XCOOR
+;
+; Check bit
+;
+FLGETBIT JSR GETMASK
+         STA FLMASK
+         AND (BORDER),Y
+         PHP 
+         PLA 
+         EOR FLINVERT
+         AND #2
+         RTS 
+;-----------
+;
+; Increment pattern pointer
+;
+NEXTPATT INC CURRPATT
+SHOWFILL LDA #01
+CURRPATT =   *-1
+         CMP #FILLPATS/8
+         BNE >0
+         LDA #0
+^0       STA CURRPATT
+         LDY PAGENUM
+         CPY #3
+         BNE >1
+         JSR SHOWPATT
+^1       RTS 
+;
+; Fill patterns:
+;
+FILLPATT HEX FFFFFFFFFFFFFFFF
+         HEX 55AA55AA55AA55AA
+         HEX 8822882288228822
+         HEX 8800220088002200
+         HEX 8000080080000800
+         HEX 0000000000000000
+         HEX 8010022001084004
+;
+         HEX FF808080FF080808
+         HEX 8040200002040800
+         HEX 8244384482010101
+         HEX F87422478F172271
+         HEX FF000000FF000000
+         HEX 8888888888888888
+         HEX 081C22C180010204
+         HEX 40A00000040A0000
+         HEX 8080413E080814E3
+         HEX 0102040810204080
+FILLPATS =   *-FILLPATT
+;-----------
+;
+; Display current pattern on screen
+;
+SHOWPATT ASL 
+         ASL 
+         ASL 
+         STA TMP0
+         LDA #8
+         STA TMP1
+         LDX #FFYLOC
+;
+^0       LDA YBASELO,X
+         STA HIRES1
+         LDA YBASEHI,X
+         STA HIRES1+1
+;
+         LDY TMP0
+         INC TMP0
+         LDA FILLPATT,Y
+         EOR #$FF
+         PHA 
+         ASL 
+         PHP 
+         LDY #FFXLOC
+         LDA (HIRES1),Y
+         ASL 
+         ASL 
+         PLP 
+         ROR 
+         LSR 
+         STA (HIRES1),Y
+         PLA 
+         AND #$7F
+         TAY 
+         LDA FLIPPER,Y
+         LDY #FFXLOC+1
+         STA (HIRES1),Y
+         INX 
+         DEC TMP1
+         BNE <0
+         RTS 
+;-----------
+;
+;
+;
+         USR "BOEDIT,S4",ORG
+;
+         ICL "S:COMMON"

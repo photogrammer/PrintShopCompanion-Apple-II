@@ -1,0 +1,819 @@
+;
+; S:UCAL4
+;
+; Calendar user interface menus
+;
+;
+; SELDATE : given MNDATE as default,
+;           draws miniature calendar
+;           and allows user to select
+;           new date. Returns new date
+;           in X and in MNDATE.
+;
+; SELWDATE: given MNWDATE as default,
+;           draws miniature weekly
+;           calendar and allows user
+;           to select which piece to
+;           edit. Returns # in X and
+;           in MNWDATE. 7=DONE
+;
+;-----------
+;
+; Select day of month
+;
+; Miniature calendar width, height
+;
+HBW      =   3
+HBW2     =   HBW*7
+HBH      =   18
+;
+; Location of miniature calendar
+;
+HBM      =   4
+HBM2     =   HBM*7
+HBY      =   61
+;---
+HBZ      EPZ $80
+;
+HCALX    EPZ HBZ
+HCALY    EPZ HBZ+1
+HCLSTFLG EPZ HBZ+2
+HCDAYOWK EPZ HBZ+3
+HCMNLAST EPZ HBZ+4
+HCGKFLAG EPZ HBZ+5
+HCDVX    EPZ HBZ+6
+HCDVY    EPZ HBZ+7
+HCDWIDTH EPZ HBZ+8
+HCMNLST7 EPZ HBZ+9
+HWPIECE  EPZ HBZ+10
+HWSTRING EPZ HBZ+11
+HWDONE   EPZ HBZ+12
+;-----------
+;
+; See above explanation
+;
+SELDATE  JSR CLS1
+         LDY #1
+         JSR CALCDAY
+         LDX MNLAST
+         LDA CLTYPE
+         BNE >0
+;-----------
+;
+; Monthly date selection,
+; with DONE box.
+;
+         INX 
+         STX HCMNLAST
+         LDY #24
+         JSR SLDHELP1
+         JSR HCALEN
+         JMP HGETDATE
+;-----------
+;
+; Weekly date selection
+;
+^0       STX HCMNLAST
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#19
+         BYT 'SELECT THE FIRST DAY FOR',CR
+         BYT 'YOUR WEEKLY '
+         .DA #PRSTR,TXTCAL,#CR
+         BRK 
+         JSR HCALEN
+         JSR SLDHELP
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'WHEN DONE',CR,0
+         JMP HGETDATE
+;-----------
+;
+; Show help information
+;
+HBHELPX  =   32
+;
+SLDHELP1 STY >0+3
+         JSR PRINT
+         BYT PRCNTR
+^0       .DA #PRLOC,140,#00
+         BYT 'HIGHLIGHT SPECIAL OCCASIONS',CR,0
+         JSR SLDHELP
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'TO ENTER',CR
+         BYT 'TEXT',CR,0
+         RTS 
+;
+SLDHELP  LDX #HBHELPX-3
+         LDY #HBY-12
+         LDA #0
+         JSR SHOWAROW
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,HBHELPX*7,#HBY+36
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         BYT 'TO SELECT',CR
+         BYT 'DATE',CR,CR
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         BRK 
+         RTS 
+;-----------
+;
+; Draw miniature calendar
+;
+HCALEN   JSR PRINT
+         BYT PRSPC,9
+         BYT PRCNTR
+         .DA #PRLOC,HBM2+73,#HBY-18
+         .DA #PRSTR,MONTHTXT,', '
+         .DA #PRSTR,YEARTEXT,#CR
+;
+         .DA #PRHTAB,HBM2+HBW2/2
+         BYT 'S',NOCR
+         BYT PRRTAB2,HBW2,'M',NOCR
+         BYT PRRTAB2,HBW2,'T',NOCR
+         BYT PRRTAB2,HBW2,'W',NOCR
+         BYT PRRTAB2,HBW2,'T',NOCR
+         BYT PRRTAB2,HBW2,'F',NOCR
+         BYT PRRTAB2,HBW2,'S',NOCR
+         BRK 
+;
+; Draw all the dates
+;
+         LDY #1
+^0       STY DATE
+         JSR HCDATE
+         LDY DATE
+         INY 
+         CPY HCMNLAST
+         BLT <0
+         BEQ <0
+         RTS 
+;---
+HCDATE   JSR HCXYCALC
+         STA HCALX
+         STY HCALY
+         LDA HCWX2,X
+         STA >0+1
+         STY >0+3
+         JSR PRINT
+^0       .DA #PRLOC,0,#0,#0
+;
+; Draw the frame
+;
+         LDA HCALX
+         JSR HCDVLIN
+         LDA HCALX
+         CLC 
+         ADC HCDWIDTH
+         JSR HCDVLIN
+;
+         LDA #14
+         SEC 
+         SBC MNFDAY
+         CMP DATE
+         BLT >1
+         LDA HCALY
+         JSR HCDHLIN
+^1       LDA HCALY
+         CLC 
+         ADC #HBH
+         JSR HCDHLIN
+;
+; "DONE" box?
+;
+         LDY DATE
+         CPY MNLAST
+         BLT >1
+         BEQ >1
+;
+         LDA HCALY
+         JSR HCDHLIN
+         JSR PRINT
+         BYT PRSPC,5,CR
+         BYT PRRTAB2,5
+         BYT 'DONE',CR,0
+         RTS 
+;
+; Check to see if any data
+; if so, put * under date.
+;
+^1       LDA MNLAST
+         EOR HCMNLAST
+         BEQ >2
+;
+; BUT only for monthly !!!
+;
+         LDA #'*'
+         LDX DBUFPNTH-1,Y
+         BNE >3
+^2       LDA #NOCR
+^3       STA >4+2
+;
+; Print number
+;
+         JSR MAKEDTXT
+         JSR PRINT
+         BYT PRSPC,2,CR,PRSPC,8
+         BYT PRRTAB2,4
+         .DA #PRSTR,DATETEXT,#CR
+^4       BYT PRRTAB,3,'?',NOCR
+         BRK 
+         RTS 
+;---
+;
+; Draw horizontal line
+;
+HCDHLIN  LDX HCALX
+         LDY HCDWIDTH
+         STX >0+1
+         STA >0+2
+         STA >1+2
+         STY >0+3
+         TXA 
+         CLC 
+         ADC HCDWIDTH
+         STA >1+1
+         JSR PRINT
+^0       BYT RTOSWITE,00,00,HBW,1
+         BYT RTOSANY
+^1       BYT $03,00,00,1,1,0
+         RTS 
+;---
+;
+; Draw vertical line
+;
+HCDVLIN  LDY HCALY
+         INY 
+         STY >0+2
+         STA >0+1
+         JSR PRINT
+         BYT RTOSANY
+^0       BYT $03,00,01,1,HBH,0
+         RTS 
+;---
+;
+; Calculate screen address in X,Y
+; given DATE
+;
+; returns A:X byte offset
+;         Y:Y byte offset
+;         X:lookup table index, 0-6
+;          (used for X-bit offset)
+;   HCWIDTH:width of box
+;
+HCXYCALC LDA DATE
+         CMP MNLAST
+         BEQ >0
+         BLT >0
+;
+; "DONE" box if DATE > MNLAST
+;
+         LDA #HBW*2
+         STA HCDWIDTH
+         LDA #HBM+2+HBW*2
+         LDY #158
+         LDX #7
+         RTS 
+;
+^0       LDY #HBW
+         STY HCDWIDTH
+         CLC 
+         ADC MNFDAY
+         SBC #0
+         LDX #$FF
+^1       INX 
+         SEC 
+         SBC #7
+         BCS <1
+         ADC #7
+         LDY HCWY,X
+         TAX 
+         LDA HCWX,X
+         RTS 
+;---
+;
+; X-byte location
+;
+HCWX     BYT HBM,HBM+HBW,HBM+HBW*2
+         BYT HBM+HBW*3,HBM+HBW*4
+         BYT HBM+HBW*5,HBM+HBW*6
+;
+; X-bit location
+;
+HCWX2    BYT HBM2,HBM2+HBW2,HBM2+HBW2*2
+         BYT HBM2+HBW2*3,HBM2+HBW2*4
+         BYT HBM2+HBW2*5,HBM2+HBW2*6
+         BYT HBM2+14+HBW2*2
+;
+; Y-byte location
+;
+HCWY     BYT HBY,HBY+HBH,HBY+HBH*2
+         BYT HBY+HBH*3,HBY+HBH*4
+         BYT HBY+HBH*5
+;-----------
+;
+; Move cursor around to select date
+;
+HGETDATE LDX MNDATE
+         BNE *+3
+         INX 
+         CPX HCMNLAST
+         BLT *+4
+         LDX HCMNLAST
+         STX DATE
+         LDA HCMNLAST
+         CLC 
+         ADC #7
+         STA HCMNLST7
+HGETDAT2 ASL HCGKFLAG
+         JSR HGETDVRD
+         STX HCDVX
+         STY HCDVY
+;
+^0       INC HCGKFLAG
+         JSR HCCURSOR
+         JSR FLSHINIT
+;
+^1       JSR HGETDVRD
+         BCS >2
+         ASL 
+         BMI >2
+         BCS >3
+         JSR HGETDEVC
+;
+^2       JSR POLEKEY
+         BMI >4
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+^3       LDA #CR
+;
+; Key pressed
+;
+^4       JSR HCCURSOF
+         LDX DATE
+         JSR PARSE
+         .DA #CR,HCGDCR
+         .DA #ESC,HCGDESC
+         .DA #'I',HCGDUP
+         .DA #$0B,HCGDUP
+         .DA #'M',HCGDDOWN
+         .DA #$0A,HCGDDOWN
+         .DA #'J',HCGDLEFT
+         .DA #$08,HCGDLEFT
+         .DA #'K',HCGDRITE
+         .DA #$15,HCGDRITE
+         BRK 
+         JMP HGETDAT2
+;---
+;
+; Handle input device
+;
+HGETDEVC CPX HCDVX
+         BNE >0
+         CPY HCDVY
+         BNE >0
+         RTS 
+;
+; Device moved
+;
+^0       JSR HGETDVST
+         JSR HCCURSOF
+;
+; Compute date given X,Y coordinates
+;
+         LDA HCDVX
+         LDY HCDVY
+^1       CLC 
+         ADC #7
+         DEY 
+         BPL <1
+         SBC #6
+         SBC MNFDAY
+         LDY #0
+         TAX 
+^2       PLA 
+         PLA 
+         TXA 
+         JMP HGETDVAD
+;---
+;
+; Do device clamping
+;
+HGETDVST BIT RTS
+         CPX #7
+         BLT >0
+         LDX #6
+         CLV 
+^0       CPY #8
+         BLT >1
+         LDY #7
+         CLV 
+^1       STX HCDVX
+         STY HCDVY
+         BVS >2
+         TXA 
+         ASL 
+         ASL 
+         ASL 
+         TAX 
+         TYA 
+         ASL 
+         ASL 
+         TAY 
+         JSR DEVICEST
+^2       RTS 
+;---
+;
+; Get scaled values from input device
+;
+HGETDVRD LDY #0
+         JSR DEVICERD
+         PHP 
+         PHA 
+         TXA 
+         LSR 
+         LSR 
+         LSR 
+         TAX 
+         TYA 
+         LSR 
+         LSR 
+         TAY 
+         PLA 
+         PLP 
+         RTS 
+;---
+HCCURSOF LSR HCGKFLAG
+         PHA 
+         BCC >8
+         PLA 
+;
+; Plot cursor
+;
+HCCURSOR PHA 
+         JSR HCXYCALC
+         TAX 
+         STX >0+2
+         INX 
+         STX >1+1
+;
+         INY 
+         STY >0+3
+         STY >1+2
+;
+         LDX HCDWIDTH
+         DEX 
+         STX >1+3
+         JSR PRINT
+^0       BYT RTOSANY,$FC,00,01,1,HBH-1
+^1       BYT RTOSINV,01,01,HBW-1,HBH-1,0
+^8       PLA 
+         RTS 
+;---
+HCGDCR   CLC 
+         HEX 24
+HCGDESC  SEC 
+         PHP 
+         CPX HCMNLAST
+         BLT >0
+         LDX HCMNLAST
+^0       STX MNDATE
+         PLP 
+         RTS 
+;
+HCGDUP   LDY #0
+         HEX 2C
+HCGDDOWN LDY #1
+         HEX 2C
+HCGDLEFT LDY #2
+         HEX 2C
+HCGDRITE LDY #3
+;
+         DEX 
+         TXA 
+         CLC 
+         ADC HCGDTBL0,Y
+HGETDVAD: 
+         BPL >0
+         SEC 
+         SBC HCGDTBL0,Y
+;
+^0       TAX 
+         INX 
+         CPX HCMNLST7
+         BLT >1
+         DEX 
+         TXA 
+         SBC #7
+         BCS <0
+;
+; If no DONE box, then clamp.
+;
+^1       LDA HCMNLAST
+         CMP MNLAST
+         BNE >2
+         CPX HCMNLAST
+         BLT >2
+         TAX 
+;
+^2       STX DATE
+         JMP HGETDAT2
+;
+HCGDTBL0 BYT 0-7,7,0-1,1
+;-----------
+;
+; Select which piece of weekly
+; calendar to edit.
+;
+HWX      =   5
+HWX2     =   HWX*7
+HWY      =   37
+HWX2L    =   140
+HWW      =   6
+HWH      =   18
+HWX2LMAX =   91
+;
+SELWDATE JSR CLS1
+         LDA MNDATE
+         STA DATE
+         JSR MAKEDTXT
+         LDY #19
+         JSR SLDHELP1
+         JSR PRINT
+         BYT PRCSPACE,1
+         BYT PRCNTR
+         .DA #PRLOC,140,#19+8
+         BYT 'FOR THE WEEK OF '
+         .DA #PRSTR,MONTHTXT,' '
+         .DA #PRSTR,DATETEXT,', '
+         .DA #PRSTR,YEARTEXT,#CR
+;
+; Draw border
+;
+         BYT RTOSANY,$60,HWX-1,HWY,1,1+8*HWH
+         BYT RTOSANY,$03,HWX+6,HWY,1,1+8*HWH
+         BYT RTOSANY,$60,HWX+19,HWY,1,1+7*HWH
+         BRK 
+;
+; Fill in the blanks
+;
+         JSR SWDOWEEK
+         LDX MNWDATE
+;
+; Select new MNWDATE
+;
+NEWPIECE STX HWPIECE
+         ASL HCGKFLAG
+         JSR HGETDVRD
+         STX HCDVX
+         STY HCDVY
+;
+^0       INC HCGKFLAG
+         JSR WKCURSOR
+         JSR FLSHINIT
+;
+^1       JSR HGETDVRD
+         BCS >2
+         ASL 
+         BMI >2
+         BCS >3
+         JSR WKDEVICE
+         BNE NEWPIECE
+;
+^2       JSR POLEKEY
+         BMI >4
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+^3       LDA #CR
+;
+^4       JSR WKCURSOF
+         LDX HWPIECE
+         JSR PARSE
+         .DA #CR,WKGDCR
+         .DA #ESC,WKGDESC
+         .DA #'I',WKGDUP
+         .DA #$0B,WKGDUP
+         .DA #$08,WKGDUP
+         .DA #'M',WKGDDOWN
+         .DA #$0A,WKGDDOWN
+         .DA #$15,WKGDDOWN
+         BRK 
+         JMP NEWPIECE
+;
+WKGDCR   CLC 
+         HEX 24
+WKGDESC  SEC 
+         STX MNWDATE
+         RTS 
+;
+WKGDUP   DEX 
+         BPL >0
+         LDX #6
+;
+WKGDDOWN INX 
+         CPX #8
+         BLT >0
+         LDX #0
+^0       JMP NEWPIECE
+;---
+;
+; Handle input device
+;
+WKDEVICE CPX HCDVX
+         BNE >0
+         CPY HCDVY
+         BNE >0
+         RTS 
+;
+^0       JSR HGETDVST
+         JSR WKCURSOF
+         LDX HCDVY
+         LDA #1
+         RTS 
+;---
+;
+; Turn off cursor
+;
+WKCURSOF LSR HCGKFLAG
+         PHA 
+         BCC >1
+         PLA 
+;
+; Toggle cursor
+;
+WKCURSOR PHA 
+         JSR SWDYCALC
+         INY 
+         STY >0+2
+         JSR PRINT
+^0       BYT RTOSINV,HWX,01,HWW,HWH-1,0
+^1       PLA 
+         RTS 
+;---
+;
+; Draw mini-cal
+;
+SWDOWEEK LDA #0
+         LDX MNDATE
+         LDY MNFDAY
+;
+^0       STA HWPIECE
+         STX DATE
+         STY HCDAYOWK
+         JSR SWDDODAY
+         LDX DATE
+         INX 
+         CPX MNLAST
+         BEQ >1
+         BLT >1
+         LDX #1
+^1       LDY HCDAYOWK
+         INY 
+         CPY #7
+         BLT >2
+         LDY #0
+^2       LDA HWPIECE
+         CLC 
+         ADC #1
+         CMP #8
+         BLT <0
+         RTS 
+;-----------
+;
+; Draw day of week, given
+;
+; given:HWPIECE : 0-7
+;          DATE : 1-31
+;       HCDAYOWK: 0-6
+;
+SWDDODAY LDY HCDAYOWK
+         JSR MAKEWTXT
+         LDA #0
+         STA WEEKTEXT+3
+         JSR MAKEDTXT
+;
+         LDA HWPIECE
+         CMP #7
+         ROR HWDONE
+;
+; Draw top line
+;
+         JSR SWDYCALC
+         STY >0+2
+         STY >1+3
+         INY 
+         STY GRAPHY
+         JSR LINES
+         BYT "H",HWX-1
+^0       BYT WITE,5,HWY,HWX2L
+         BYT WITE,5,HWY+8*HWH,44
+         BYT 1
+;
+;
+; Next draw text
+;
+         JSR PRINT
+^1       .DA #PRLOC,HWX2+21,#00
+         BRK 
+;
+         BIT HWDONE
+         BPL >2
+;---
+;
+; DONE box
+;
+         JSR PRINT
+         BYT PRCNTR
+         BYT PRSPC,5,CR
+         BYT 'DONE',CR,0
+         RTS 
+;---
+;
+; Day of week box
+;
+^2       JSR PRINT
+         BYT PRCNTR
+         BYT PRSPC,2,CR,PRSPC,8
+         .DA #PRSTR,WEEKTEXT,#CR
+         .DA #PRSTR,DATETEXT,#CR
+         BRK 
+;---
+;
+; Now do this really clever thing here
+; with the data in the buffer, sort
+; of a graph indicating how much data
+; has been typed in!!!!
+;
+         LDA HWPIECE
+         ASL 
+         ASL 
+         STA HWSTRING
+;
+         LDA #4
+SWDGLOOP PHA 
+;
+; Get length of string
+;
+         LDY HWSTRING
+         INC HWSTRING
+         JSR GETTEXT
+         TYA 
+         ASL 
+         CMP #HWX2LMAX
+         BLT *+4
+         LDA #HWX2LMAX
+         STA GRAPHY+1
+;
+; Now draw the line
+;
+         LDA #3
+^0       PHA 
+         INC GRAPHY
+         LDA TEXTBUFF
+         BEQ >1
+;
+         JSR LINES
+         BYT "H",HWX-1
+         BYT WITE,52,00,11
+GRAPHY   =   *-2
+         BYT 1
+;
+^1       PLA 
+         SEC 
+         SBC #1
+         BNE <0
+         INC GRAPHY
+         PLA 
+         SBC #1
+         BNE SWDGLOOP
+         RTS 
+;-----------
+;
+; Given HWPIECE, compute Y-offset
+; and self modify code.
+;
+SWDYCALC LDX HWPIECE
+         LDY >0+0,X
+         RTS 
+;
+^0       BYT HWY,HWY+HWH,HWY+2*HWH
+         BYT HWY+3*HWH,HWY+4*HWH
+         BYT HWY+5*HWH,HWY+6*HWH
+         BYT HWY+7*HWH
+;-----------
+;
+;
+;
+         ICL "S:UCAL5"

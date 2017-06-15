@@ -1,0 +1,90 @@
+;-----------
+;
+; Subroutine package:
+;
+SP       =   $E000
+;
+PRINT    =   SP
+CLSCREEN =   SP+3
+WITEBORD =   SP+6
+ESCBACK  =   SP+9
+PICDRAW  =   SP+12
+;
+DEVICENW =   SP+15
+DEVICEON =   SP+18
+DEVICEOF =   SP+21
+DEVICERD =   SP+24
+DEVICEST =   SP+27
+SCALING  =   SP+30
+;
+POLEBTN  =   SP+31
+POLEKEY  =   SP+34
+GETKEY   =   SP+37
+SELECT   =   SP+40
+;
+SETTYPE  =   SP+43
+GETFILE  =   SP+46
+SAVEFILE =   SP+49
+TYPELEN  =   SP+52
+FLSTART  =   SP+53
+FLLENGTH =   SP+55
+BLOAD    =   SP+57
+BSAVE    =   SP+60
+DOSCR    =   SP+63
+ERROR    =   SP+66
+;
+MUSIC    =   SP+69
+FLSHINIT =   SP+72
+JMPVECTS =   SP+75
+LINES    =   SP+78
+PARSE    =   SP+81
+SHOWAROW =   SP+84
+NUMBER   =   SP+87
+WAITPSD  =   SP+90
+WAITCD   =   SP+93
+ANYKEY   =   SP+96
+CHKPRINT =   SP+99
+BOOP     =   SP+102
+GETINIT  =   SP+105
+GETBYTE  =   SP+108
+INPUT    =   SP+111
+CLS1     =   SP+114
+PRINTGRP =   SP+117
+RTOS     =   SP+120
+SPACEBAR =   SP+123
+GETPDISK =   SP+126
+ESCMAIN  =   SP+129
+TESTPAPR =   SP+132
+GETANUMB =   SP+135
+ANYKEY2  =   SP+138
+;
+WITE     =   $FF
+GRAY     =   $AA
+GRAY2    =   $55
+BLAK     =   $00
+;
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+PRPIC    =   19
+PRRTAB   =   20
+PRRTAB2  =   21
+PRKERN   =   22
+RTOSINV  =   23
+GOOBER   =   24
+;

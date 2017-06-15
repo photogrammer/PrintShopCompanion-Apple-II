@@ -1,0 +1,622 @@
+         NLS 
+         TTL "S:FDRAW"
+ORG      =   $8A00
+;
+; Routine to draw string
+; of chars using pixel data table
+;
+;   New fast version
+; by Roland Gustafsson
+;
+SP       =   $E000
+;
+GETINIT  =   SP+105
+GETBYTE  =   SP+108
+;
+FONTADDR =   $8500
+WTABLE   =   FONTADDR
+HTABLE   =   FONTADDR+$3B
+PIXADLO  =   FONTADDR+$76
+PIXADHI  =   FONTADDR+$B1
+;
+KTABLE   =   $0300
+;
+TABHI    =   $9100
+TABLO    =   $91C0
+XBYTE2   =   $9398
+XBIT2    =   $94B0
+;-----------
+;
+; CSIZE, PIXAD & XCUR are to be used
+; by external LINEDRAW routines.
+;
+DAT      EPZ $50
+;
+PIXAD    EPZ DAT
+XCUR     EPZ DAT+2
+WCOUNT   EPZ DAT+4
+BUFFER1  EPZ DAT+5
+BUFFER2  EPZ DAT+7
+XBYTE    EPZ DAT+9
+DATABYTE EPZ DAT+10
+BCOUNT   EPZ DAT+11
+BLDBYTE  EPZ DAT+12
+;
+SLENGTH  EPZ DAT+13
+TEMP     EPZ DAT+15
+YCUR     EPZ DAT+16
+HCOUNT   EPZ DAT+17
+WIDTH    EPZ DAT+18
+STRPTR   EPZ DAT+19
+;-----------
+         ORG ORG
+         OBJ $0800
+;-----------
+START    JMP STRING0
+;-----------
+OPTION   HEX 02
+XOPTION  HEX 02
+XPOS     HEX 0000
+YPOS     HEX 0000
+PIECE    HEX 00
+CSPACE   HEX 01
+CSIZE    HEX 00
+STRADDR  HEX 0000
+KERN?    HEX 00
+;-----------
+; Kern mode $00:no kern
+;           $01:kern
+;           $80:use same kern table
+;-----------
+         JMP INSTALL
+         JMP SCREEN
+         JMP FINSTALL
+;-----------
+;
+STRING0  JSR OPTIONMD
+;
+         LDA STRADDR
+         STA GETSTRX+1
+         LDA STRADDR+1
+         STA GETSTRX+2
+;
+         BIT KERN?
+         BMI >0
+         JSR KERN
+;
+; If left justify, then skip
+; length-computation routine
+;
+^0       LDA XOPTION
+         BEQ STRING1
+;
+; Compute length of string
+;
+         LDX #0
+         STX SLENGTH
+         STX SLENGTH+1
+;
+^0       JSR GETSTRX
+         BEQ >2
+         SEC 
+         SBC #$20
+         TAY 
+         LDA WTABLE,Y
+FONTMOD0 =   *-1
+         SEC 
+         SBC KTABLE,X
+         CLC 
+         ADC CSPACE
+         ADC SLENGTH
+         STA SLENGTH
+         BCC >1
+         INC SLENGTH+1
+^1       INX 
+         BNE <0
+;
+^2       CPX #0
+         BEQ >4
+         LDA SLENGTH
+         SEC 
+         SBC CSPACE
+         STA SLENGTH
+         BCS *+4
+         DEC SLENGTH+1
+         LDX CSIZE
+         BEQ >4
+^3       ASL SLENGTH
+         ROL SLENGTH+1
+         DEX 
+         BNE <3
+;
+^4       LDX XOPTION
+         CPX #3
+         BEQ STRLENGT
+         DEX 
+         BEQ >5
+         LSR SLENGTH+1
+         ROR SLENGTH
+^5       LDA XPOS
+         SEC 
+         SBC SLENGTH
+         STA XPOS
+         LDA XPOS+1
+         SBC SLENGTH+1
+         STA XPOS+1
+;
+; Draw the string to buffer
+;
+STRING1  LDX #0
+^0       STX STRPTR
+         JSR GETSTRX
+         BEQ STRING8
+         JSR CHAR
+         LDX STRPTR
+         JSR GETSTRX
+         SEC 
+         SBC #$20
+         TAY 
+         LDA CSPACE
+         CLC 
+         ADC WTABLE,Y
+FONTMOD1 =   *-1
+         INX 
+         SEC 
+         SBC KTABLE,X
+         LDY #0
+         STY TEMP
+         LDY CSIZE
+         BEQ >2
+^1       ASL 
+         ROL TEMP
+         DEY 
+         BNE <1
+^2       CLC 
+         ADC XPOS
+         STA XPOS
+         LDA TEMP
+         ADC XPOS+1
+         STA XPOS+1
+         BCC <0
+;
+STRLENGT LDY SLENGTH
+         LDA SLENGTH+1
+STRING8  LDX #1
+         RTS 
+;-----------
+; Routine for LDA STRING,X
+;
+GETSTRX  LDA STRADDR,X
+         RTS 
+;-----------
+;
+; Draw character on screen
+; Upper left corner in XPOS,YPOS
+;
+CHAR     SEC 
+         SBC #$20
+         BEQ CDONE
+         TAX 
+         LDA HTABLE,X
+FONTMOD2 =   *-1
+         STA HCOUNT
+         LDA WTABLE,X
+FONTMOD3 =   *-1
+         STA WIDTH
+         LDA PIXADLO,X
+FONTMOD4 =   *-1
+         STA PIXAD
+         LDA PIXADHI,X
+FONTMOD5 =   *-1
+         STA PIXAD+1
+         LDA CSIZE
+         ASL 
+         BNE CHAR1
+         LDA #1
+CHAR1    STA TEMP
+         LDA YPOS
+         STA YCUR
+CHAR2    LDA XPOS
+         STA XCUR
+         LDA XPOS+1
+         STA XCUR+1
+         LDA WIDTH
+         STA WCOUNT
+         LDY YCUR
+LINEMOD  JSR LINEDRAW
+;
+         LDA YCUR
+         CLC 
+         ADC TEMP
+         STA YCUR
+         DEC HCOUNT
+         BNE CHAR2
+CDONE    RTS 
+;-----------
+; KERN SECTION
+;
+LADDR    EPZ DAT
+RADDR    EPZ DAT+2
+LBWIDTH  EPZ DAT+4
+RBWIDTH  EPZ DAT+5
+LCHAR    EPZ DAT+6
+RCHAR    EPZ DAT+7
+KCOUNT   EPZ DAT+9
+LREM     EPZ DAT+10
+MINWIDTH EPZ DAT+11
+;
+KERN     LDX #0
+         STX KTABLE
+KERN0    STX STRPTR
+         JSR GETSTRX
+         BEQ KDONE
+;
+         LDY KERN?
+         BEQ KERN2
+;
+         CMP #'A'
+         BCC KERN2
+         STA LCHAR
+         INX 
+         JSR GETSTRX
+         BEQ KDONE
+         CMP #'A'
+         BCC KERN2
+         STA RCHAR
+         JSR KSETUP
+         LDA KCOUNT
+         CMP #100
+         BCC KERN1
+KERN2    LDA #0
+KERN1    LDX STRPTR
+         INX 
+         STA KTABLE,X
+         JMP KERN0
+KDONE    LDA #0
+         STA KTABLE,X
+         RTS 
+;
+KSETUP   SEC 
+         ROR MINWIDTH
+         LDA LCHAR
+         JSR BWCOMP
+         STA LBWIDTH
+         STY LREM
+         LDA PIXADLO,X
+FONTMOD6 =   *-1
+         STA LADDR
+         LDA PIXADHI,X
+FONTMOD7 =   *-1
+         STA LADDR+1
+         LDA HTABLE,X
+FONTMOD8 =   *-1
+         STA HCOUNT
+         LDA RCHAR
+         JSR BWCOMP
+         STA RBWIDTH
+         LDA PIXADLO,X
+FONTMOD9 =   *-1
+         STA RADDR
+         LDA PIXADHI,X
+FONTMODA =   *-1
+         STA RADDR+1
+         LDA HTABLE,X
+FONTMODB =   *-1
+         CMP HCOUNT
+         BGE KERN4
+         STA HCOUNT
+KERN4    LDA MINWIDTH
+         CLC 
+         ADC CSPACE
+         STA KCOUNT
+KERN5    JSR LCOMP
+         STA TEMP
+         JSR RCOMP
+         CLC 
+         ADC TEMP
+         CMP KCOUNT
+         BGE KERN6
+         STA KCOUNT
+KERN6    LDA LADDR
+         CLC 
+         ADC LBWIDTH
+         STA LADDR
+         BCC KERN7
+         INC LADDR+1
+KERN7    LDA RADDR
+         CLC 
+         ADC RBWIDTH
+         STA RADDR
+         BCC KERN8
+         INC RADDR+1
+KERN8    DEC HCOUNT
+         BNE KERN5
+         RTS 
+;
+BWCOMP   SEC 
+         SBC #$20
+         TAX 
+         LDA WTABLE,X
+FONTMODC =   *-1
+         CMP MINWIDTH
+         BGE >0
+         STA MINWIDTH
+^0       SEC 
+         SBC #1
+         PHA 
+         AND #$07
+         EOR #$07
+         TAY 
+         PLA 
+         LSR 
+         LSR 
+         LSR 
+         CLC 
+         ADC #1
+         RTS 
+;
+LCOMP    LDX #0
+         LDY LBWIDTH
+         DEY 
+LCOMP2   LDA (LADDR),Y
+         BNE LCOMP3
+         TXA 
+         CLC 
+         ADC #8
+         TAX 
+         DEY 
+         BPL LCOMP2
+         LDA #100
+         RTS 
+LCOMP3   INX 
+         LSR 
+         BCC LCOMP3
+         DEX 
+         TXA 
+         SEC 
+         SBC LREM
+         RTS 
+;
+RCOMP    LDX #0
+         LDY #0
+RCOMP2   LDA (RADDR),Y
+         BNE RCOMP3
+         TXA 
+         CLC 
+         ADC #$08
+         TAX 
+         INY 
+         CPY RBWIDTH
+         BNE RCOMP2
+         LDA #100
+         RTS 
+RCOMP3   INX 
+         ASL 
+         BCC RCOMP3
+         DEX 
+         TXA 
+         RTS 
+;-----------
+;
+; Draw line of font data
+;
+; given Y=ycoor
+;
+LINEDRAW LDA TABLO,Y
+         STA BUFFER1
+         LDA TABHI,Y
+         STA BUFFER1+1
+         LDA TABLO+1,Y
+         STA BUFFER2
+         LDA TABHI+1,Y
+         STA BUFFER2+1
+;
+         LDX XCUR
+         LDA XCUR+1
+         BEQ >0
+         LDA XBIT2+256,X
+         LDY XBYTE2+256,X
+         BNE >1
+^0       LDA XBIT2,X
+         LDY XBYTE2,X
+^1       STY XBYTE
+;
+; Compensate for bits not to be
+; affected to the left.
+;
+         LDY #8
+^2       DEY 
+SD1MOD0  SEC 
+         ROR BLDBYTE
+         LSR 
+         BCC <2
+;
+         LDX #0
+         LDA CSIZE
+         BNE LINEDUBL
+;
+; Do a line of normal size
+;
+LINENORM LDA (PIXAD,X)
+         EOR #$FF
+SD2MOD0  =   *-1
+         STA DATABYTE
+         INC PIXAD
+         BNE *+4
+         INC PIXAD+1
+         LDX #8
+^0       ASL DATABYTE
+         ROR BLDBYTE
+         DEY 
+         BNE >1
+;
+         LDY XBYTE
+         INC XBYTE
+         LDA BLDBYTE
+         LSR 
+SD0MOD0  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+         LDY #7
+;
+^1       DEC WCOUNT
+         BEQ >2
+         DEX 
+         BNE <0
+         BEQ LINENORM
+;
+^2       CPY #7
+         BEQ >3
+         LDA BLDBYTE
+SD1MOD1  SEC 
+         ROR 
+         DEY 
+         BNE SD1MOD1
+         LSR 
+         LDY XBYTE
+SD0MOD1  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+^3       RTS 
+;
+; Do a line of double size
+;
+LINEDUBL LDA (PIXAD,X)
+         EOR #$FF
+SD2MOD1  =   *-1
+         STA DATABYTE
+         INC PIXAD
+         BNE *+4
+         INC PIXAD+1
+         LDX #8
+^0       STX BCOUNT
+         ASL DATABYTE
+         LDX #2
+^1       PHP 
+         ROR BLDBYTE
+         DEY 
+         BNE >2
+;
+         LDY XBYTE
+         INC XBYTE
+         LDA BLDBYTE
+         LSR 
+         STA BLDBYTE
+SD0MOD2  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+         LDA BLDBYTE
+SD0MOD3  AND (BUFFER2),Y
+         STA (BUFFER2),Y
+         LDY #7
+;
+^2       PLP 
+         DEX 
+         BNE <1
+;
+         DEC WCOUNT
+         BEQ >3
+         LDX BCOUNT
+         DEX 
+         BNE <0
+         BEQ LINEDUBL
+;
+^3       CPY #7
+         BEQ >4
+         LDA BLDBYTE
+SD1MOD2  SEC 
+         ROR 
+         DEY 
+         BNE SD1MOD2
+         LSR 
+         STA BLDBYTE
+         LDY XBYTE
+SD0MOD4  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+         LDA BLDBYTE
+SD0MOD5  AND (BUFFER2),Y
+         STA (BUFFER2),Y
+^4       RTS 
+;-----------
+; #2  #3  #4
+; ORA/AND/EOR how to put on screen
+; CLC/SEC/CLC what to fill excess with
+; $00/$FF/$00 eor after getting data
+;
+MODS0    HEX 113151
+MODS1    HEX 183818
+MODS2    HEX 00FF00
+;
+; Option mod routine.
+;
+OPTIONMD LDY OPTION
+         LDA MODS0-2,Y
+         PHA 
+         LDX MODS1-2,Y
+         LDA MODS2-2,Y
+         TAY 
+         PLA 
+OPTNMOD  JMP SCRNOPTN
+;
+; OPTION mods for internal screen
+; routines
+;
+SCRNOPTN STA SD0MOD0
+         STA SD0MOD1
+         STA SD0MOD2
+         STA SD0MOD3
+         STA SD0MOD4
+         STA SD0MOD5
+;
+         STX SD1MOD0
+         STX SD1MOD1
+         STX SD1MOD2
+;
+         STY SD2MOD0
+         STY SD2MOD1
+         RTS 
+;-----------
+;
+; Reset STROUT for screen draw
+;
+SCREEN   JSR INSTALL
+         ADR SCRNOPTN
+         ADR LINEDRAW
+         HBY FONTADDR
+         RTS 
+;-----------
+;
+; JSR INSTALL
+; ADR OPTIONMD ; option mods
+; ADR LINEDRAW ; line draw routine
+; HBY FONTADDR ; hi byte of font data
+;
+INSTALL  JSR GETINIT
+;
+         JSR GETBYTE
+         STA OPTNMOD+1
+         JSR GETBYTE
+         STA OPTNMOD+2
+;
+         JSR GETBYTE
+         STA LINEMOD+1
+         JSR GETBYTE
+         STA LINEMOD+2
+;
+         JSR GETBYTE
+FINSTALL STA FONTMOD0
+         STA FONTMOD1
+         STA FONTMOD2
+         STA FONTMOD3
+         STA FONTMOD4
+         STA FONTMOD5
+         STA FONTMOD6
+         STA FONTMOD7
+         STA FONTMOD8
+         STA FONTMOD9
+         STA FONTMODA
+         STA FONTMODB
+         STA FONTMODC
+         RTS 
+;
+;
+;
+         USR "O:FDRAW",ORG
+         END 

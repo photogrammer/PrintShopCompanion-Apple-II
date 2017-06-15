@@ -1,0 +1,592 @@
+         TTL "S:EDIT"
+; S:EDIT1
+         NOG 
+ORG      =   $5000
+OBJ      =   $800
+;
+; 02/27/85
+; 07/31/85 last mod
+; added support for FONTS
+;
+; Editor for use with
+; The Print Shop Companion Disk
+;
+; For FONTS and GRAPHICS
+;
+; by Roland Gustafsson
+;
+DAT      EPZ $D0
+;
+XCOOR    EPZ DAT
+YCOOR    EPZ DAT+1
+BUFLO    EPZ DAT+2
+BUFHI    EPZ DAT+3
+TBUFLO   EPZ DAT+4
+TBUFHI   EPZ DAT+5
+XMAX     EPZ DAT+6
+YMAX     EPZ DAT+7
+OLDXCOOR EPZ DAT+8
+OLDYCOOR EPZ DAT+9
+X1       EPZ DAT+10
+Y1       EPZ DAT+11
+X2       EPZ DAT+12
+Y2       EPZ DAT+13
+BUTTON   EPZ DAT+14
+CNSTRAIN EPZ DAT+15
+;
+PTMP0    EPZ DAT+16
+PTMP1    EPZ DAT+17
+;
+; Temporary z-page for use within
+; subroutines
+;
+PLOTX    EPZ $4D
+FLASHLO  EPZ $4E
+FLASHHI  EPZ $4F
+;
+TMP0     EPZ $F0
+TMP1     EPZ $F1
+TMP2     EPZ $F2
+TMP3     EPZ $F3
+TMP4     EPZ $F4
+TMP5     EPZ $F5
+HIRES1   EPZ $F6
+HIRES2   EPZ $F8
+HIRES3   EPZ $FA
+;
+TMPLO    EPZ TMP0
+TMPHI    EPZ TMP1
+;
+; Absolute references:
+;
+EDITBUFF =   $7800
+UNDOBUFF =   EDITBUFF+$240
+TEMPBUFF =   UNDOBUFF+$240
+;
+XSTACK   =   $8300
+YSTACK   =   $8400
+;
+; Subroutine package entry points
+;
+SP       =   $E000
+;
+PRINT    =   SP
+CLSCREEN =   SP+3
+WITEBORD =   SP+6
+ESCBACK  =   SP+9
+PICDRAW  =   SP+12
+;
+DEVICENW =   SP+15
+DEVICEON =   SP+18
+DEVICEOF =   SP+21
+DEVICERD =   SP+24
+DEVICEST =   SP+27
+SCALING  =   SP+30
+;
+POLEBTN  =   SP+31
+POLEKEY  =   SP+34
+GETKEY   =   SP+37
+SELECT   =   SP+40
+;
+SETTYPE  =   SP+43
+GETFILE  =   SP+46
+SAVEFILE =   SP+49
+TYPELEN  =   SP+52
+FLSTART  =   SP+53
+FLLENGTH =   SP+55
+BLOAD    =   SP+57
+BSAVE    =   SP+60
+DOSCR    =   SP+63
+ERROR    =   SP+66
+;
+MUSIC    =   SP+69
+FLSHINIT =   SP+72
+JMPVECTS =   SP+75
+LINES    =   SP+78
+PARSE    =   SP+81
+SHOWAROW =   SP+84
+NUMBER   =   SP+87
+BOOP     =   SP+102
+;
+WITE     =   $FF
+GRAY     =   $AA
+BLAK     =   $00
+;
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+;
+ESC      =   $1B
+;
+; SYSLIB tables
+;
+SYSFONT  =   $8500
+FLIPPER  =   $9080
+YBASELO  =   $91C0
+YBASEHI  =   $9100
+XBYTEOFF =   $9280
+;
+FONTDATA =   $8500
+;
+FONTWITH =   FONTDATA
+FONTHITE =   FONTDATA+$3B
+FONTADRL =   FONTDATA+$76
+FONTADRH =   FONTDATA+$B1
+;
+WAIT     =   $FCA8
+;
+; Variables:
+;
+GRAFXOFF =   0
+GRAFYOFF =   23
+;
+FONTXOFF =   1
+FONTYOFF =   38
+;
+REFMOVER =   $4003
+;
+FONTW    =   48
+FONTH    =   38
+;
+;-----------
+         ORG ORG
+         OBJ OBJ
+;-----------
+         JMP EDITINIT
+         JMP SHOWBOXS
+         JMP SHOWGR
+         JMP CHKBUFF
+         JMP CLRBUFF
+         JMP ORBUFF
+         JMP BUFFSAVE
+         JMP BASECALC
+         JMP SETPLOTX
+         JMP SETBIT
+         JMP CLRBIT
+         JMP PRINTGR
+         JMP DRAWTEXT
+         JMP DOSHAPE
+         JMP EDITLOOP
+         JMP FONTMODS
+FONTRX1  HEX 80
+FONTRY1  HEX 80
+FONTRY2  HEX 80
+REFLINES HEX 80
+         JMP RESETBT1
+;-----------
+;
+; Initialize XMAX & YMAX
+; Center the cursor and update screen
+;
+EDITINIT STX XMAX
+         STY YMAX
+GRCENTER LDA XMAX
+         LSR 
+         STA XCOOR
+         DEC XCOOR
+         LDA YMAX
+         LSR 
+         STA YCOOR
+         DEC YCOOR
+         RTS 
+;-----------
+;
+; Show fill pattern and mirror status
+;
+SHOWBOXS LDY #FILLPLOC-1
+         JSR SHOWBOX
+         LDY #MIRRPLOC-1
+         JSR SHOWBOX
+         JSR SHOWFILL
+         JSR SHOWMIRR
+         JMP SHOWLOCK
+;-----------
+;
+; Check EDITBUFF for all zeroes
+;
+CHKBUFF  LDY #0
+         TYA 
+^0       ORA EDITBUFF,Y
+         ORA EDITBUFF+$100,Y
+         INY 
+         BNE <0
+^1       ORA EDITBUFF+$200,Y
+         INY 
+         CPY #60
+         BLT <1
+         TAY 
+         RTS 
+;-----------
+;
+; Clear EDITBUFF
+;
+CLRBUFF  LDY #0
+;
+; Clear buffer
+;
+BUFFCLR  LDA BUFFERS,Y
+         STA TMPLO
+         LDA BUFFERS+1,Y
+         STA TMPHI
+         LDY #0
+         TYA 
+         LDX #2
+^0       STA (TMPLO),Y
+         INY 
+         BNE <0
+         INC TMPHI
+         DEX 
+         BNE <0
+^1       STA (TMPLO),Y
+         INY 
+         CPY #60
+         BLT <1
+         RTS 
+;
+BUFFERS  ADR EDITBUFF
+         ADR UNDOBUFF
+         ADR TEMPBUFF
+;-----------
+;
+; OR UNDOBUFF into EDITBUFF
+;
+ORBUFF   LDY #0
+^0       LDA UNDOBUFF,Y
+         ORA EDITBUFF,Y
+         STA EDITBUFF,Y
+         LDA UNDOBUFF+$100,Y
+         ORA EDITBUFF+$100,Y
+         STA EDITBUFF+$100,Y
+         INY 
+         BNE <0
+^1       LDA UNDOBUFF+$200,Y
+         ORA EDITBUFF+$200,Y
+         STA EDITBUFF+$200,Y
+         INY 
+         CPY #60
+         BLT <1
+         RTS 
+;-----------
+;
+; Move EDIT buffer to UNDO buffer
+;
+BUFFSAVE LDY #0
+         LDX #2
+;
+; Move buffer Y->X
+;
+BUFFMOVE LDA BUFFERS,Y
+         STA TMP0
+         LDA BUFFERS+1,Y
+         STA TMP1
+         LDA BUFFERS,X
+         STA TMP2
+         LDA BUFFERS+1,X
+         STA TMP3
+         LDX #2
+         LDY #0
+^0       LDA (TMP0),Y
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+;
+^1       LDA (TMP0),Y
+         STA (TMP2),Y
+         INY 
+         CPY #60
+         BLT <1
+         RTS 
+;-----------
+;
+; Calculate pointer into buffer
+; 3 entry points:
+;
+; BASECLCT=point into TEMPBUFF
+; BASECLCU=point into UNDOBUFF
+;
+; BASECALC=point only EDITBUFF
+;
+BASECLCU LDA #UNDOBUFF-EDITBUFF
+         LDX /UNDOBUFF-EDITBUFF
+         BNE >0
+;
+BASECLCT LDA #TEMPBUFF-EDITBUFF
+         LDX /TEMPBUFF-EDITBUFF
+;
+^0       LDY YCOOR
+         CLC 
+         ADC EDYBASEL,Y
+         STA TBUFLO
+         TXA 
+         ADC EDYBASEH,Y
+         STA TBUFHI
+;
+BASECALC LDY YCOOR
+         LDA EDYBASEL,Y
+         STA BUFLO
+         LDA EDYBASEH,Y
+         STA BUFHI
+;
+; Get mask (in A) and offset (in Y)
+;
+GETXMASK LDA XCOOR
+         LSR 
+         LSR 
+         LSR 
+         TAY 
+         LDA XCOOR
+         AND #7
+         TAX 
+         LDA XCOORMSK,X
+         RTS 
+;
+; X-coor mask
+;
+XCOORMSK BYT %10000000
+         BYT %01000000
+         BYT %00100000
+         BYT %00010000
+         BYT %00001000
+         BYT %00000100
+         BYT %00000010
+         BYT %00000001
+;-----------
+;
+; Given XCOOR,YCOOR set
+; PLOT routine to opposite
+; of whatever is in this
+; coordinate.
+;
+SETPLOTX JSR BASECALC
+         LDX #PLSET
+         AND (BUFLO),Y
+         BEQ *+4
+         LDX #PLCLR
+SETPLTX2 STX PLOTX
+;
+; Set PLOT routine, given X
+;
+PLSET    =   0
+PLCLR    =   2
+PLEOR    =   4
+PLUNDO   =   6
+PLTEMP   =   8
+;
+SETPLOT  LDY SETPLOT2,X
+         LDA SETPLOT2+1,X
+         STY PLOT+1
+         STA PLOT+2
+         RTS 
+;
+SETPLOT2 ADR SETBIT
+         ADR CLRBIT
+         ADR EORBIT
+         ADR UNDOBIT
+         ADR TEMPBIT
+;
+PLOT     JMP SETBIT
+;
+; If FONT editor, then check
+; for reference lines.
+;
+FONTREF  BIT REFLINES
+         BPL >0
+         LDA XCOOR
+         CMP FONTRX1
+         BNE *+5
+         JSR DOFONTX
+;
+         LDA YCOOR
+         CMP FONTRY1
+         BNE *+5
+         JSR DOFONTY
+;
+         LDA YCOOR
+         CMP FONTRY2
+         BEQ DOFONTY
+^0       RTS 
+;
+DOFONTX  ASL 
+         ADC #1
+         STA >0+1
+         JSR LINES
+         BYT "V",FONTXOFF
+^0       BYT GRAY,00,FONTYOFF,3*FONTH
+         BYT 1
+         RTS 
+;
+DOFONTY  STA TMP0
+         ASL 
+         ADC TMP0
+         ADC #FONTYOFF+2
+         STA >0+2
+         JSR LINES
+         BYT "H",FONTXOFF
+^0       BYT GRAY,0,00,2*FONTW
+         BYT 1
+         RTS 
+;-----------
+;
+; Set bit in section and screen
+;
+SETBIT   JSR BASECALC
+         ORA (BUFLO),Y
+         STA (BUFLO),Y
+SETBIT2  JMP PLOTON
+;
+; Clear bit in section and screen
+;
+CLRBIT   JSR BASECALC
+         EOR #$FF
+         AND (BUFLO),Y
+         STA (BUFLO),Y
+CLRBIT2  JMP PLOTOFF
+;
+; Invert bit at current location
+;
+EORBIT   JSR BASECALC
+         STA TMP0
+         EOR (BUFLO),Y
+         STA (BUFLO),Y
+         LDA TMP0
+         BNE RESETBT2
+;
+; Restore current location, use
+; after BRFLASH
+;
+RESETBIT JSR RESETBT1
+         JMP FONTREF
+;
+RESETBT1 JSR BASECALC
+RESETBT2 AND (BUFLO),Y
+         BEQ CLRBIT2
+         BNE SETBIT2
+;-----------
+;
+; Move bit TEMPBUFF-->EDITBUFF
+;
+TEMPBIT  JSR BASECLCT
+         BNE >0
+;
+; Move bit UNDOBUFF-->EDITBUFF
+;
+UNDOBIT  JSR BASECLCU
+^0       STA TMP0
+         AND (TBUFLO),Y
+         STA TMP1
+         LDA TMP0
+         EOR #$FF
+         AND (BUFLO),Y
+         ORA TMP1
+         STA (BUFLO),Y
+         LDA TMP1
+         JMP RESETBT2
+;-----------
+;
+; Do PLOT routine with mirrors
+;
+MRPLOT   LDX XCOOR
+         LDY YCOOR
+         STX MRXSAVE
+         STY MRYSAVE
+         JSR PLOT
+         LDA CURRMIRR
+         BEQ MRDOBITR
+         CMP #2
+         BEQ >2
+         CMP #3
+         BEQ >3
+;
+; Mirror both axis
+;
+^1       JSR >3
+         JSR >2
+         LDA YMAX
+         SEC 
+         SBC YCOOR
+         STA YCOOR
+         LDA XMAX
+         SEC 
+         SBC XCOOR
+         STA XCOOR
+         JMP MRDOBIT
+;
+; Mirror vertical
+;
+^2       LDA YMAX
+         SEC 
+         SBC YCOOR
+         STA YCOOR
+         JMP MRDOBIT
+;
+; Mirror horizontal
+;
+^3       LDA XMAX
+         SEC 
+         SBC XCOOR
+         STA XCOOR
+;
+; Do one bit and restore X,Y
+;
+MRDOBIT  LDA XCOOR
+         CMP XMAX
+         BGE >0
+         LDA YCOOR
+         CMP YMAX
+         BGE >0
+         JSR PLOT
+^0       LDX #00
+MRXSAVE  =   *-1
+         LDY #00
+MRYSAVE  =   *-1
+         STX XCOOR
+         STY YCOOR
+MRDOBITR RTS 
+;-----------
+;
+; Ybase for EDITBUFF
+;
+EDYBASEL HEX 000B16212C37424D58636E79848F9AA5
+         HEX B0BBC6D1DCE7F2FD08131E29343F4A55
+         HEX 606B76818C97A2ADB8C3CED9E4EFFA05
+         HEX 101B2631
+;
+EDYBASEH HEX 78787878787878787878787878787878
+         HEX 78787878787878787979797979797979
+         HEX 7979797979797979797979797979797A
+         HEX 7A7A7A7A
+;-----------
+;
+; Font modifications
+;
+FONTMODS LDX #FONTXOFF
+         LDY #FONTYOFF
+         STX XOFFSET
+         STY YOFFSET
+         LDA #$20
+         STA PLOT
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:EDIT2"

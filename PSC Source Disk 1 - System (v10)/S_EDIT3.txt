@@ -1,0 +1,332 @@
+;
+; S:EDIT3
+;
+; Low-level routines that draw to
+; the screen.
+;
+;-----------
+;
+; Plot ON,OFF, FLASH
+;
+PLOTON   JSR PLOTINIT
+         EOR #$7F
+         STA PTMP0
+         AND (HIRES1),Y
+         STA (HIRES1),Y
+         LDA PTMP0
+         AND (HIRES2),Y
+         STA (HIRES2),Y
+         LDA PTMP0
+         AND (HIRES3),Y
+         STA (HIRES3),Y
+         TXA 
+         BNE >0
+         RTS 
+;
+^0       INY 
+         EOR #$7F
+         TAX 
+         AND (HIRES1),Y
+         STA (HIRES1),Y
+         TXA 
+         AND (HIRES2),Y
+         STA (HIRES2),Y
+         TXA 
+         AND (HIRES3),Y
+         STA (HIRES3),Y
+         RTS 
+;
+PLOTOFF  JSR PLOTINIT
+         ORA (HIRES1),Y
+         STA (HIRES1),Y
+         LDA PTMP0
+         ORA (HIRES2),Y
+         STA (HIRES2),Y
+         LDA PTMP0
+         ORA (HIRES3),Y
+         STA (HIRES3),Y
+         TXA 
+         BNE >0
+         RTS 
+;
+^0       INY 
+         ORA (HIRES1),Y
+         STA (HIRES1),Y
+         TXA 
+         ORA (HIRES2),Y
+         STA (HIRES2),Y
+         TXA 
+         ORA (HIRES3),Y
+         STA (HIRES3),Y
+         RTS 
+;
+GRFLASH  JSR PLOTINIT
+         EOR (HIRES2),Y
+         STA (HIRES2),Y
+         INY 
+         TXA 
+         EOR (HIRES2),Y
+         STA (HIRES2),Y
+         RTS 
+;-----------
+;
+; Redraw entire area, quickly
+;
+; To optimize this routine for speed,
+; make sure that the main loop
+; doesn't cross a page boundard! It
+; will slow it down.
+;
+BYTE     EPZ TMP0
+WIDTH    EPZ TMP1
+BITS8    EPZ TMP2
+MASK     EPZ TMP3
+;
+SHOWGR   JSR SAVECOOR
+         LDY #EDITBUFF
+         LDA /EDITBUFF
+         STY BUFLO
+         STA BUFHI
+         LDY #0
+SHOWGR1  STY YCOOR
+;
+         JSR PLOTINIT
+;
+         LDY #1
+         STY BITS8
+;
+         LDY BUFLO
+         LDA BUFHI
+         STY SHOWGRMD+1
+         STA SHOWGRMD+2
+         LDX XMAX
+         STX WIDTH
+         LDX #7
+         LDY XOFFSET
+;
+; X-loop
+;
+SHOWGR2  DEC BITS8
+         BNE >1
+         STA >0+1
+         LDA #8
+         STA BITS8
+SHOWGRMD LDA EDITBUFF
+         EOR #$FF
+         STA BYTE
+         INC SHOWGRMD+1
+         BNE >0
+         INC SHOWGRMD+2
+^0       LDA #00
+;
+^1       ASL BYTE
+         PHP 
+         ROR 
+         DEX 
+         BNE >2
+         LSR 
+         STA (HIRES1),Y
+         STA (HIRES2),Y
+         STA (HIRES3),Y
+         LDX #7
+         INY 
+^2       PLP 
+         ROR 
+         DEX 
+         BNE >3
+         LSR 
+         STA (HIRES1),Y
+         STA (HIRES2),Y
+         STA (HIRES3),Y
+         LDX #7
+         INY 
+^3       DEC WIDTH
+         BNE SHOWGR2
+;
+         STA BYTE
+         LDA GRDRWMSK-1,X
+         STA MASK
+^4       LSR BYTE
+         DEX 
+         BPL <4
+         LDA (HIRES1),Y
+         AND MASK
+         ORA BYTE
+         STA (HIRES1),Y
+         STA (HIRES2),Y
+         STA (HIRES3),Y
+;
+         LDA BUFLO
+         CLC 
+         ADC #11
+         STA BUFLO
+         BCC >5
+         INC BUFHI
+;
+^5       LDY YCOOR
+         INY 
+         CPY YMAX
+         BGE >6
+         JMP SHOWGR1
+;
+^6       JSR DOFONTRF
+         JMP RESTCOOR
+;
+GRDRWMSK HEX 406070787C7E7F
+;-----------
+;
+; Display the Font reference lines
+;
+DOFONTRF LDA PLOT
+         CMP #$4C
+         BEQ >0
+         BIT REFLINES
+         BPL >0
+         LDA FONTRX1
+         BMI *+5
+         JSR DOFONTX
+         LDA FONTRY1
+         BMI *+5
+         JSR DOFONTY
+         LDA FONTRY2
+         BMI *+5
+         JSR DOFONTY
+^0       RTS 
+;-----------
+;
+; Init plot routine
+;
+; Multiply Y by 3
+;
+PLOTINIT LDA YCOOR
+         ASL 
+         ADC YCOOR
+         ADC #GRAFYOFF
+YOFFSET  =   *-1
+         TAX 
+         LDA YBASELO,X
+         STA HIRES1
+         LDA YBASEHI,X
+         STA HIRES1+1
+         LDA YBASELO+1,X
+         STA HIRES2
+         LDA YBASEHI+1,X
+         STA HIRES2+1
+         LDA YBASELO+2,X
+         STA HIRES3
+         LDA YBASEHI+2,X
+         STA HIRES3+1
+;
+; Get bit pattern
+;
+         LDX XCOOR
+         LDY XLOOK,X
+         LDA XDATA,Y
+         STA PTMP0
+         LDA XDATA+1,Y
+         STA PTMP1
+;
+; Get X byte offset
+;
+         LDA XBYTEOFF,X
+         ADC #GRAFXOFF
+XOFFSET  =   *-1
+         TAY 
+;
+         LDA PTMP0
+         LDX PTMP1
+         RTS 
+;
+; X lookup table
+;
+XLOOK    HEX 00020406080A0C00
+         HEX 020406080A0C0002
+         HEX 0406080A0C000204
+         HEX 06080A0C00020406
+         HEX 080A0C0002040608
+         HEX 0A0C00020406080A
+         HEX 0C00020406080A0C
+         HEX 00020406080A0C00
+         HEX 020406080A0C0002
+         HEX 0406080A0C000204
+         HEX 06080A0C00020406
+;
+XDATA    HEX 0300
+         HEX 0C00
+         HEX 3000
+         HEX 4001
+         HEX 0600
+         HEX 1800
+         HEX 6000
+;
+; Display current pattern on screen
+;
+SHOWPATT ASL 
+         ASL 
+         ASL 
+         STY TMP0
+         ADC TMP0
+         STA PATTADR+1
+         BCC *+3
+         INX 
+         STX PATTADR+2
+;
+         LDA #0
+         STA TMP0
+         LDA #8
+         STA TMP1
+         LDX #00
+SHOWYLOC =   *-1
+;
+^0       LDA YBASELO,X
+         STA HIRES1
+         LDA YBASEHI,X
+         STA HIRES1+1
+;
+         LDY TMP0
+         INC TMP0
+PATTADR  LDA FILLPATT,Y
+         EOR #$FF
+         PHA 
+         ASL 
+         PHP 
+         LDY #SHOWXLOC
+         LDA (HIRES1),Y
+         ASL 
+         ASL 
+         PLP 
+         ROR 
+         LSR 
+         STA (HIRES1),Y
+         PLA 
+         AND #$7F
+         TAY 
+         LDA FLIPPER,Y
+         LDY #SHOWXLOC+1
+         STA (HIRES1),Y
+         INX 
+         DEC TMP1
+         BNE <0
+         RTS 
+;
+; Box routine for border around
+; the current pattern and mirror
+;
+SHOWBOX  STY >0+1
+         JSR PICDRAW
+^0       BYT SHOWXLOC,0,3,10
+         HEX 707F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 307F03
+         HEX 707F03
+         RTS 
+;
+;
+;
+         ICL "S:EDIT4"

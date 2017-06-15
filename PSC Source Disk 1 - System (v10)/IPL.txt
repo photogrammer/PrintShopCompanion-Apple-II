@@ -1,0 +1,108 @@
+4000-   20 59 40    JSR   $4059
+4003-   20 CC 40    JSR   $40CC
+4006-   20 0F 40    JSR   $400F
+4009-   20 0F E0    JSR   $E00F
+400C-   4C 00 08    JMP   $0800
+400F-   2C 83 C0    BIT   $C083    rw:LCBANK2
+4012-   2C 83 C0    BIT   $C083    rw:LCBANK2
+4015-   A0 E6       LDY   #$E6
+4017-   A9 40       LDA   #$40
+4019-   84 3A       STY   $3A
+401B-   85 3B       STA   $3B
+401D-   A0 00       LDY   #$00
+401F-   20 50 40    JSR   $4050
+4022-   85 3C       STA   $3C
+4024-   20 50 40    JSR   $4050
+4027-   85 3D       STA   $3D
+4029-   05 3C       ORA   $3C
+402B-   F0 2B       BEQ   $4058
+402D-   20 50 40    JSR   $4050
+4030-   AA          TAX
+4031-   20 50 40    JSR   $4050
+4034-   85 3F       STA   $3F
+4036-   20 50 40    JSR   $4050
+4039-   91 3C       STA   ($3C),Y
+403B-   E6 3C       INC   $3C
+403D-   D0 02       BNE   $4041
+403F-   E6 3D       INC   $3D
+4041-   8A          TXA
+4042-   D0 02       BNE   $4046
+4044-   C6 3F       DEC   $3F
+4046-   CA          DEX
+4047-   D0 ED       BNE   $4036
+4049-   8A          TXA
+404A-   05 3F       ORA   $3F
+404C-   D0 E8       BNE   $4036
+404E-   F0 CF       BEQ   $401F
+4050-   B1 3A       LDA   ($3A),Y
+4052-   E6 3A       INC   $3A
+4054-   D0 02       BNE   $4058
+4056-   E6 3B       INC   $3B
+4058-   60          RTS
+4059-   2C 83 C0    BIT   $C083    rw:LCBANK2
+405C-   2C 83 C0    BIT   $C083    rw:LCBANK2
+405F-   A2 00       LDX   #$00
+4061-   8E 00 E0    STX   $E000
+4064-   EC 00 E0    CPX   $E000
+4067-   D0 04       BNE   $406D
+4069-   E8          INX
+406A-   D0 F5       BNE   $4061
+406C-   60          RTS
+406D-   2C 81 C0    BIT   $C081    rw:ROMIN
+4070-   20 2F FB    JSR   $FB2F    F8ROM:INIT
+4073-   20 58 FC    JSR   $FC58    F8ROM:HOME
+4076-   20 84 FE    JSR   $FE84    F8ROM:SETNORM
+4079-   20 93 FE    JSR   $FE93    F8ROM:SETVID
+407C-   20 89 FE    JSR   $FE89    F8ROM:SETKBD
+407F-   A9 08       LDA   #$08
+4081-   20 5B FB    JSR   $FB5B    F8ROM:TABV
+4084-   A0 00       LDY   #$00
+4086-   B9 99 40    LDA   $4099,Y
+4089-   F0 FE       BEQ   $4089
+408B-   20 ED FD    JSR   $FDED    F8ROM:COUT
+408E-   C9 8D       CMP   #$8D
+4090-   D0 04       BNE   $4096
+4092-   A9 07       LDA   #$07
+4094-   85 24       STA   $24
+4096-   C8          INY
+4097-   D0 ED       BNE   $4086
+4099-   8D D4 C8    STA   $C8D4
+409C-   C5 A0       CMP   $A0
+409E-   D0 D2       BNE   $4072
+40A0-   C9 CE       CMP   #$CE
+40A2-   D4          ???
+40A3-   A0 D3       LDY   #$D3
+40A5-   C8          INY
+40A6-   CF          ???
+40A7-   D0 A0       BNE   $4049
+40A9-   C3          ???
+40AA-   CF          ???
+40AB-   CD D0 C1    CMP   $C1D0
+40AE-   CE C9 CF    DEC   $CFC9
+40B1-   CE 8D 8D    DEC   $8D8D
+40B4-   A0 D2       LDY   #$D2
+40B6-   C5 D1       CMP   $D1
+40B8-   D5 C9       CMP   $C9,X
+40BA-   D2 C5       CMP   ($C5)
+40BC-   D3          ???
+40BD-   A0 B6       LDY   #$B6
+40BF-   B4 CB       LDY   $CB,X
+40C1-   A0 CF       LDY   #$CF
+40C3-   C6 A0       DEC   $A0
+40C5-   CD C5 CD    CMP   $CDC5
+40C8-   CF          ???
+40C9-   D2 D9       CMP   ($D9)
+40CB-   00          BRK
+40CC-   A0 00       LDY   #$00
+40CE-   A9 F8       LDA   #$F8
+40D0-   84 3A       STY   $3A
+40D2-   85 3B       STA   $3B
+40D4-   2C 81 C0    BIT   $C081    rw:ROMIN
+40D7-   2C 81 C0    BIT   $C081    rw:ROMIN
+40DA-   B1 3A       LDA   ($3A),Y
+40DC-   91 3A       STA   ($3A),Y
+40DE-   C8          INY
+40DF-   D0 F9       BNE   $40DA
+40E1-   E6 3B       INC   $3B
+40E3-   D0 F5       BNE   $40DA
+40E5-   60          RTS

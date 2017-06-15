@@ -1,0 +1,907 @@
+         NLS 
+         TTL "S:SETUP"
+         NOG 
+ORG      =   $5800
+;
+; 06/11/85
+; 10/03/85 last mod
+;
+; Print Shop Companion
+;
+; SETUP option, updates original
+; Print Shop disk to recognize
+; Companion disk and fixes a few bugs!
+; Also grabs PRCOMMS, CONFIG from
+; original Print Shop disk.
+;
+; by Roland Gustafsson
+;    Copyright 1985
+;
+TMP0     EPZ $F0
+TMP1     EPZ $F1
+TMP2     EPZ $F2
+TMP3     EPZ $F3
+;
+MAINMENU =   $800
+;
+PRCOMS   =   $1800
+PRCOMLEN =   8
+;-----------
+;
+; Subroutine package:
+;
+SP       =   $E000
+;
+PRINT    =   SP
+CLSCREEN =   SP+3
+WITEBORD =   SP+6
+ESCBACK  =   SP+9
+PICDRAW  =   SP+12
+;
+DEVICENW =   SP+15
+DEVICEON =   SP+18
+DEVICEOF =   SP+21
+DEVICERD =   SP+24
+DEVICEST =   SP+27
+SCALING  =   SP+30
+;
+POLEBTN  =   SP+31
+POLEKEY  =   SP+34
+GETKEY   =   SP+37
+SELECT   =   SP+40
+;
+SETTYPE  =   SP+43
+GETFILE  =   SP+46
+SAVEFILE =   SP+49
+TYPELEN  =   SP+52
+FLSTART  =   SP+53
+FLLENGTH =   SP+55
+BLOAD    =   SP+57
+BSAVE    =   SP+60
+DOSCR    =   SP+63
+ERROR    =   SP+66
+;
+MUSIC    =   SP+69
+FLSHINIT =   SP+72
+JMPVECTS =   SP+75
+LINES    =   SP+78
+PARSE    =   SP+81
+SHOWAROW =   SP+84
+NUMBER   =   SP+87
+WAITPSD  =   SP+90
+WAITCD   =   SP+93
+ANYKEY   =   SP+96
+CHKPRINT =   SP+99
+BOOP     =   SP+102
+GETINIT  =   SP+105
+GETBYTE  =   SP+108
+INPUT    =   SP+111
+CLS1     =   SP+114
+PRINTGRP =   SP+117
+RTOS     =   SP+120
+SPACEBAR =   SP+123
+GETPDISK =   SP+126
+ESCMAIN  =   SP+129
+;
+WITE     =   $FF
+GRAY     =   $AA
+BLAK     =   $00
+;
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+GOOBER   =   24
+;
+; Monitor routines:
+;
+RTS      =   $FF58
+;
+; SYSLIB
+;
+MENULAST =   $95F5
+MENUOTHR =   $95F6
+FIRSTIME =   $95F7
+;-----------
+ESC      =   $1B
+;
+MENUTOP  =   20
+MENU0Y   =   70
+MENU1Y   =   64
+MENU2Y   =   72
+;-----------
+         ORG ORG
+         OBJ $800
+;
+START    LDX #$FF
+         TXS 
+         JSR WITEBORD
+         JSR ESCBACK
+         JSR PRINT
+         BYT PRBIG,PRCNTR,PRINVR
+         .DA #PRLOC,140,#1
+         BYT 'SETUP',CR,0
+;
+         LDA FIRSTIME
+         BNE >0
+         JMP MENUFRST
+;
+^0       JSR PRINT
+         BYT PRCNTR
+         BYT PRVTAB,MENU0Y
+         BYT 'MAKE A CHOICE:',CR
+         BYT CR
+         .DA #PRSTR,MENUTXT1,#CR
+         .DA #PRSTR,MENUTXT2,#CR
+         BYT 'GO TO MAIN MENU',CR
+         BRK 
+START2   JSR PRINT
+         BYT PRVTAB,MENUTOP,0
+;
+^0       LDY #00
+SEL1     =   *-1
+         JSR SELECT
+         BYT 3,34,MENU0Y+15,3
+         ADR RTS
+         BCS >2
+         STY SEL1
+         JSR CLS1
+         JSR >1
+         JMP START
+;
+^1       LDA #6
+         STA MENULAST
+         LDY SEL1
+         JSR JMPVECTS
+         ADR MENU1
+         ADR MENU2
+         ADR MAINMENU
+;
+^2       JSR ESCMAIN
+         BCS START2
+;
+CLS3     JSR PRINT
+         BYT RTOSBLAK,1,31,38,151,0
+         RTS 
+;-----------
+TXTTOU   BYT 'THIS OPTION UPDATES',0
+TXTFYWU  BYT 'FIRST YOU WILL UPDATE',0
+TXTNYWU  BYT 'NEXT YOU WILL UPDATE',0
+TXTPS    BYT 'PRINT SHOP',0
+TXTINFO  BYT 'INFORMATION',0
+;-----------
+;
+; Borrow PRCOMMS and CONFIG from
+; original Print Shop disk and save
+; them on the Companion disk.
+;
+MENUTXT1 BYT 'UPDATE '
+CDSTXT   BYT 'COMPANION DISK SETUP',0
+;
+MENU1A   LDX #TXTNYWU
+         LDA /TXTNYWU
+         STX >0+1
+         STA >0+2
+;
+MENU1    JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,MENUTXT1,#CR
+         BYT PRVTAB,MENU1Y
+^0       .DA #PRSTR,TXTTOU,' THE',#CR
+         BYT 'COMPANION DISK WITH THE SETUP',CR
+         .DA #PRSTR,TXTINFO
+         BYT ' FROM THE ORIGINAL',CR
+         .DA #PRSTR,TXTPS,'.  THIS INCLUDES',#CR
+         BYT 'PRINTER, INTERFACE AND DISK',CR
+         BYT 'DRIVE '
+         .DA #PRSTR,TXTINFO,'.',#CR
+         BRK 
+         JSR ANYKEY
+         CMP #ESC
+         BEQ MENU1DON
+;
+         JSR CLS3
+         LDA #$80
+MENU1FLG =   *-1
+         ASL 
+^0       JSR WAITPSD2
+         BCS MENU1DON
+         JSR BLOAD
+         BYT 'PRCOMS,D1',0
+         JSR ERROR?
+         BCS <0
+;
+         JSR FXPRCOMS
+;
+         JSR BLOAD
+         BYT 'CONFIG',0
+         JSR ERROR?
+         BCS <0
+;
+; Has the SETUP program been run on
+; the original Print Shop?
+;
+         LDA FIRSTIME
+         BEQ >2
+;
+         LDA #0
+         STA MENULAST
+;---
+         SEC 
+^1       JSR WAITCD2
+         BCS <0
+         JSR BSAVE
+         BYT 'PRCOMS,A$1800,L$800',0
+         JSR ERROR?
+         BCS <1
+;
+         JSR BSAVE
+         BYT 'CONFIG,A$95F0,L$10',0
+         JSR ERROR?
+         BCS <1
+;
+MENU1DON RTS 
+;---
+;
+; Setup was never run on the original
+; Print Shop.
+;
+^2       JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#68
+         BYT 'YOU MUST FIRST RUN SETUP',CR
+         BYT CR
+         BYT 'ON YOUR '
+         .DA #PRSTR,TXTPS
+         BYT ' DISK.',CR
+         BRK 
+         JSR ANYKEY
+         LDA #7
+         STA MENULAST
+         JMP MAINMENU
+;-----------
+;
+; Scan through PRCOMS file
+; and change all references to
+; the $9600 page to $8900.
+;
+; Uses monitor routine $F88C
+;
+; Given: X=0, $3A.3B pointing to data
+;
+; Return: $2F=length of instrucion-1
+;
+FXPRCOMS LDY #PRCOMS
+         LDA /PRCOMS
+         STY $3A
+         STA $3B
+         LDA #PRCOMLEN
+         STA TMP0
+^0       LDX #0
+         LDA ($3A,X)
+         JSR $F88E
+         LDY $2F
+         CPY #2
+         BNE >2
+         LDA ($3A),Y
+         CMP #$96
+         BNE >2
+;
+; Now check for appropriate
+; instructions, JSR, JMP or
+; LDA $FFFF,Y
+;
+         LDY #0
+         LDA ($3A),Y
+         CMP #$20
+         BEQ >1
+         CMP #$4C
+         BEQ >1
+         CMP #$B9
+         BNE >2
+;
+; LDA $890E,Y
+; There is at least one version
+; of the Print Shop that doesn't
+; use the LDA $960E,Y table but
+; one at $9608,Y !!!
+;
+         INY 
+         LDA #$0E
+         STA ($3A),Y
+;
+; Change page reference to $8900
+;
+^1       LDY #2
+         LDA #$89
+         STA ($3A),Y
+;
+^2       TYA 
+         SEC 
+         ADC $3A
+         STA $3A
+         BCC <0
+         INC $3B
+         DEC TMP0
+         BNE <0
+         RTS 
+;-----------
+;
+; Update original Print Shop disk to
+; recognize "FROM OTHER DISK" for
+; borders and fonts, also fix a few
+; bugs associated with "FROM OTHER
+; DISK"
+;
+MENUTXT2 BYT 'UPDATE PRINT SHOP DISK',0
+;
+MENU2A   LDX #TXTFYWU
+         LDA /TXTFYWU
+         STX >0+1
+         STA >0+2
+;
+MENU2    JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,MENUTXT2,#CR
+         BYT PRVTAB,MENU2Y
+^0       .DA #PRSTR,TXTTOU,' YOUR',#CR
+         .DA #PRSTR,TXTPS
+         BYT ' DISK TO RECOGNIZE',CR
+         BYT 'BORDERS AND FONTS',CR
+         BYT 'FROM OTHER DISKS',CR,0
+         JSR ANYKEY
+         CMP #ESC
+         BEQ >0
+;
+         JSR M2MODS
+;
+^0       RTS 
+;-----------
+;
+; Make changes to PRINT SHOP files
+;
+M2MODS   SEC 
+^0       JSR WAITPSD2
+         BCS M2MODS2
+;
+; Make sure Print Shop is checked
+; for protection
+;
+         LDA #8
+^1       PHA 
+         JSR GOOBERDO
+         PLA 
+         SEC 
+         SBC #1
+         BNE <1
+;
+         JSR FXCONFIG
+         BCS <0
+         JSR FXHELLO
+         BCS <0
+         JSR FXMENLIB
+         BCS <0
+         JSR FXMENUS1
+         BCS <0
+         JSR FXMENUS5
+         BCS <0
+         JSR FXDRAW3
+         BCS <0
+;
+M2MODS2  RTS 
+;-----------
+;
+; "HELLO" file
+;
+FXHELLO  JSR SWAP800
+         JSR BLOAD
+         BYT 'HELLO',0
+         JSR ERROR?
+         BCS SWAP800
+;
+; Fix bug with printer cards that
+; use $C800 space. If any other
+; card is using that space, then
+; the PRCOMS will crash.
+;
+         LDY #CFFFLEN-1
+^0       LDA CFFFMOD,Y
+         STA $83D,Y
+         DEY 
+         BPL <0
+;
+; FONT from other disk bug, was
+; LDA, should have been LDX
+;
+         LDA #$A2
+         STA $D58
+;
+; Move $1800 bytes, not $1700
+;
+         LDA #$18
+         STA $D74
+;
+; <ESC> pressed when asking for
+; DATA DISK, didn't clear screen
+;
+         LDA #$97
+         STA $BBB
+;
+; New routine to get SUPP file
+;
+         LDY #SUPPFIXL-1
+^0       LDA SUPPFIX,Y
+         STA $BC0,Y
+         DEY 
+         BPL <0
+;
+; New text for supplemental disk
+;
+         LDY #SUPPTXTL-1
+^0       LDA SUPPTEXT,Y
+         STA $C28,Y
+         DEY 
+         BPL <0
+;
+         LDY #SUPPTX2L-1
+^1       LDA SUPPTXT2,Y
+         STA $C62,Y
+         DEY 
+         BPL <1
+;
+         LDA #$3B
+         STA $BA9
+;
+; Change SUPP filename to [CD]
+;
+         LDY #3
+^0       LDA SUPPNAME,Y
+         STA $CA9,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'HELLO,A$800,L$800',0
+         JSR ERROR?
+;
+SWAP800  LDA #8
+         JMP SWAP
+;---
+;
+; Hit $CFFF when booting
+;
+CFFFMOD  LDA $CFFF
+         LDA $C000
+         CMP #$9B
+         BNE *+5
+CFFFLEN  =   *-CFFFMOD
+;
+; Replacement text for
+; "SUPPLEMENTAL DISK"
+;
+SUPPTEXT BYT 'DATA DISK IN '
+         BYT 'DRIVE 2'
+         DFS 8,$20
+         BYT 0
+SUPPTXTL =   *-SUPPTEXT
+;
+SUPPTXT2 BYT '   DATA DISK   '
+         BYT 0,0
+SUPPTX2L =   *-SUPPTXT2
+;
+SUPPNAME BYT '[CD]'
+;
+; Change to SUPP routine
+;
+SUPPFIX  LDA #0
+         STA $B00D
+         LDX #$A9
+         LDY #$0C
+         JSR $0CD2
+         BEQ >0
+         JSR $B53
+         LDX #$9D
+         LDY #$0C
+         JSR $8E06
+         JSR $8005
+         JMP $0B8E
+^0       LDA $CB1
+         JSR $6300
+         NOP 
+         NOP 
+         NOP 
+SUPPFIXL =   *-SUPPFIX
+;-----------
+;
+; "MENULIB" file
+;
+FXMENLIB JSR BLOAD
+         BYT 'MENULIB',0
+         JSR ERROR?
+         BCS >9
+;
+; Better way of checking for 16k
+; RAMcard. Old one killed contents
+;
+         LDY #RMCHKLEN-1
+^0       LDA RMCHK,Y
+         STA $78D6,Y
+         DEY 
+         BPL <0
+;
+; Enable <ESC> to work during
+; CATALOGs!!!
+;
+         LDY #$E0
+         LDA #$81
+         STY $80C1
+         STA $80C2
+         LDY #PAKMSG2L-1
+^1       LDA PAKMSG2,Y
+         STA $81E0,Y
+         DEY 
+         BPL <1
+;
+; Fix PSDCHK bug which causes
+; DISK ERROR if you try to use
+; COMPANION disk as a graphic
+; data disk.
+;
+         LDY #PSDCHKL-1
+^0       LDA PSDCHK,Y
+         STA $77D9,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'MENULIB,A$6000,L$21F8',0
+         JSR ERROR?
+;
+^9       RTS 
+;---
+;
+; New RAMcard check routine
+;
+RMCHK    LDA $C083
+         LDA $C083
+         LDY $D000
+         LDX #0
+^0       STX $D000
+         CPX $D000
+         BNE >1
+         INX 
+         BNE <0
+^1       STY $D000
+         STA $C082
+         RTS 
+RMCHKLEN =   *-RMCHK
+;---
+;
+; Patch to allow ESC exit
+; from CATALOG
+;
+PAKMSG2  JSR $80F4
+         AND #$7F
+         CMP #ESC
+         BNE >0
+         PLA 
+         PLA 
+^0       RTS 
+PAKMSG2L =   *-PAKMSG2
+;---
+;
+; Correct error in PSDCHK which
+; returned SEC for any data disk
+; that had a 3 or greater at loc
+; TS(17,0) offset $FF
+;
+;
+PSDCHK   LDA #0
+         STA $B00D
+         SEC 
+         ROL 
+PSDCHKL  =   *-PSDCHK
+;-----------
+;
+; "CONFIG" file
+;
+FXCONFIG JSR BLOAD
+         BYT 'CONFIG,A$55F0',0
+         JSR ERROR?
+         BCS >0
+;
+; Enable FROM OTHER DISK messages
+;
+         LDA MENUOTHR-$4000
+         CMP #4
+         BGE >1
+         LDA #3
+         STA MENUOTHR-$4000
+;
+         LDY #15
+^0       LDA $55F0,Y
+         STA $95F0,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'CONFIG,A$95F0,L16',0
+         JSR ERROR?
+;
+^0       RTS 
+;---
+;
+; Don't update this Print Shop
+;
+^1       JSR CLS3
+         JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#MENU2Y+8
+         BYT 'THIS '
+         .DA #PRSTR,TXTPS
+         BYT ' DISK DOES',CR
+         BYT 'NOT NEED TO BE UPDATED.',CR
+         BRK 
+         JSR ANYKEY
+         PLA 
+         PLA 
+         CLC 
+         RTS 
+;-----------
+FXMENUS1 JSR BLOAD
+         BYT 'MENUS1',0
+         JSR ERROR?
+         BCS >9
+;
+; Fix bug in greeting card when
+; using two different fonts from
+; other disk, edit window got
+; wrong information after printing
+; and backing up with <ESC>
+;
+         LDX #$E0
+         LDY #$54
+         STX $4AD4
+         STY $4AD5
+;
+         LDY #MEN1FLEN-1
+^0       LDA MENU1FIX,Y
+         STA $54E0,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'MENUS1,A$4000,L$17F8',0
+         JSR ERROR?
+;
+^9       RTS 
+;---
+MENU1FIX LDA #$60
+         STA $D6F
+         JSR $D27
+         LDA #$A9
+         STA $D6F
+         LDA $C082
+         JMP $4204
+MEN1FLEN =   *-MENU1FIX
+;-----------
+;
+; "MENUS5" files
+;
+FXMENUS5 JSR SWAP1000
+;
+         JSR BLOAD
+         BYT 'MENUS5',0
+         JSR ERROR?
+         BCS SWAP1000
+;
+; Screen Magic Font bug, didn't
+; get parameters in the correct
+; order
+;
+         LDY #SMFIXLEN-1
+^0       LDA SMFIX,Y
+         STA $154A,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'MENUS5,A$1000,L$DF8',0
+         JSR ERROR?
+;
+SWAP1000 LDA #$10
+         JMP SWAP
+;
+; Screen Magic patch
+;
+SMFIX:   
+TEXT2    =   *-$21
+;
+         LDA $81F
+         STA $1BC4
+         LDA $820
+         STA $1BB2
+         LDA $821
+         STA $1BBB
+         LDX $85C0
+         DEX 
+         LDA $1BBC,X
+         STA $7904
+         LDA $15AB,X
+         ASL 
+         ASL 
+         ASL 
+         SEC 
+         SBC $15AB,X
+         STA $7905
+         LDA #01
+         STA $7906
+         JSR $7900
+         DEC $7906
+         LDA $83FF
+         CMP #$1B
+         BEQ TEXT2
+         JSR $7016
+         LDA $85C0
+         JSR $810
+SMFIXLEN =   *-SMFIX
+;-----------
+;
+; "DRAW3" file (LETTERHEAD)
+;
+FXDRAW3  JSR BLOAD
+         BYT 'DRAW3',0
+         JSR ERROR?
+         BCS >9
+;
+; Letterhead draw enhancement.
+;
+         LDX #$A2
+         LDA #$00
+         STX $7B66
+         STA $7B67
+         LDX #$4C
+         LDY #$D1
+         LDA #$7C
+         STX $7B68
+         STY $7B69
+         STA $7B6A
+;
+         LDY #LHDRWLEN-1
+^0       LDA LHDRWFIX,Y
+         STA $7CD1,Y
+         DEY 
+         BPL <0
+;
+         JSR BSAVE
+         BYT 'DRAW3,A$7800,L$4F8',0
+         JSR ERROR?
+;
+^9       RTS 
+;
+; This routine enhances the
+; Letterhead draw routine by
+; automatically doubling fonts
+; that are small enough to be
+; doubled.
+;
+LHDRWFIX LDA $87C0
+         CMP #7
+         BLT >3
+         CMP #10
+         BNE >2
+         LDY #'Z'-$20
+^0       CPY #$20
+         BEQ >1
+         LDA $603B,Y
+         CMP #19+1
+         BGE >3
+^1       DEY 
+         BPL <0
+^2       INX 
+^3       STX $8A0B
+         RTS 
+LHDRWLEN =   *-LHDRWFIX
+;-----------
+;
+; Enter with A= DOS error code
+;
+ERROR?   BNE >0
+         CLC 
+         RTS 
+;
+^0       JSR ERROR
+         SEC 
+         RTS 
+;-----------
+WAITPSD2 JSR WAITPSD
+^0       BCS >1
+GOOBERDO JSR PRINT
+         BYT GOOBER,0
+^1       RTS 
+;
+WAITCD2  LDA #1
+         JSR WAITCD
+         BCC <0
+         RTS 
+;-----------
+;
+; Swap memory given A=page
+;
+; Swaps 16 pages with $6000
+;
+SWAP     LDX #$10
+         LDY #0
+         STY TMP0
+         STA TMP1
+         LDA #$60
+         STY TMP2
+         STA TMP3
+;
+^0       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+         RTS 
+;-----------
+;
+; Update Print Shop and Companion
+; for the first time.
+;
+MENUFRST LSR MENU1FLG
+         LDA #1
+         JSR MENUF
+         LDA #0
+         JSR MENUF
+         JMP MAINMENU
+;
+MENUF    PHA 
+         JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#MENUTOP
+         BRK 
+         PLA 
+         TAY 
+         JSR >1
+         BCC >0
+         JSR PRINT
+         BYT RTOSBLAK,1,160,38,23,0
+         JSR ESCMAIN
+         PLA 
+         PLA 
+         BCS MENUFRST
+^0       RTS 
+;
+^1       JSR JMPVECTS
+         ADR MENU1A
+         ADR MENU2A
+;-----------
+;
+;
+;
+         USR "SETUP,S4",ORG
+         END 

@@ -1,0 +1,272 @@
+         NLS 
+         TTL "S:8E00"
+ORG      =   $8E00
+;
+GETBTNS  =   $8900
+;
+SP       =   $E000
+;
+POLEKEY  =   SP+31
+FLSHINIT =   SP+72
+PARSE    =   SP+81
+RTOS     =   SP+120
+;
+X0       EPZ $3A
+Y0       EPZ $3B
+WIDTH    EPZ $3C
+HEIGHT   EPZ $3D
+;-----------
+;
+; AUX SYSTEM LIB ROUTINES
+;
+XTEMP    EPZ $70
+YTEMP    EPZ $71
+DADDR    EPZ $80
+SADDR    EPZ $82
+;
+STRING   =   $8A00
+XBYTE2   EQU $9398
+;*
+         ORG ORG
+         OBJ $800
+;*
+         JMP GETBTNS
+         JMP TINPUT
+PARAMS   HEX 0000
+INMAX    HEX 00
+;----------------
+; GDOIT - X,Y ADDR OF PARAMS
+; DRAW CONSECUTIVE STRINGS
+; Y+=9 EACH TIME
+;
+GDOIT    LDA #00
+         STA INMAX
+GPRINT   LDA DADDR
+         PHA 
+         LDA DADDR+1
+         PHA 
+         LDA SADDR
+         PHA 
+         LDA SADDR+1
+         PHA 
+         STX DADDR
+         STY DADDR+1
+         LDY #04
+         LDA (DADDR),Y
+         PHA 
+         LDY #09
+         LDA (DADDR),Y
+         PHA 
+         INY 
+         LDA (DADDR),Y
+         PHA 
+*
+GDOIT0   LDY #11
+GDOIT1   LDA (DADDR),Y
+         STA STRING+3,Y
+         DEY 
+         BPL GDOIT1
+         JSR STRING
+         LDA STRING+12
+         STA SADDR
+         LDA STRING+13
+         STA SADDR+1
+         LDY #00
+GDOIT2   LDA (SADDR),Y
+         BEQ GDOIT3
+         INY 
+         BNE GDOIT2
+GDOIT3   STY STRPTR
+         INY 
+         LDA (SADDR),Y
+         CMP #$FF
+         BEQ GDOITX
+         LDA INMAX
+         BNE GDOITX
+         TYA 
+         LDY #09
+         CLC 
+         ADC (DADDR),Y
+         STA (DADDR),Y
+         INY 
+         LDA (DADDR),Y
+         ADC #00
+         STA (DADDR),Y
+         LDY #04
+         LDA (DADDR),Y
+         CLC 
+         ADC #08
+         STA (DADDR),Y
+         JMP GDOIT0
+*
+GDOITX   LDY #10
+         PLA 
+         STA (DADDR),Y
+         DEY 
+         PLA 
+         STA (DADDR),Y
+         LDY #04
+         PLA 
+         STA (DADDR),Y
+RESTORE  PLA 
+         STA SADDR+1
+         PLA 
+         STA SADDR
+         PLA 
+         STA DADDR+1
+         PLA 
+         STA DADDR
+         RTS 
+;------------------
+;
+; TEXT INPUT
+;
+TINPUT   LDA PARAMS
+         STA GETPARAM+1
+         LDA PARAMS+1
+         STA GETPARAM+2
+         LDA SADDR
+         PHA 
+         LDA SADDR+1
+         PHA 
+         LDX #09
+         JSR GETPARAM
+         STA SADDR
+         INX 
+         JSR GETPARAM
+         STA SADDR+1
+TINPUT1  LDX #02
+         JSR GETPARAM
+         TAY 
+         LDA XBYTE2,Y
+         STA X0
+         LDA #39
+         SEC 
+         SBC X0
+         STA WIDTH
+         LDX #04
+         JSR GETPARAM
+         STA Y0
+         LDA #07
+         STA HEIGHT
+         LDA #$A9
+         LDY #$00
+         JSR RTOS
+         LDX PARAMS
+         LDY PARAMS+1
+         JSR GPRINT
+         LDA STRING+5
+         STA CURSX
+         LDA STRING+6
+         STA CURSX+1
+;---
+;
+; Get a key
+;
+KEYIN    JSR FLSHINIT
+         JSR CURSOR
+^0       JSR POLEKEY
+         BMI >1
+         DEC $4E
+         BNE <0
+         DEC $4F
+         BPL <0
+         BMI KEYIN
+;
+^1       PHA 
+         JSR CURSOFF
+         PLA 
+;
+; Process keypress
+;
+         CMP #$0D
+         BEQ RETURN
+         CMP #$1B
+         BEQ ESC
+         CMP #$08
+         BEQ BS
+         CMP #$7F
+         BEQ BS
+         CMP #$05
+         BEQ CTRLE
+         CMP #','
+         BEQ KEYIN
+         CMP #'@'
+         BEQ KEYIN
+;
+         CMP #' '
+         BLT KEYIN
+         CMP #'Z'+1
+         BGE KEYIN
+*
+         LDY STRPTR
+         CPY #00
+         BNE CHAR2
+         CMP #' '
+         BEQ KEYIN
+         LDY INMAX
+         CPY #15
+         BNE CHAR2
+         CMP #'A'
+         BLT KEYIN
+CHAR2    LDY STRPTR
+         CPY INMAX
+         BCS KEYIN
+         STA (SADDR),Y
+         INY 
+         BNE BS2
+*
+BS       LDY STRPTR
+         BEQ KEYIN
+         DEY 
+BS2      LDA #00
+         BEQ CTRLE2
+*
+CTRLE    LDA #00
+         TAY 
+CTRLE2   STA (SADDR),Y
+         STY STRPTR
+JT1      JMP TINPUT1
+*
+RETURN   CLC 
+         HEX 24
+*
+ESC      SEC 
+         PLA 
+         STA SADDR+1
+         PLA 
+         STA SADDR
+         RTS 
+;---
+;
+; Plot cursor
+;
+CURSOR   LDA #4
+         HEX 2C
+CURSOFF  LDA #03
+         STA STRING+3
+         LDA #00
+         STA STRING+10
+         STA STRING+4
+         LDA CURSX
+         STA STRING+5
+         LDA CURSX+1
+         STA STRING+6
+         LDA #CURSTR
+         STA STRING+12
+         LDA /CURSTR
+         STA STRING+13
+         JMP STRING
+*
+CURSTR   ASC 'II'
+         HEX 00
+*
+GETPARAM LDA $8000,X
+         RTS 
+*
+STRPTR   HEX 00
+CFLAG    HEX 00
+CURSX    HEX 0000
+*
+         USR "O:8E00",ORG
+         END 

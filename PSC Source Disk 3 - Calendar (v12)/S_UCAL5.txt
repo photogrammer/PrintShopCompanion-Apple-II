@@ -1,0 +1,160 @@
+;
+; S:UCAL5
+;
+; Credit line stuff that didn't fit
+; in ICAL. CRBLAK/CRDRAW
+;        
+; INITCAL:move code to homes
+;
+;-----------
+;
+; Routine to erase current line
+;
+CRBLAK   LDY CRLINE
+         LDA TEXTBUFF
+         BNE >0
+         STA CRLINE
+         TAY 
+         JSR >0
+         LDY #1
+;
+^0       LDA CRYTBL,Y
+         STA >1+2
+         JSR PRINT
+^1       BYT RTOSBLAK,CRXB,00
+         BYT CRXMAXB,7,0
+         LDY #TEXTBUFF
+         LDA /TEXTBUFF
+         STY TMP2
+         STA TMP3
+         RTS 
+;---
+;
+; Draw 
+;
+CRDRAW   LDY CRLINE
+         JSR CRDRAW2
+         LDY CRLINE
+         BNE >1
+;
+         LDA TEXTBUFF,X
+         BEQ CRRTS
+         INC CRLINE
+         BNE CRDRAW
+;
+^1       LDX CRPOS,Y
+         LDA TEXTBUFF,X
+         BNE CRRTS
+         DEC CRLINE
+         BEQ CRDRAW
+;---
+;
+; Given Y=0 or 1, draw given line
+;
+CRDRAW2  STY CRLINE
+         LDA CRYTBL,Y
+         STA >2+3
+         LDX CRPOS,Y
+         STX >3+1
+         LDA #0
+         DEX 
+^0       INX 
+         LDY TEXTBUFF,X
+         BEQ >1
+         CLC 
+         ADC UFONTW-$20,Y
+         ADC #2
+         CMP #CRXMAX+1
+         BLT <0
+;
+^1       LDA TEXTBUFF,X
+         PHA 
+         LDA #0
+         STA TEXTBUFF,X
+         TXA 
+         PHA 
+;
+         JSR PRINT
+^2       .DA #PRLOC,CRX,#00
+^3       .DA #PRSTR,TEXTBUFF
+         BYT NOCR,0
+;
+         PLA 
+         TAX 
+         PLA 
+         STA TEXTBUFF,X
+;
+         LDY CRLINE
+         BEQ >4
+         LDA #0
+         STA TEXTBUFF,X
+CRRTS    RTS 
+;
+^4       STX CRPOS+1
+         RTS 
+;
+CRYTBL   BYT CRY1+2
+         BYT CRY1+10
+CRPOS    BYT 0
+         BYT 0
+;-----------
+;
+; Initialize all the external
+; subroutines, move them to their
+; homes.
+;
+SRCLO    EPZ $3A
+SRCHI    EPZ $3B
+DSTLO    EPZ $3C
+DSTHI    EPZ $3D
+LENLO    EPZ $3E
+LENHI    EPZ $3F
+;
+INITCAL  LDY #EXTERNAL
+         LDA /EXTERNAL
+         STY SRCLO
+         STA SRCHI
+         LDY #0
+;
+^0       JSR MOVEGET
+         STA DSTLO
+         JSR MOVEGET
+         STA DSTHI
+         ORA DSTLO
+         BEQ MOVERTS
+         JSR MOVEGET
+         TAX 
+         JSR MOVEGET
+         STA LENHI
+;
+^1       JSR MOVEGET
+         STA (DSTLO),Y
+         INC DSTLO
+         BNE >2
+         INC DSTHI
+^2       TXA 
+         BNE >3
+         DEC LENHI
+^3       DEX 
+         BNE <1
+         TXA 
+         ORA LENHI
+         BNE <1
+         BEQ <0
+;
+; Get a byte from program data
+;
+MOVEGET  LDA (SRCLO),Y
+         INC SRCLO
+         BNE MOVERTS
+         INC SRCHI
+MOVERTS  RTS 
+;-----------
+;
+;
+EXTERNAL: 
+;
+;
+         USR "UCAL",ORG
+;
+         ICL "S:COMMON"

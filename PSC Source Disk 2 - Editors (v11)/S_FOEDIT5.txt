@@ -1,0 +1,459 @@
+;
+; S:FOEDIT5
+;
+; Print the entire font
+;
+;-----------
+;
+; PRCOMS locations
+;
+CRLF     =   $1803
+SENDGC   =   $1806
+GCOUT    =   $1809
+MTHINK   =   $180C
+MPRINT   =   $180F
+MPAUSE   =   $1812
+COPYCONT =   $1815
+UPLRK    =   $1816
+;-----------
+;
+; Print buffer constants
+;
+BUFWIDTH =   1024
+;
+BUFMAX   =   950
+;
+PBUFFER  =   $2000
+TBUFFER  =   $BB00
+;-----------
+;
+; STROUT variables
+;
+STROUT   =   $8A00
+SPARM    =   STROUT+3
+;
+; STROUT mod routines
+;
+STINSTAL =   STROUT+$0F
+STSCREEN =   STROUT+$12
+;
+STRZ     EPZ $50
+;
+PIXAD    EPZ STRZ
+XCUR     EPZ STRZ+2
+WCOUNT   EPZ STRZ+4
+BUFFER1  EPZ STRZ+5
+BUFFER2  EPZ STRZ+7
+SDXBYTE  EPZ STRZ+9
+DATABYTE EPZ STRZ+10
+BCOUNT   EPZ STRZ+11
+BLDBYTE  EPZ STRZ+12
+;-----------
+PRZ      EPZ $80
+;
+PYEND    EPZ PRZ
+PXCOOR   EPZ PRZ+1
+PYCOOR   EPZ PRZ+2
+PYCOORSV EPZ PRZ+3
+;
+PXCOUNT  EPZ PRZ+4
+PYCOUNT  EPZ PRZ+5
+;
+PBUILD   EPZ PRZ+6
+PYSPACE  EPZ PRZ+7
+;
+PBUFSAVL EPZ PRZ+8
+PBUFSAVH EPZ PRZ+9
+PBUFL    EPZ PRZ+10
+PBUFH    EPZ PRZ+11
+;
+PCHAR    EPZ PRZ+12
+PCHAREND EPZ PRZ+13
+PMAXH    EPZ PRZ+14
+PSTACK   EPZ PRZ+15
+;-----------
+;
+; Print the font
+;
+; First install the font
+;
+PRINFONT JSR PRINT
+         BYT PRKERN,1
+         BYT PRCSPACE,3
+         BYT PRVTAB,0
+         BRK 
+         JSR STINSTAL
+         ADR PFOPTION
+         ADR PFLINDRW
+         HBY FONT2BUF
+;
+         JSR TRF1F2
+         JSR MTHINK
+;
+         TSX 
+         STX PSTACK
+         LDY #'A'
+         STY PCHAR
+         BNE PRSTART
+;-----------
+;
+; Main loop
+;
+^0       STY PCHAR
+;
+; Find end of buffer
+;
+         LDX #$FF
+^1       INX 
+         LDA TBUFFER,X
+         BNE <1
+         STX PCHAREND
+;
+; Store char into buffer
+;
+         TYA 
+         STA TBUFFER,X
+         LDA #0
+         STA TBUFFER+1,X
+;
+; Will the string fit?
+;
+         LDA #3
+         STA SPARM+1
+         JSR UPLRK
+         JSR STROUT
+         CPY #BUFMAX
+         SBC /BUFMAX
+         BLT >3
+;
+; String too long, get rid of last
+; character and print the string.
+;
+         LDX PCHAREND
+         LDA #0
+         STA TBUFFER,X
+         JSR PRINLINE
+;
+PRSTART  JSR MTHINK
+         LDY PCHAR
+         LDA #0
+         STA TBUFFER
+         STA PMAXH
+         BEQ <0
+;
+^3       LDY PCHAR
+         LDA FONT2H-$20,Y
+         CMP PMAXH
+         BLT >4
+         STA PMAXH
+^4       INY 
+         CPY #'@'
+         BEQ >5
+         CPY #'Z'+1
+         BLT <0
+         LDY #'!'
+         BNE <0
+;
+; Now print
+;
+^5       LDA PMAXH
+         BEQ PFABORT
+         JSR PRINLINE
+         CLC 
+;
+PFABORT  LDX PSTACK
+         TXS 
+         PHP 
+         JSR STSCREEN
+         LDA #0
+         STA SPARM+11
+         JSR CLRPBUF2
+         PLP 
+         BCS >0
+         LDX #12
+         LDY #3
+         JSR CRLF
+^0       SEC 
+         RTS 
+;-----------
+;
+; Clear print buffer
+;
+CLRPBUFF JSR MTHINK
+;
+CLRPBUF2 LDY #0
+         LDX #$20
+         STY TMP0
+         STX TMP1
+         TYA 
+^0       STA (TMP0),Y
+         INY 
+         BNE <0
+         INC TMP1
+         DEX 
+         BNE <0
+         RTS 
+;-----------
+;
+; SMC for OPTION
+;
+PFOPTION STA SD0MOD0
+         STA SD0MOD1
+;
+         STX SD1MOD0
+         STX SD1MOD1
+;
+         STY SD2MOD0
+         RTS 
+;
+; LINEDRAW routine
+; Buffer is PBUFFER+Y*128.
+;
+LORESL   BRK 
+LORESH   BRK 
+;
+PFLINDRW TYA 
+         LSR 
+         ORA #$20
+         STA BUFFER1+1
+         LDA #0
+         ROR 
+         STA BUFFER1
+;
+; Update lores screen?
+;
+         LDA LORESL
+         ADC WCOUNT
+         STA LORESL
+         BCC >1
+         INC LORESH
+         LDA LORESH
+         EOR #20
+         BNE >1
+         STA LORESH
+         JSR CHECKESC
+         JSR UPLRK
+;
+; Starting X-byte offset = XCUR/8
+;
+^1       LDA XCUR+1
+         STA SDXBYTE
+         LDA XCUR
+         LSR SDXBYTE
+         ROR 
+         LSR SDXBYTE
+         ROR 
+         LSR 
+         STA SDXBYTE
+;
+; Compensate for bits not to be
+; affected to the left.
+;
+         LDA XCUR
+         AND #7
+         TAX 
+         LDY #9
+SD1MOD0  SEC 
+         ROL BLDBYTE
+         DEY 
+         DEX 
+         BPL SD1MOD0
+;
+         LDX #0
+;
+; Do a line of normal size
+;
+PFLINNRM LDA (PIXAD,X)
+         EOR #$FF
+SD2MOD0  =   *-1
+         STA DATABYTE
+         INC PIXAD
+         BNE *+4
+         INC PIXAD+1
+         LDX #8
+^0       ASL DATABYTE
+         ROL BLDBYTE
+         DEY 
+         BNE >1
+;
+         LDY SDXBYTE
+         INC SDXBYTE
+         LDA BLDBYTE
+SD0MOD0  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+         LDY #8
+;
+^1       DEC WCOUNT
+         BEQ >2
+         DEX 
+         BNE <0
+         BEQ PFLINNRM
+;
+^2       CPY #8
+         BEQ >3
+         LDA BLDBYTE
+SD1MOD1  SEC 
+         ROL 
+         DEY 
+         BNE SD1MOD1
+         LDY SDXBYTE
+SD0MOD1  AND (BUFFER1),Y
+         STA (BUFFER1),Y
+^3       RTS 
+;-----------
+;
+; Print string to buffer, then print.
+;
+PRINLINE JSR CLRPBUFF
+         STA SPARM+1
+         STA SPARM+2
+         STA SPARM+3
+         JSR STROUT
+;
+         LDA PMAXH
+         CLC 
+         ADC #6
+         STA PYEND
+;
+         JSR MPRINT
+;
+         LDA #0
+;
+; Print single line of buffer
+;
+PFPRLOP1 STA PYCOORSV
+;
+; Calculate buffer address
+;
+         LSR 
+         TAY 
+         LDA #0
+         ROR 
+         STA PBUFSAVL
+         TYA 
+         ADC /PBUFFER
+         STA PBUFSAVH
+;
+; Tell printer how many bytes
+;
+         LDX #BUFWIDTH
+         LDY /BUFWIDTH
+         JSR SENDGC
+;
+         LDX #0
+;
+; Output line of data
+;
+PFPRLOP2 STX PXCOOR
+         LDX #0
+;
+; Output 8 bytes
+;
+PFPRLOP3 STX PXCOUNT
+         LDX PBUFSAVL
+         LDA PBUFSAVH
+         STX PBUFL
+         STA PBUFH
+         LDX #0
+         STX PBUILD
+         LDY PYCOORSV
+;
+; Output 1 byte
+;
+; X=counter, 0-6
+; Y=Y-coordinate
+;
+PFPRLOP4 STX PYCOUNT
+         STY PYCOOR
+;
+         LDY PXCOOR
+         LDA (PBUFL),Y
+         LDX PXCOUNT
+         AND PBITS8,X
+         BEQ >1
+;
+         LDY PYCOUNT
+         LDA PBITS7,Y
+         ORA PBUILD
+         STA PBUILD
+;
+^1       LDA PBUFL
+         EOR #$80
+         STA PBUFL
+         BNE *+4
+         INC PBUFH
+;
+         LDY PYCOOR
+         INY 
+         LDX PYCOUNT
+         INX 
+         CPY PYEND
+         BEQ >2
+         CPX #7
+         BLT PFPRLOP4
+;
+^2       STX PYSPACE
+         LDA PBUILD
+         JSR GCOUT
+;
+         LDX PXCOUNT
+         INX 
+         CPX #8
+         BLT PFPRLOP3
+;
+         LDX PXCOOR
+         INX 
+         CPX #BUFWIDTH/8
+         BLT PFPRLOP2
+;
+         LDX PYSPACE
+         LDY #1
+         JSR CRLF
+;
+         JSR CHECKESC
+;
+         LDA PYCOORSV
+         CLC 
+         ADC PYSPACE
+         CMP PYEND
+         CLC 
+         BEQ >9
+         JMP PFPRLOP1
+;
+; Set spacing back to 6 characters
+; per inch (12/72)
+;
+^9       RTS 
+;
+; Bit lookup tables
+;
+PBITS8   HEX 80
+PBITS7   HEX 40201008040201
+;-----------
+;
+; Check for <ESC>, if yes then
+; show pausing message and allow
+; another <ESC> to abort.
+;
+CHECKESC JSR POLEKEY
+         CMP #ESC
+         BNE <9
+         JSR DEVICEON
+         JSR MPAUSE
+         PHP 
+         JSR DEVICEOF
+         PLP 
+         BCC <9
+         JMP PFABORT
+;-----------
+ACODE    =   *-TAILORG
+         DPH 
+;-----------
+;
+;
+;
+         USR "FOEDIT,S4",ORGLOAD
+         LST 
+MAINLEN  =   MCODE
+ALTLEN   =   ACODE
+         ICL "S:COMMONEDIT"

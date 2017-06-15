@@ -1,0 +1,981 @@
+;
+; S:EDIT2
+;
+; The main editor calls here to
+; get a key and let the editor
+; do it's job.
+;
+EDITLOOP LDX XCOOR
+         LDY YCOOR
+         STX OLDXCOOR
+         STY OLDYCOOR
+         JSR DEVICEST
+^0       JSR SETFLASH
+;
+^1       LDY #2
+JOYMOD   =   *-1
+         JSR DEVICERD
+         BCS >2
+;
+         STA BUTTON
+         JSR DODEVICE
+         LDA #1
+         BIT BUTTON
+         BMI >3
+;
+^2       LDA #0
+         STA CNSTRAIN
+         JSR POLEKEY
+         BMI KEYPRESS
+         LDA #2
+;
+^3       STA JOYMOD
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+; Since didn't match one of our
+; commands, then return calling
+; program and let it handle this
+; key.
+;
+NOTOURS  LDA KEYGOT
+         JMP LOCKOFF
+;
+; Process keypress
+;
+KEYPRESS STA KEYGOT
+         JSR RESETBIT
+         LDY #$FD
+^0       INY 
+         INY 
+         INY 
+         LDA COMMANDS,Y
+         BEQ NOTOURS
+         AND #$7F
+         CMP #00
+KEYGOT   =   *-1
+         BNE <0
+;
+; If a "LOCKstopper", then doit!
+;
+         CPY #LOCKSTOP-COMMANDS
+         BLT >1
+         JSR LOCKOFF
+;
+; If move command, and lockmode
+; is on, plot!
+;
+^1       CPY #MOVECOM?-COMMANDS
+         BGE >1
+         LDA #00
+LOCKMODE =   *-1
+         BPL >1
+         TYA 
+         PHA 
+         JSR MRPLOT
+         PLA 
+         TAY 
+;
+^1       LDA COMMANDS+1,Y
+         STA >4+1
+         LDA COMMANDS+2,Y
+         STA >4+2
+;
+         LDA COMMANDS,Y
+         BPL >3
+;
+         JSR BUFFSAVE
+;
+^3       LDX XCOOR
+         LDY YCOOR
+;
+^4       JSR $FFFF
+         JMP EDITLOOP
+;-----------
+;
+; Handle input device
+;
+; First check to see if it moved
+;
+DODEVICE CPX XCOOR
+         BNE >0
+         CPY YCOOR
+         BEQ >3
+;
+; Device moved
+;
+^0       LDA CNSTRAIN
+         BPL >1
+;
+; Figure out which direction
+; to constrain
+;
+         LDA #1
+         CPX XCOOR
+         BEQ *+3
+         ASL 
+         STA CNSTRAIN
+;
+^1       STX >1+1
+         STY >2+1
+         JSR RESETBIT
+         LDX XCOOR
+         LDY YCOOR
+         STX OLDXCOOR
+         STY OLDYCOOR
+^1       LDX #00
+^2       LDY #00
+         JSR DEVCONST
+;
+; If button down, plot new point
+; else, just plot cursor.
+;
+         BIT BUTTON
+         BMI DOBUTTON
+         BPL SETFLASH
+;
+; End up here if device didn't move.
+; If button is not down or if button
+; was down last time, then exit.
+;
+^3       STX OLDXCOOR
+         STY OLDYCOOR
+         BIT BUTTON
+         BPL DEVRTS
+         BVS DEVRTS
+;
+; Handle button press
+;
+DOBUTTON BVS >0
+;
+; Button down for first time, so
+; get bit and invert.
+;
+         LDA LOCKMODE
+         STA CNSTRAIN
+         JSR BUFFSAVE
+         JSR SETPLOTX
+;
+; Draw a line from
+; (OLDXCOOR,OLDYCOOR) to
+; (XCOOR,YCOOR)
+;
+^0       JSR LINE
+;
+; Invert current position and
+; set countdown timer
+;
+SETFLASH JSR GRFLASH
+         JSR FLSHINIT
+;
+; Show coordinates
+;
+         LDA XCOOR
+         LDX #4
+         LDY #185
+         JSR NUMBER
+         LDA YCOOR
+         LDX #10
+         LDY #185
+         JMP NUMBER
+;
+DEVRTS   RTS 
+;
+; Device input constrain
+; but only when the constrain
+; feature is selected.
+;
+DEVCONST BIT DEVRTS
+         LDA CNSTRAIN
+         BEQ DEVCLAMP
+;
+         LSR 
+         BCC >0
+;
+; Constrain X?
+;
+         CPX XCOOR
+         BEQ DEVCLMP2
+         LDX XCOOR
+         CLV 
+         BVC DEVCLMP2
+;
+; Constrain Y?
+;
+^0       CPY YCOOR
+         BEQ DEVCLMP2
+         LDY YCOOR
+         CLV 
+         BVC DEVCLMP2
+;
+; Device input clamping
+;
+DEVCLAMP BIT DEVRTS
+DEVCLMP2 CPX XMAX
+         BLT >0
+         CLV 
+         LDX XMAX
+         DEX 
+^0       CPY YMAX
+         BLT >1
+         CLV 
+         LDY YMAX
+         DEY 
+^1       STX XCOOR
+         STY YCOOR
+         BVS DEVRTS
+         JMP DEVICEST
+;-----------
+;
+; Commands followed by their
+; locations in memory
+;
+COMMANDS .DA #'I',MOVEUP
+         .DA #$0B,MOVEUP
+         .DA #'M',MOVEDOWN
+         .DA #$0A,MOVEDOWN
+         .DA #'J',MOVELEFT
+         .DA #$08,MOVELEFT
+         .DA #'K',MOVERITE
+         .DA #$15,MOVERITE
+MOVECOM?: 
+         .DA #'L'-$40,TOGGLOCK
+         .DA #"D",GRSET
+         .DA #"E",GRCLEAR
+LOCKSTOP: 
+;
+         .DA #'W',SCRLUP
+         .DA #'Z',SCRLDOWN
+         .DA #'A',SCRLLEFT
+         .DA #'S',SCRLRITE
+;
+         .DA #"1",INSEROW
+         .DA #"2",DELEROW
+         .DA #"3",INSECOLU
+         .DA #"4",DELECOLU
+;
+         .DA #'H',FLIPHORI
+         .DA #'V',FLIPVERT
+         .DA #'N',GRINVERS
+         .DA #"F",FLODFILL
+         .DA #'P',NEXTPATT
+         .DA #'X',NEXTMIRR
+;
+         .DA #'U',UNDO
+;
+         BRK 
+;-----------
+;
+; Swap UNDO buffer with EDIT buffer
+;
+UNDO     LDY #EDITBUFF
+         LDA /EDITBUFF
+         STY TMP0
+         STA TMP1
+         LDY #UNDOBUFF
+         LDA /UNDOBUFF
+         STY TMP2
+         STA TMP3
+         LDY #0
+         LDX #0
+;
+^0       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         CPX #2
+         BNE >1
+         CPY #59
+         BEQ >2
+^1       INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         INX 
+         BNE <0
+;
+^2       JMP SHOWGR
+;-----------
+;
+; Keyboard cursor move
+;
+MOVEUP   DEY 
+         BPL MOVEDONE
+         LDY YMAX
+         DEY 
+         BNE MOVEDONE
+;
+MOVEDOWN INY 
+         CPY YMAX
+         BLT MOVEDONE
+         LDY #0
+;
+; Set new coordinates
+;
+MOVEDONE STX XCOOR
+         STY YCOOR
+         RTS 
+;
+MOVELEFT DEX 
+         BPL MOVEDONE
+         LDX XMAX
+         DEX 
+         BNE MOVEDONE
+;
+MOVERITE INX 
+         CPX XMAX
+         BLT MOVEDONE
+         LDX #0
+         BEQ MOVEDONE
+;-----------
+;
+; Delete row
+;
+DELEROW  LDA YCOOR
+         STA TMP5
+         JSR INITBOT2
+         LDY #11
+         BNE >0
+;
+; Insert row
+;
+INSEROW  LDA YCOOR
+         STA TMP5
+         JSR INITBOTT
+         LDY #$F5
+;
+^0       LDA YMAX
+         SEC 
+         SBC TMP5
+         TAX 
+         DEX 
+         JSR MOVEALL
+;
+         LDY #10
+         LDA #0
+^1       STA (BUFLO),Y
+         DEY 
+         BPL <1
+         LDA TMP5
+         STA YCOOR
+         JMP SHOWGR
+;
+; Scroll down
+;
+SCRLDOWN LDA YCOOR
+         PHA 
+         JSR INITBOTT
+         LDY #$F5
+         JSR MOVEALL
+         PLA 
+         STA YCOOR
+         BPL SCRLDONE
+;
+; Scroll up
+;
+SCRLUP   JSR INITTOP
+;
+         LDY #11
+         JSR MOVEALL
+;
+; Restore line, redraw
+;
+SCRLDONE LDY #10
+^0       LDA TEMPBUFF,Y
+         STA (BUFLO),Y
+         DEY 
+         BPL <0
+         JMP SHOWGR
+;
+; Init pointer to bottom
+;
+INITBOTT LDY YMAX
+         DEY 
+         STY YCOOR
+INITBOT2 JSR BASECALC
+         JMP SCRLSAVE
+;
+; Init pointer to top
+;
+INITTOP  LDY #EDITBUFF
+         LDA /EDITBUFF
+         STY BUFLO
+         STA BUFHI
+         STY TMPLO
+         STA TMPHI
+;
+; Bottom or Top line save for
+; scroll routines
+;
+SCRLSAVE LDY #10
+^0       LDA (BUFLO),Y
+         STA TEMPBUFF,Y
+         DEY 
+         BPL <0
+         LDX YMAX
+         DEX 
+         RTS 
+;
+; Given A,Y = add,  X=# of lines
+;
+; move from BUF->TMP
+;
+MOVEALL  STY >1+1
+         TXA 
+         BEQ >4
+         LDA #$FF
+         CPY #$F5
+         BEQ >0
+         LDA #$00
+^0       STA >2+1
+;
+^0       LDA BUFLO
+         STA TMPLO
+         CLC 
+^1       ADC #00
+         STA BUFLO
+         LDA BUFHI
+         STA TMPHI
+^2       ADC #00
+         STA BUFHI
+         LDY #10
+^3       LDA (BUFLO),Y
+         STA (TMPLO),Y
+         DEY 
+         BPL <3
+         DEX 
+         BNE <0
+^4       RTS 
+;
+; Insert Column
+;
+INSECOLU LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       LDA TEMPBUFF,X
+         STA TEMPBUFF+1,X
+         DEX 
+         BMI >1
+         CPX XCOOR
+         BGE <0
+^1       LDA #0
+         INX 
+         STA TEMPBUFF,X
+         RTS 
+;
+; Delete Column
+;
+DELECOLU LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       LDY XCOOR
+^1       LDA TEMPBUFF+1,Y
+         STA TEMPBUFF,Y
+         INY 
+         DEX 
+         BMI >2
+         CPX XCOOR
+         BGE <1
+^2       LDA #0
+         STA TEMPBUFF,Y
+         RTS 
+;
+; Scroll left
+;
+SCRLLEFT LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       LDA TEMPBUFF
+         PHA 
+^1       LDA TEMPBUFF+1,Y
+         STA TEMPBUFF,Y
+         INY 
+         DEX 
+         BPL <1
+         PLA 
+         STA TEMPBUFF,Y
+         RTS 
+;
+; Scroll right
+;
+SCRLRITE LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       LDA TEMPBUFF+1,X
+         PHA 
+^1       LDA TEMPBUFF,X
+         STA TEMPBUFF+1,X
+         DEX 
+         BPL <1
+         PLA 
+         STA TEMPBUFF
+         RTS 
+;-----------
+;
+; Flip vertical
+;
+FLIPVERT LDA YCOOR
+         PHA 
+         JSR INITTOP
+         JSR INITBOTT
+         TXA 
+         LSR 
+         TAX 
+;
+^0       LDY #10
+^1       LDA (TMPLO),Y
+         PHA 
+         LDA (BUFLO),Y
+         STA (TMPLO),Y
+         PLA 
+         STA (BUFLO),Y
+         DEY 
+         BPL <1
+;
+         LDA TMPLO
+         CLC 
+         ADC #11
+         STA TMPLO
+         BCC >2
+         INC TMPHI
+^2       LDA BUFLO
+         SEC 
+         SBC #11
+         STA BUFLO
+         BCS >3
+         DEC BUFHI
+^3       DEX 
+         BPL <0
+         PLA 
+         STA YCOOR
+         JMP SHOWGR
+;
+; Flip horizontal
+;
+FLIPHORI LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       INX 
+^1       LDA TEMPBUFF,X
+         PHA 
+         LDA TEMPBUFF,Y
+         STA TEMPBUFF,X
+         PLA 
+         STA TEMPBUFF,Y
+         DEX 
+         STX >2+1
+         INY 
+^2       CPY #00
+         BLT <1
+         RTS 
+;
+; Invert buffer
+;
+GRINVERS LDY #>0
+         LDA />0
+         JMP DOLINES
+;
+^0       INX 
+^1       LDA TEMPBUFF,X
+         EOR #1
+         STA TEMPBUFF,X
+         DEX 
+         BPL <1
+         RTS 
+;-----------
+;
+; General purpose line mod routine
+;
+DOLINES  STY DOLINESB+1
+         STA DOLINESB+2
+         LDY #EDITBUFF
+         LDA /EDITBUFF
+         STY BUFLO
+         STA BUFHI
+         LDA YMAX
+DOLINELP PHA 
+         LDX #0
+         STX TMP0
+;
+^1       LDY TMP0
+         INC TMP0
+         LDA (BUFLO),Y
+         STA TMP1
+         LDY #8
+;
+^2       DEY 
+         BMI <1
+         ASL TMP1
+         ROL 
+         STA TEMPBUFF,X
+         INX 
+         CPX XMAX
+         BLT <2
+;
+         DEX 
+         DEX 
+         LDY #0
+DOLINESB JSR $FFFF
+;
+         LDX #0
+         STX TMP0
+;
+^1       LDY #8
+;
+^2       DEY 
+         BPL >3
+         LDY TMP0
+         STA (BUFLO),Y
+         INC TMP0
+         BNE <1
+;
+^3       ROR TEMPBUFF,X
+         ROL 
+         INX 
+         CPX XMAX
+         BLT <2
+;
+^4       DEY 
+         BMI >5
+         ASL 
+         BPL <4
+;
+^5       LDY TMP0
+         STA (BUFLO),Y
+;
+         LDA BUFLO
+         CLC 
+         ADC #11
+         STA BUFLO
+         BCC >6
+         INC BUFHI
+^6       PLA 
+         SEC 
+         SBC #1
+         BNE DOLINELP
+         JMP SHOWGR
+;-----------
+;
+; Set bit when "D" is pressed
+;
+GRSET    LDX #PLSET
+         LDA #$16
+         BNE >0
+;
+; Clear bit when "E" is pressed
+;
+GRCLEAR  LDX #PLCLR
+         LDA #$18
+;
+^0       PHA 
+         JSR SETPLOT
+         JSR MRPLOT
+         PLA 
+         TAY 
+;
+; Click the speaker
+;
+^0       LDX #7
+^1       LDA $C030
+         TYA 
+         JSR WAIT
+         DEX 
+         BNE <1
+         RTS 
+;-----------
+;
+; Here is the nifty flood-fill
+; routine. (Same as in Dazzle Draw)
+;
+FLZ      EPZ $80
+;
+FLTMP0   EPZ FLZ
+FLINVERT EPZ FLZ+1
+FLXMIN   EPZ FLZ+2
+FLXMAX   EPZ FLZ+3
+FLMASK   EPZ FLZ+4
+FLSTACK1 EPZ FLZ+5
+FLSTACK2 EPZ FLZ+6
+;
+FLODFILL JSR SAVECOOR
+         LDY #4
+         JSR BUFFCLR
+         LDA #0
+         STA FLSTACK1
+         STA FLSTACK2
+         STA FLINVERT
+         JSR FLODPUSH
+         JSR FLGETBIT
+         STA FLINVERT
+;
+; Main recursive routine:
+;
+FLODMAIN JSR FLODPULL
+;
+; If we've already been here,
+; then don't bother checking
+;
+         JSR FLGETBIT
+         LDA FLMASK
+         AND (TBUFLO),Y
+         BNE FLODRDON
+;
+; Fill left
+;
+         LDA XCOOR
+         PHA 
+^0       DEC XCOOR
+         BMI >1
+         JSR FLODCHEK
+         BEQ <0
+;
+;  Fill right
+;
+^1       LDX XCOOR
+         INX 
+         STX FLXMIN
+         PLA 
+         STA XCOOR
+;
+^2       JSR FLODCHEK
+         BNE >3
+         INC XCOOR
+         LDA XCOOR
+         CMP XMAX
+         BLT <2
+;
+; Now scan above and below
+;
+^3       LDA XCOOR
+         STA FLXMAX
+;
+         INC YCOOR
+         JSR FLODSCAN
+         DEC YCOOR
+         DEC YCOOR
+         JSR FLODSCAN
+;
+; Is stack empty?
+;
+FLODRDON LDA FLSTACK1
+         CMP FLSTACK2
+         BNE FLODMAIN
+         JSR DOFONTRF
+         JMP RESTCOOR
+;
+; Scan a line for new runs
+;
+FLODSCAN LDA YCOOR
+         CMP YMAX
+         BGE >2
+         LDA FLXMAX
+         STA XCOOR
+;
+^0       JSR FLDECGET
+         BNE <0
+         LDA FLMASK
+         AND (TBUFLO),Y
+         BNE >1
+         JSR FLODPUSH
+;
+^1       JSR FLDECGET
+         BEQ <1
+         BNE <0
+;
+^2       RTS 
+;
+FLODCHEK JSR FLGETBIT
+         BNE >9
+;
+; Get bit from pattern
+;
+         LDA YCOOR
+         AND #7
+         STA FLTMP0
+         LDA CURRPATT
+         ASL 
+         ASL 
+         ASL 
+         ADC FLTMP0
+         TAX 
+         LDA FILLPATT,X
+         AND FLMASK
+         STA FLTMP0
+;
+; Set bit in temp buffer
+;
+         LDA FLMASK
+         ORA (TBUFLO),Y
+         STA (TBUFLO),Y
+;
+; Set bit in edit buffer
+;
+         LDA FLMASK
+         EOR #$FF
+         AND (BUFLO),Y
+;
+         ORA FLTMP0
+         STA (BUFLO),Y
+         LDA FLMASK
+         JSR RESETBT2
+         LDA #0
+^9       RTS 
+;
+; Push current point on stack
+;
+FLODPUSH LDY FLSTACK1
+         LDA XCOOR
+         STA XSTACK,Y
+         LDA YCOOR
+         STA YSTACK,Y
+         INC FLSTACK1
+         RTS 
+;
+; Pull next point from stack
+;
+FLODPULL LDY FLSTACK2
+         LDA XSTACK,Y
+         STA XCOOR
+         LDA YSTACK,Y
+         STA YCOOR
+         INC FLSTACK2
+         RTS 
+;
+; Decrement X, check for min
+;
+FLDECGET LDA XCOOR
+         CMP FLXMIN
+         BNE >0
+         PLA 
+         PLA 
+         RTS 
+;
+^0       DEC XCOOR
+;
+; Check bit
+;
+FLGETBIT JSR BASECLCT
+         STA FLMASK
+         AND (BUFLO),Y
+         PHP 
+         PLA 
+         EOR FLINVERT
+         AND #2
+         RTS 
+;-----------
+;
+SHOWXLOC =   37
+FILLPLOC =   39
+;
+; Increment pattern pointer
+;
+NEXTPATT INC CURRPATT
+SHOWFILL LDA #01
+CURRPATT =   *-1
+         CMP #FILLPATS/8
+         BNE >0
+         LDA #0
+^0       STA CURRPATT
+         LDY #FILLPLOC
+         STY SHOWYLOC
+         LDY #FILLPATT
+         LDX /FILLPATT
+         JMP SHOWPATT
+;
+; Fill patterns:
+;
+FILLPATT HEX FFFFFFFFFFFFFFFF
+         HEX 55AA55AA55AA55AA
+         HEX 8822882288228822
+         HEX 8800220088002200
+         HEX 8000080080000800
+         HEX 0000000000000000
+         HEX 8010022001084004
+;
+         HEX FF808080FF080808
+         HEX 8040200002040800
+         HEX 8244384482010101
+         HEX F87422478F172271
+         HEX FF000000FF000000
+         HEX 8888888888888888
+         HEX 081C22C180010204
+         HEX 40A00000040A0000
+         HEX 8080413E080814E3
+         HEX 0102040810204080
+FILLPATS =   *-FILLPATT
+;
+; Increment mirror pointer
+;
+MIRRPLOC =   50
+;
+NEXTMIRR INC CURRMIRR
+SHOWMIRR LDA #00
+CURRMIRR =   *-1
+         CMP #4
+         BNE >0
+         LDA #0
+^0       STA CURRMIRR
+         LDY #MIRRPLOC
+         STY SHOWYLOC
+         LDY #MIRRPATT
+         LDX /MIRRPATT
+         JMP SHOWPATT
+;
+; Mirror patterns:
+;
+MIRRPATT HEX FFFFFFFFFFFFFFFF
+         HEX E7E7E70000E7E7E7
+         HEX FFFFFF0000FFFFFF
+         HEX E7E7E7E7E7E7E7E7
+;-----------
+;
+; Turn off lock mode
+;
+LOCKOFF  STX >0+1
+         STY >1+1
+         STA >2+1
+         LDA LOCKMODE
+         BPL >2
+;
+; Toggle lock mode
+;
+TOGGLOCK LDA LOCKMODE
+         EOR #$80
+         STA LOCKMODE
+         BPL SHOWLOCK
+;
+; If we are turning on lock mode,
+; then save graphic in UNDOBUFF
+; and use opposite color of
+; current X,Y.
+;
+         JSR BUFFSAVE
+         JSR SETPLOTX
+;
+; Show lock mode
+;
+SHOWLOCK JSR PRINT
+         BYT RTOSBLAK,39,9,1,9,0
+         LDA LOCKMODE
+         BPL >0
+         JSR PICDRAW
+         BYT 39,9,1,9
+         HEX 1C222222C17777777F
+^0       LDX #00
+^1       LDY #00
+^2       LDA #00
+^3       RTS 
+;
+;
+;
+         ICL "S:EDIT3"

@@ -1,0 +1,898 @@
+;
+; S:SUBPAK3
+;
+; PRINT routine
+;
+PRDONE   =   0
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+PRPIC    =   19
+PRRTAB   =   20
+PRRTAB2  =   21
+PRKERN   =   22
+RTOSINV  =   23
+GOOBER   =   24
+;
+PRINT    JSR GETINIT
+         JSR PRZZNORM
+         JSR PRZZLEFT
+         JSR PRZZSMAL
+         LDA #8
+         STA PRNTYINC
+         LDA #2
+         STA SPARM+7
+;
+PRINT1   LDX #0
+PRINT2   JSR GETBYTE
+         CMP #' '
+         BLT PRINT3
+         STA PRINBUFF,X
+         INX 
+         BNE PRINT2
+;
+PRINT3   ASL 
+         TAY 
+         LDA PRINT5,Y
+         STA PRINT4+1
+         LDA PRINT5+1,Y
+         STA PRINT4+2
+         CLC 
+PRINT4   JSR $FFFF
+         BCC PRINT2
+         BCS PRINT1
+;
+; Addresses of print options
+;
+PRINT5   ADR PRZZDONE
+         ADR PRZZNORM
+         ADR PRZZINVR
+         ADR PRZZLEFT
+         ADR PRZZRITE
+         ADR PRZZCNTR
+         ADR PRZZLOC
+         ADR PRZZSMAL
+         ADR PRZZBIG
+         ADR PRZZSTR
+         ADR PRZZSPC
+         ADR PRZZHTAB
+         ADR PRZZVTAB
+         ADR PRZZCR
+         ADR PRZZNOCR
+         ADR PRZZBLAK
+         ADR PRZZWITE
+         ADR PRZZANY
+         ADR PRZZCSPC
+         ADR PICDRAW2
+         ADR PRZZRTAB
+         ADR PRZZRTB2
+         ADR PRZZKERN
+         ADR PRZZRINV
+         ADR GOOBER1
+;
+PRZZDONE PLA 
+         PLA 
+         RTS 
+;
+PRZZNORM LDA #2
+         HEX 2C
+PRZZINVR LDA #3
+         STA SPARM+0
+         RTS 
+;
+PRZZLEFT LDA #0
+         HEX 2C
+PRZZRITE LDA #1
+         HEX 2C
+PRZZCNTR LDA #2
+         STA SPARM+1
+         RTS 
+;
+PRZZHTAB JSR GETBYTE
+         STA SPARM+2
+         STA PRNTXLO
+         JSR GETBYTE
+         STA SPARM+3
+         STA PRNTXHI
+         RTS 
+;
+PRZZLOC  JSR PRZZHTAB
+PRZZVTAB JSR GETBYTE
+         STA SPARM+4
+         RTS 
+;
+PRZZCSPC JSR GETBYTE
+         STA SPARM+7
+         RTS 
+;
+PRZZSMAL LDA #0
+         HEX 2C
+PRZZBIG  LDA #1
+         STA SPARM+8
+         RTS 
+;
+PRZZKERN JSR GETBYTE
+         STA SPARM+11
+         RTS 
+;
+PRZZSTR  JSR GETBYTE
+         STA >0+1
+         JSR GETBYTE
+         STA >0+2
+         LDY #0
+^0       LDA $FFFF,Y
+         BEQ >2
+         CMP #$20
+         BLT >1
+         STA PRINBUFF,X
+         INX 
+^1       INY 
+         BNE <0
+;
+PRZZSPC  JSR GETBYTE
+         STA PRNTYINC
+^2       CLC 
+         RTS 
+;
+PRZZRTAB JSR PRZZNOCR
+         JSR GETBYTE
+         CLC 
+         ADC PRNTXLO
+         STA SPARM+2
+         LDA PRNTXHI
+         ADC #0
+         STA SPARM+3
+         SEC 
+         RTS 
+;
+PRZZRTB2 JSR PRZZRTAB
+         STA PRNTXHI
+         LDA SPARM+2
+         STA PRNTXLO
+         RTS 
+;
+PRZZCR   JSR PRZZNOCR
+         LDY #00
+PRNTXLO  =   *-1
+         LDA #00
+PRNTXHI  =   *-1
+         STY SPARM+2
+         STA SPARM+3
+         LDA SPARM+4
+         CLC 
+         ADC #00
+PRNTYINC =   *-1
+         STA SPARM+4
+         SEC 
+         RTS 
+;
+PRZZNOCR LDA #0
+         STA PRINBUFF,X
+         LDY #PRINBUFF
+         LDA /PRINBUFF
+         STY SPARM+9
+         STA SPARM+10
+         JSR STROUT
+         SEC 
+         RTS 
+;
+PRZZANY  JSR GETBYTE
+         HEX 2C
+PRZZBLAK LDA #$00
+         HEX 2C
+PRZZWITE LDA #$7F
+         HEX 2C
+PRZZRINV LDA #$FF
+         ASL 
+         PHP 
+         LSR 
+         TAY 
+         PLP 
+         LDA #$A0
+         BCC *+3
+         ASL 
+         ORA #$09
+;
+         PHA 
+         LDX #0
+^1       JSR GETBYTE
+         CMP #$FF
+         BEQ >2
+         STA RTOSPARM,X
+^2       INX 
+         CPX #4
+         BLT <1
+         PLA 
+         JSR RTOS
+         SEC 
+         RTS 
+;-----------
+;
+; JSR PRINTGRP
+; BYT <Xoption>
+; BYT <# items>
+; ADR <buffer>
+;
+PRINTGRP JSR GETINIT
+         JSR GETWORD
+         STX PRINTGM0
+         STA TMP2
+         JSR GETWORD
+         STX TMP0
+         STA TMP1
+         JSR SAVEGOT
+;
+^0       JSR PRINTGR2
+         LDY #0
+^1       LDA (TMP0),Y
+         INC TMP0
+         BNE *+4
+         INC TMP1
+         TAX 
+         BNE <1
+         DEC TMP2
+         BNE <0
+         JMP RESTGOT
+;
+; Print string pointed to
+; by TMP0.TMP1
+;
+PRINTGR2 LDX TMP0
+         LDA TMP1
+         STX PRINTGM1+1
+         STA PRINTGM1+2
+         JSR PRINT
+PRINTGM0 BYT PRCNTR
+PRINTGM1 .DA #PRSTR,$FFFF,#CR,#0
+         RTS 
+;-----------
+GOOBER0  ADR GOOBER2
+GOOBER1  LDA READPROT
+         JMP (GOOBER0)
+;-----------
+;
+; JSR INPUT
+; ADR <buffer>
+; BYT <maxlen>
+; .DA <xcoor>
+; BYT <ycoor>
+;
+INPUT    JSR GETINIT
+         JSR GETWORD
+         STX INPUTP3
+         STA INPUTP3+1
+         JSR GETBYTE
+         STA STRGET+5
+         JSR GETWORD
+         STX INPUTP1
+         STA INPUTP1+1
+         JSR GETBYTE
+         STA INPUTP2
+         LDX #INPUTP
+         LDY /INPUTP
+         STX STRGET+3
+         STY STRGET+4
+         JMP STRGET
+;
+INPUTP   HEX 0200
+INPUTP1  ADR 0
+INPUTP2  ADR 0
+         HEX 000200
+INPUTP3  ADR 0
+         HEX 00
+;-----------
+READPROT HEX 00
+;-----------
+;
+; Clear screen routines
+;
+CLSCREEN JSR PRINT
+         BYT RTOSBLAK,0,0,40,192,0
+         BIT $C057
+         BIT $C052
+         BIT $C050
+         RTS 
+;
+CLS1     JSR PRINT
+         BYT RTOSBLAK,1,17,38,165,0
+         RTS 
+;
+CLS2     JSR PRINT
+         BYT RTOSBLAK,1,28,38,154,0
+         RTS 
+;-----------
+GOOBER2  INC READPROT
+         JMP GOOBER3
+;-----------
+;
+CLS3     JSR PRINT
+         BYT RTOSBLAK,1,31,38,151,0
+         RTS 
+;
+; GET routines
+;
+GETINIT  TSX 
+         LDA $103,X
+         STA GOTBYTE+1
+         LDA $104,X
+         STA GOTBYTE+2
+         LDA #>0-1
+         STA $103,X
+         LDA />0-1
+         STA $104,X
+         RTS 
+;
+^0       PHA 
+         JSR GETBYTE
+         PLA 
+         JMP (GOTBYTE+1)
+;
+; Get a word
+; X=lo, A=hi
+;
+GETWORD  JSR GETBYTE
+         TAX 
+;
+; Get a byte
+;
+GETBYTE  INC GOTBYTE+1
+         BNE GOTBYTE
+         INC GOTBYTE+2
+GOTBYTE  LDA $FFFF
+         RTS 
+;
+; Save GOTBYTE info
+;
+SAVEGOT  LDY GOTBYTE+1
+         LDA GOTBYTE+2
+         STY RESTGOT+1
+         STA RESTGOT+3
+         RTS 
+;
+; Restore GOTBYTE info
+;
+RESTGOT  LDY #00
+         LDA #00
+         STY GOTBYTE+1
+         STA GOTBYTE+2
+         RTS 
+;-----------
+;
+; JSR SELECT
+; BYT <xstart>,<xwidth>,<ystart>,<max entries>
+; ADR <routine>
+;
+SELECT   STY SELCUR
+         LDA SCALING
+         STA SCALSAVE
+         LSR SCALING
+         JSR GETINIT
+;
+         LDX #0
+         STX SELWERDP
+^0       JSR GETBYTE
+         STA SELECTXS,X
+         INX 
+         CPX #6
+         BLT <0
+;
+         ASL SELECTXS
+         LDY #'V'-$40
+         BCS *+4
+         LDY #$FF
+         STY SELVRMOD
+         LSR SELECTXS
+;
+; Set input device to default
+;
+         LDA SELCUR
+         JSR SELSET
+;
+SELLOOP  JSR SELECTIV
+         JSR SAVEGOT
+         JSR SELSUB
+         JSR RESTGOT
+;
+^0       LDY #0
+         JSR DEVICERD
+         BCS >1
+;
+; If button was down at last
+; reading, then ignore.
+;
+         ASL 
+         BMI >1
+;
+; If button is down now, then
+; selection made
+;
+         BCS SELDONE
+         TYA 
+         LSR 
+         LSR 
+         CMP #00
+SELDEVY  =   *-1
+         STA SELDEVY
+         BEQ >1
+         CMP SELECTMX
+         BLT SELNEW
+;
+; Too big, so set device to
+; maximum.
+;
+         LDX SELECTMX
+         DEX 
+         BPL >9
+;
+^1       JSR POLEKEY
+         BPL <0
+;
+         LDX SELCUR
+         CMP #8
+         BEQ SELUP
+         CMP #$0B
+         BEQ SELUP
+         CMP #$15
+         BEQ SELDOWN
+         CMP #$0A
+         BEQ SELDOWN
+         CMP #ESC
+         BEQ >2
+         CMP #CR
+         BEQ SELDONE
+         CMP #00
+SELVRMOD =   *-1
+         BEQ SELVERS
+         JSR SELDOWRD
+         BNE <0
+;
+SELVERS  ROR SELWERDP
+;
+SELDONE  CLC 
+^2       PHP 
+         JSR SELECTIV
+         PLP 
+         LDA #00
+SCALSAVE =   *-1
+         STA SCALING
+         LDA SELWERDP
+         LDY SELCUR
+         RTS 
+;---
+;
+; Since keyboard was used,
+; update device also.
+;
+^9       TXA 
+         JSR SELSET
+SELNEW   PHA 
+         JSR SELECTIV
+         PLA 
+         STA SELCUR
+         BPL SELLOOP
+;
+SELUP    DEX 
+         BPL <9
+         LDX SELECTMX
+         DEX 
+         BPL <9
+;
+SELDOWN  INX 
+         CPX SELECTMX
+         BLT <9
+         LDX #0
+         BEQ <9
+;
+SELECTIV LDA SELCUR
+         ASL 
+         ASL 
+         ASL 
+         ADC SELECTYS
+         STA RTOSPARM+1
+         LDA #9
+         STA RTOSPARM+3
+         LDY SELECTXS
+         LDA SELECTXW
+         STY RTOSPARM
+         STA RTOSPARM+2
+         LDA #$49
+         LDY #$7F
+         JMP RTOS
+;
+SELDOWRD LDY SELWERDP
+         CMP SELWEIRD,Y
+         BEQ >0
+         LDY #$FF
+         HEX 24
+^0       INY 
+         STY SELWERDP
+         LDA #1
+         RTS 
+;
+; Set input device
+;
+SELSET   PHA 
+         STA SELDEVY
+         ASL 
+         ASL 
+         ADC #2
+         TAY 
+         LDX #0
+         JSR DEVICEST
+         PLA 
+         RTS 
+;
+SELWEIRD BYT 'STEVEN',0
+SELWERDP BRK 
+;-----------
+GOOBER30 ADR GOOBER4
+GOOBER3  AND #7
+         BEQ >0
+         CLC 
+         RTS 
+         HEX 6D
+^0       JMP (GOOBER30)
+;-----------
+SELSUB   LDA SELCUR
+         ASL 
+         TAX 
+         JMP (SELADR)
+;
+SELCUR   BRK 
+;
+SELECTXS BRK 
+SELECTXW BRK 
+SELECTYS BRK 
+SELECTMX BRK 
+SELADR   ADR 0
+;-----------
+         HEX 20
+GOOBER4  JSR CHEKPROT
+         CLC 
+         RTS 
+;-----------
+;
+; JMP to routine given in Y
+;
+; JSR JMPVECTS
+; ADR ROUTINE0
+; ADR ROUTINE1
+;
+JMPVECTS JSR GETINIT
+^0       JSR GETWORD
+         STX TMP0
+         STA TMP1
+         DEY 
+         BPL <0
+         PLA 
+         PLA 
+         JMP (TMP0)
+;-----------
+;
+; JSR LINES
+; BYT 'V' (or 'H') for vertical/horiz
+; BYT <color>,<xstart>,<ystart>,<len>
+; BYT 1 (terminate)
+;
+; TMP0=length
+;
+LINES    LDA #0
+         STA LINEXOFF
+         JSR GETINIT
+         JSR GETBYTE
+         STA LINETYPE
+         BPL >0
+         JSR GETBYTE
+         STA LINEXOFF
+;
+^0       JSR GETBYTE
+         CMP #1
+         BEQ LINERTS
+         STA LINECOLR
+         JSR GETBYTE
+         TAX 
+         JSR GETBYTE
+         STA LINEY
+         JSR GETBYTE
+         STA TMP0
+         LDA #00
+LINETYPE =   *-1
+         AND #$7F
+         CMP #'V'
+         BEQ LINEV
+;
+LINEH    JSR LINEDOT
+         INX 
+         DEC TMP0
+         BNE LINEH
+         JMP <0
+;
+LINEV    JSR LINEDOT
+         INC LINEY
+         DEC TMP0
+         BNE LINEV
+         JMP <0
+;
+LINEDOT  LDY #00
+LINEY    =   *-1
+         LDA YBASELO,Y
+         CLC 
+         ADC #00
+LINEXOFF =   *-1
+         STA HIRES
+         LDA YBASEHI,Y
+         STA HIRES+1
+         STY TMP2
+         LDY XBYTEOFF,X
+         TYA 
+         EOR TMP2
+         LSR 
+         LDA #00
+LINECOLR =   *-1
+         BCC >0
+         LSR 
+^0       AND XBITS,X
+         STA TMP2
+         LDA XBITS,X
+         EOR #$FF
+         AND (HIRES),Y
+         ORA TMP2
+         STA (HIRES),Y
+LINERTS  RTS 
+;-----------
+;
+; JSR PARSE
+; .DA #'A',JMPA
+; .DA #'B',JMPB
+; BRK
+;
+; If no match, then routine simply
+; continues to execute code after
+; the BRK instruction.
+;
+; all registers preserved
+;
+PARSE    STA TMP0
+         JSR SAVEREGS
+         JSR GETINIT
+^0       JSR GETBYTE
+         BEQ >1
+         EOR TMP0
+         PHA 
+         JSR GETWORD
+         STX TMP1
+         STA TMP2
+         PLA 
+         BNE <0
+         PLA 
+         PLA 
+         JSR RESTREGS
+         JMP (TMP1)
+^1       JMP RESTREGS
+;-----------
+;
+; Draw arrow at X,Y
+; A=0 for IJMK, 1 for WASZ
+;
+SHOWAROW STX ARROWX
+         STY ARROWY
+         ASL 
+         ASL 
+         STA AROWTYPE
+;
+; Compute bit location by
+; multiplying X by 7.
+;
+         TXA 
+         ASL 
+         ASL 
+         ASL 
+         SEC 
+         SBC ARROWX
+         STA ARROWX2
+;
+         JSR PICDRAW
+ARROWX   BYT 26
+ARROWY   BYT 1
+         BYT 6,37
+         HEX 82400184600384300684180C840C1884
+         HEX 06308403608340014001826001400382
+         HEX 40014001824001400182460140318247
+         HEX 01407181407D01405F01608403308406
+         HEX 18840C0C84180684300C841818840C30
+         HEX 8406608403407D01405F018147014071
+         HEX 82460140318240014001824001400182
+         HEX 60014003824001400183036084063084
+         HEX 0C1884180C84300684600384400182
+;
+         LDA #0
+         STA TMP5
+^1       LDY #00
+AROWTYPE =   *-1
+         INC AROWTYPE
+         LDA SHOWARTB,Y
+         STA >3+0
+         LDY TMP5
+         LDA ARROWOFX,Y
+         CLC 
+         ADC #00
+ARROWX2  =   *-1
+         STA >2+1
+         LDA ARROWOFY,Y
+         ADC ARROWY
+         STA >2+3
+         JSR PRINT
+         BYT PRCNTR
+^2       .DA #PRLOC,00,#00
+^3       BYT ' ',NOCR,0
+;
+         INC TMP5
+         LDA TMP5
+         CMP #4
+         BLT <1
+         RTS 
+;
+SHOWARTB BYT 'IJKMWASZ'
+;
+ARROWOFX BYT 21,12,30,21
+ARROWOFY BYT 7,15,15,23
+;-----------
+;
+; Convert number to text
+; given in A, return
+; Y=tens digit, A=ones digit
+;
+MAKENUMB LDY #$FF
+         SEC 
+^0       INY 
+         SBC #10
+         BCS <0
+         ADC #10
+         RTS 
+;-----------
+;
+; Print a number
+;
+; Given X,Y and A=number
+;
+NUMBER   STX DIGITX
+         STY DIGITY
+         JSR MAKENUMB
+         PHA 
+         JSR DIGITPRN
+         PLA 
+         INC DIGITX
+;
+         TAY 
+DIGITPRN LDA SYSFONT+$86,Y
+         STA TMPLO
+         LDA SYSFONT+$C1,Y
+         STA TMPHI
+         LDA #7
+         STA TMP2
+         LDX #00
+DIGITY   =   *-1
+^0       LDA YBASELO,X
+         STA HIRES
+         LDA YBASEHI,X
+         STA HIRES+1
+         LDY #0
+         LDA (TMPLO),Y
+         INC TMPLO
+         BNE *+4
+         INC TMPHI
+         LSR 
+         TAY 
+         LDA FLIPPER,Y
+         LDY #00
+DIGITX   =   *-1
+         STA (HIRES),Y
+         INX 
+         DEC TMP2
+         BNE <0
+         RTS 
+;-----------
+;
+; Ram TO Screen routine
+; A is opcode
+; Y is operand
+;
+RTOSPARM EPZ $3A
+;
+RTX      EPZ RTOSPARM
+RTY      EPZ RTOSPARM+1
+RTXL     EPZ RTOSPARM+2
+RTYL     EPZ RTOSPARM+3
+RTADRL   EPZ RTOSPARM+4
+RTADRH   EPZ RTOSPARM+5
+;
+RTSCRL   EPZ RTOSPARM+6
+RTSCRH   EPZ RTOSPARM+7
+;
+RTOS     STA RTOSMD0
+         STY RTOSMD0+1
+;
+         LDX RTY
+^0       LDA YBASEHI,X
+         STA RTSCRH
+         LDA YBASELO,X
+         CLC 
+         ADC RTX
+         STA RTSCRL
+         LDY RTXL
+         DEY 
+^1       LDA (RTSCRL),Y
+RTOSMD0  EOR #$7F
+         STA (RTSCRL),Y
+         DEY 
+         BPL <1
+         LDA RTADRL
+         CLC 
+         ADC RTXL
+         STA RTADRL
+         BCC >2
+         INC RTADRH
+^2       INX 
+         DEC RTYL
+         BNE <0
+         RTS 
+;-----------
+;
+; PRESS SPACE BAR
+;    FOR MORE
+;
+SPACEBAR STA >0+0
+         JSR PICDRAW
+^0       BYT 26,181,14,11
+         HEX 787979793C707971717D70637303181B
+         HEX 1B0C0618181B1B0C3036360678797978
+         HEX 3C7079791B3C70737703185819406181
+         HEX 1B181B0C3036360318187B793C701918
+         HEX 737D703336069178797C701C4F4F0F86
+         HEX 184C4D715F59590186784C7D305B594F
+         HEX 0786184C6D3058594D018618784C3118
+         HEX 4F590F83
+         RTS 
+;-----------
+;
+; <ESC> TO GO TO MAIN MENU
+;
+ESCMAIN  JSR PRINT
+         BYT RTOSWITE,0,183,40,9
+         BRK 
+;
+         JSR MUSIC
+;
+         JSR PRINT
+         .DA #PRLOC,140,#174
+         BYT PRCNTR
+         BYT '<ESC> TO GO TO MAIN MENU',CR
+         BRK 
+         JSR GETKEY
+         CMP #ESC
+         BNE >0
+         JMP MAINMENU
+;
+^0       JSR PRINT
+         BYT RTOSBLAK,1,174,38,7,0
+         JMP ESCBACK
+;-----------
+;
+;
+;
+         ICL "S:SUBPAK4"

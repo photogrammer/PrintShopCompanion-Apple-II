@@ -1,0 +1,212 @@
+         TTL "S:SUBPAK"
+; S:SUBPAK1
+         NOG 
+ORG      =   $E000
+OBJ      =   $800
+;
+; 03/11/85
+; 08/23/85 last mod
+;
+; The Print Shop Companion Disk
+;      Subroutine Package
+;
+; by Roland Gustafsson
+;
+;------------
+;
+; Temp z-page
+;
+FLASHLO  EPZ $4E
+FLASHHI  EPZ $4F
+;
+TMP      EPZ $F0
+TMP0     EPZ TMP
+TMP1     EPZ TMP+1
+TMP2     EPZ TMP+2
+TMP3     EPZ TMP+3
+TMP4     EPZ TMP+4
+TMP5     EPZ TMP+5
+;
+TMPLO    EPZ TMP+6
+TMPHI    EPZ TMP+7
+HIRES    EPZ TMP+8
+;
+; For input device only!
+;
+DTMP0    EPZ TMP+10
+DTMP1    EPZ TMP+11
+DTMPLO   EPZ TMP+12
+DTMPHI   EPZ TMP+13
+;-----------
+;
+; Absolute references:
+;
+; Printer routines
+;
+PT       =   $1800
+;
+PTCOUT   =   PT
+PTCRLF   =   PT+3
+PTSENDGC =   PT+6
+PTGCOUT  =   PT+9
+;
+PRINBUFF =   $BB00
+SECTBUFF =   $8400
+;
+MAINMENU =   $0800
+;
+DATADRIV =   $95F4
+MENULAST =   $95F5
+CALENDAR =   5
+CHEKPROT =   $BCE0
+;
+; SYSLIB routines
+;
+STROUT   =   $8A00
+SPARM    =   STROUT+3
+STRGET   =   $8E03
+;
+; SYSLIB tables
+;
+YBASELO  =   $91C0
+YBASEHI  =   $9100
+XBYTEOFF =   $9398
+XBITS    =   $94B0
+SYSFONT  =   $8500
+FLIPPER  =   $9080
+;
+; Monitor routines
+;
+WAIT     =   $FCA8
+CROUT    =   $FD8E
+RTS      =   $FF58
+SAVEREGS =   $FF4A
+RESTREGS =   $FF3F
+;
+; Variables
+;
+MAXFLEN  =   15
+ESC      =   $1B
+;-----------
+         ORG ORG
+         OBJ OBJ
+;-----------
+; Screen output routines:
+;
+         JMP PRINT
+         JMP CLSCREEN
+         JMP WITEBORD
+         JMP ESCBACK
+         JMP PICDRAW
+;
+; Device input routines:
+;
+         JMP DEVICENW
+DEVMODS: 
+DEVICEON JMP DEVICEON
+DEVICEOF JMP DEVICEOF
+DEVICERD JMP DEVICERD
+DEVICEST JMP DEVICEST
+SCALING  HEX 00
+;
+; Keyboard routines:
+;
+         JMP POLEBTN
+         JMP POLEKEY
+         JMP GETKEY
+         JMP SELECT
+;
+; Load/Save routines:
+;
+         JMP SETTYPE
+         JMP GETFILE
+         JMP SAVEFILE
+TYPELEN  HEX 00
+FLSTART  ADR 0
+FLLENGTH ADR 0
+;
+         JMP BLOAD
+         JMP BSAVE
+         JMP DOSCR
+         JMP ERROR
+;
+; Miscellaneous routines:
+;
+         JMP MUSIC
+         JMP FLSHINIT
+         JMP JMPVECTS
+         JMP LINES
+         JMP PARSE
+         JMP SHOWAROW
+         JMP NUMBER
+         JMP WAITPSD
+         JMP WAITCD
+         JMP ANYKEY
+         JMP CHKPRINT
+         JMP BOOP
+         JMP GETINIT
+         JMP GETBYTE
+         JMP INPUT
+         JMP CLS1
+         JMP PRINTGRP
+         JMP RTOS
+         JMP SPACEBAR
+         JMP GETPDISK
+         JMP ESCMAIN
+         JMP TESTPAPR
+         JMP GETANUMB
+         JMP ANYKEY2
+         JMP DEVICECH
+;-----------
+;
+; Make sure that the following
+; routines don't cross page
+; boundaries.
+;
+;-----------
+;
+; Single tone error bell
+;
+BOOP     PHP 
+         SEI 
+         LDY #$20
+^0       BIT $C030
+         LDA #$18
+         JSR WAIT
+         DEY 
+         BNE <0
+         PLP 
+         RTS 
+;
+; Error Music
+;
+MUSIC    PHP 
+         SEI 
+         LDY #4
+^0       STY TMP0
+         LDA MUSICFRQ,Y
+         STA >1+1
+         LDA MUSICDUR,Y
+^1       LDX #00
+^2       INY 
+         BNE >3
+         SBC #1
+         BMI >4
+^3       DEX 
+         BNE <2
+         LDX $C030
+         JMP <1
+^4       LDY TMP0
+         DEY 
+         BPL <0
+         PLP 
+         RTS 
+;
+MUSICDUR HEX 6030301818
+MUSICFRQ HEX 5E4C807280
+;
+;-----------
+;
+;
+;
+         ICL "S:SUBPAK2"

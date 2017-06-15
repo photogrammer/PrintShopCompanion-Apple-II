@@ -1,0 +1,231 @@
+;
+; S:ICAL3
+;
+; Edit a string. GIVEN:
+;
+; 1)*Routine to BLAK current string
+;    edit area. Must also return
+;    string address in TMP2.3
+; 2) Routine to crop extra characters
+;    off the end of too-long strings.
+;    Used when the string will be
+;    printed using the loaded font.
+; 3)*Routine to actually draw the
+;    string onto the screen.
+;
+; 4)*Maximum width on screen
+; 5)*Maximum number of characters
+; 6)*CSPACE on screen
+; 7)*Kerning?
+;
+; * you must supply this parameter
+;
+;-----------
+;
+; Initialize TEDIT routine
+;
+TEINIT   JSR GETINIT
+         JSR GETWORD
+         STY TBLAKMOD+1
+         STA TBLAKMOD+2
+         JSR GETWORD
+         STY TCROPMOD+1
+         STA TCROPMOD+2
+         JSR GETWORD
+         STY TDRAWMOD+1
+         STA TDRAWMOD+2
+         JSR GETWORD
+         STY TMAXWITH
+         STA TMAXCONT
+         JSR GETWORD
+         STY TCSPACE
+         STA TKERNING
+         RTS 
+;-----------
+;
+; Text edit routine
+;
+TEDIT:   
+TBLAKMOD JSR $FFFF
+TCROPMOD JSR $FFFF
+;
+; Screen crop routine
+;
+; Set CSPACE and KERN
+;
+         LDY TMP2
+         LDA TMP3
+         STY SPARM+9
+         STA SPARM+10
+;
+         LDA #00
+TCSPACE  =   *-1
+         STA SPARM+7
+;
+         LDA #00
+TKERNING =   *-1
+         STA SPARM+11
+;
+         LDX #00
+TMAXWITH =   *-1
+         BEQ TDRAWMOD
+         LDY #0
+         LDA /UFONT
+         JSR STRCROP
+;
+TDRAWMOD JSR $FFFF
+;
+; Main loop (sort of)
+;
+^0       JSR IGETKEY
+         PHA 
+;
+; Calc length into Y
+;
+         LDY #$FF
+^1       INY 
+         LDA (TMP2),Y
+         BNE <1
+;
+         PLA 
+         LDX #1
+         JSR PARSE
+         .DA #'H'-$40,INPCTRLH
+         .DA #127,INPCTRLH
+         .DA #'E'-$40,INPCTRLE
+;
+; Return the following commands to
+; the calling program.
+;
+         .DA #CR,INPCR
+         .DA #'J'-$40,INPCR
+         .DA #ESC,INPESC
+         .DA #'K'-$40,INPESC
+;
+         .DA #'I'-$40,INPCTRLI
+         .DA #'S'-$40,INPCTRLS
+         .DA #'P'-$40,INPCTRLP
+         .DA #'F'-$40,INPCTRLF
+;
+         .DA #'@',<0+0
+         BRK 
+         CMP #' '
+         BLT <0
+         CMP #'Z'+1
+         BGE <0
+;
+; Too many letters?
+;
+         CPY #00
+TMAXCONT =   *-1
+         BGE <0
+;
+; Store char into buffer
+;
+         STA (TMP2),Y
+         INY 
+         LDA #0
+         STA (TMP2),Y
+;
+; If left justify, then don't need
+; to black out old string.
+;
+         LDA SPARM+1
+         BEQ TCROPMOD
+         BNE TBLAKMOD
+;-----------
+;
+; Erase line
+;
+INPCTRLE LDY #1
+;-----------
+;
+; Backspace
+;
+INPCTRLH DEY 
+         BMI <0
+         LDA #0
+         STA (TMP2),Y
+         JMP TEDIT
+;-----------
+INPCTRLF INX 
+INPCTRLP INX 
+INPCTRLS INX 
+INPCTRLI INX 
+INPESC   INX 
+INPCR    TXA 
+         RTS 
+;-----------
+;
+; Get a key with flashing cursor
+;
+IGETKEY  ASL ICURFLAG
+^0       JSR ICURSOR
+         INC ICURFLAG
+         JSR FLSHINIT
+;
+^1       JSR POLEBTN
+         BMI >2
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+^2       PHA 
+         LSR ICURFLAG
+         BCC >3
+         JSR ICURSOR
+^3       PLA 
+         RTS 
+;
+; EOR cursor onto screen
+;
+ICURSOR  LDA #4
+         STA SPARM+0
+;
+; SAVE: XOPTION,X,CSPACE
+;
+         LDA SPARM+1
+         PHA 
+         LDA SPARM+2
+         PHA 
+         LDA SPARM+3
+         PHA 
+         LDA SPARM+7
+         PHA 
+;
+         LDA #0
+         STA SPARM+1
+         STA SPARM+7
+         LDY #ICURSTXT
+         LDA /ICURSTXT
+         STY SPARM+9
+         STA SPARM+10
+         JSR STROUT
+;
+         PLA 
+         STA SPARM+7
+         PLA 
+         STA SPARM+3
+         PLA 
+         STA SPARM+2
+         PLA 
+         STA SPARM+1
+;
+; Set option back to OR
+; (4/2 = 2!!!)
+;
+         LSR SPARM+0
+         RTS 
+;
+ICURSTXT BYT 'II',0
+;-----------
+GETWORD  JSR GETBYTE
+         TAY 
+         JMP GETBYTE
+;-----------
+;
+;
+;
+         ICL "S:ICAL4"

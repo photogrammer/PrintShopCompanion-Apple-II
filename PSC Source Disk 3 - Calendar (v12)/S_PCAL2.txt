@@ -1,0 +1,586 @@
+;
+; S:PCAL2
+;
+; Low-level print buffer routines
+; -------------------------------
+;
+; Install calendar buffer hooks:
+;
+; INSCFONT : install calendar font
+; INSUFONT : install user font
+; -------------------------------
+; CLRPBUFF : clear print buffer
+; PRINBUFF : print buffer to printer
+; -------------------------------
+;
+ROWBUF   =   $8E00-32
+;
+STRZ     EPZ $50
+;
+PIXAD    EPZ STRZ
+XCUR     EPZ STRZ+2
+WCOUNT   EPZ STRZ+4
+PBUFLO   EPZ STRZ+5
+PBUFHI   EPZ STRZ+6
+XBYTE    EPZ STRZ+7
+COLORTMP EPZ STRZ+8
+; thru 12 available!
+YCUR     EPZ STRZ+16
+;
+;PIXAD   :pointer into font data
+;XCUR    :16 bit x-coordinate
+;WCOUNT  :starts as bit width of line
+;         but is converted to bytes.
+;PBUF    :pointer into planes
+;XBYTE   :byte offset into plane
+;COLORTMP:color to use for current line
+;         (each line different for rainbow)
+;
+;-----------
+;
+; Install calendar line draw routine
+;
+; Calendar font
+;
+INSCFONT JSR STINSTAL
+         ADR CLOPTION
+         ADR CLLINDRW
+         HBY CLFONT
+         RTS 
+;
+; User font
+;
+INSUFONT JSR STINSTAL
+         ADR CLOPTION
+         ADR CLLINDRW
+         HBY UFONT
+         RTS 
+;-----------
+;
+; Clear calendar buffer
+;
+CLRPBUFF JSR MTHINK
+         LDY #0
+         LDA /CLBUFFER
+         LDX #$40
+         STA >0+2
+         TYA 
+^0       STA CLBUFFER,Y
+         INY 
+         BNE <0
+         INC <0+2
+         DEX 
+         BNE <0
+         STA LORESH
+         RTS 
+;-----------
+;
+; SMC for OPTION
+;
+; If normal, Y=00
+;    erase , Y=FF
+; So if erase is desired, then
+; set mask to #$00
+;
+CLOPTION TYA 
+         EOR #$FF
+         STA CLINVR
+;
+; Only useful when we exit from
+; the linedraw routine.
+;
+INCPIXAD LDA WCOUNT
+         CLC 
+         ADC PIXAD
+         STA PIXAD
+         BCC >0
+         INC PIXAD+1
+^0       RTS 
+;-----------
+;
+; Calendar LINEDRAW routine
+;
+; Compute byte width of font data
+; INT((bits-1)/8)+1
+;
+CLLINDRW LDX WCOUNT
+         DEX 
+         TXA 
+         LSR 
+         LSR 
+         LSR 
+         TAX 
+         INX 
+         STX WCOUNT
+;
+; Now, should we bother with the
+; line draw routine?
+;
+         TYA 
+         CLC 
+         ADC CSIZE
+         SEC 
+         SBC YCLIP
+         CMP YMAX
+         BEQ >0
+         BGE INCPIXAD
+;
+; Update lores screen?
+;
+^0       LDA LORESL
+         ADC WCOUNT
+         STA LORESL
+         BCC >0
+         INC LORESH
+         LDA LORESH
+         EOR #4
+         BNE >0
+         STA LORESH
+         JSR CHECKESC
+         JSR UPLRK
+;---
+;
+; Move data into ROWBUF
+;
+^0       LDY WCOUNT
+         DEY 
+^1       LDA (PIXAD),Y
+         STA ROWBUF,Y
+         DEY 
+         BPL <1
+;
+         JSR INCPIXAD
+;---
+;
+; Double size of buffer?
+;
+         LDA CSIZE
+         BEQ >3
+;
+; NOTE:XBYTE is used as TEMP var
+;
+         LDX WCOUNT
+^2       TXA 
+         ASL 
+         STA XBYTE
+;
+         LDA ROWBUF-1,X
+         AND #$0F
+         TAY 
+         LDA DBLTBL,Y
+         LDY XBYTE
+         STA ROWBUF-1,Y
+;
+         LDA ROWBUF-1,X
+         LSR 
+         LSR 
+         LSR 
+         LSR 
+         TAY 
+         LDA DBLTBL,Y
+         LDY XBYTE
+         STA ROWBUF-2,Y
+         DEX 
+         BNE <2
+         ASL WCOUNT
+;---
+;
+; Rotate buffer to the right if
+; necessary.
+;
+^3       LDA XCUR
+         AND #7
+         TAY 
+         BEQ >6
+;
+; Rotate (XCUR & 7) times
+;
+         LDX WCOUNT
+         LDA #0
+         STA ROWBUF,X
+         INC WCOUNT
+^4       LDX #0
+         CLC 
+^5       ROR ROWBUF,X
+         INX 
+         TXA 
+         EOR WCOUNT
+         BNE <5
+         DEY 
+         BNE <4
+;
+; Starting X-byte offset = XCUR/8
+;
+^6       LDA XCUR+1
+         STA XBYTE
+         LDA XCUR
+         LSR XBYTE
+         ROR 
+         LSR XBYTE
+         ROR 
+         LSR 
+         STA XBYTE
+;
+; Now draw ROWBUF into buffer
+;
+         LDY YCUR
+         JSR PUTROW
+         LDA CSIZE
+         BEQ PUTROWX
+         LDY YCUR
+         INY 
+;---
+;
+; Draw ROWBUF into buffers
+;
+; $2000.2FFF yellow (black in B/W)
+;  3000.3FFF red
+;  4000.4FFF blue
+;  5000.5FFF black
+;
+; Set PBUF pointer to yellow plane
+;
+PUTROW   TYA 
+         STA RAINY
+         SEC 
+         SBC YCLIP
+         CMP YMAX
+         BGE PUTROWX
+;
+         LSR 
+         TAY 
+         LDA #0
+         ROR 
+         ORA XBYTE
+         STA PBUFLO
+         TYA 
+         ADC /CLBUFFER
+         STA PBUFHI
+;
+; Set color plane 
+; NOTE:if erasing, then CLINVR will
+; be set to #$00, causing all 4
+; planes to be erased.
+;
+         LDY COLOR
+^0       LDA COLORTBL,Y
+         AND #$FF                      ; smc
+CLINVR   =   *-1
+         STA COLORTMP
+         BPL >1
+;
+; If rainbow, go back and get new color!
+;
+         LDA #00
+RAINY    =   *-1
+         AND #$0F
+         TAX 
+         LDY RBTBL,X
+         BPL <0
+;---
+;
+; Now determine whether or not to
+; turn bits on or off!
+;
+^1       LDA #$19                      ; ORA ABS,Y
+         LSR COLORTMP
+         BCS *+4
+         LDA #$59                      ; EOR ABS,Y
+         STA >3+0
+         LDY WCOUNT
+         DEY 
+^2       LDA (PBUFLO),Y
+         ORA ROWBUF,Y
+^3       ORA ROWBUF,Y                  ; (EOR ROWBUF,Y)
+         STA (PBUFLO),Y
+         DEY 
+         BPL <2
+;
+; Point to next color plane
+;
+         LDA PBUFHI
+         CLC 
+         ADC #$10
+         STA PBUFHI
+         CMP /CLBUFFER+$4000
+         BGE PUTROWX
+;
+; If color, go back and do it!
+;
+         LDA COLORPR
+         BNE <1
+;
+PUTROWX  RTS 
+;-----------
+;
+; ----- RIBBON COLOR -----
+;
+; bit 0 yellow
+; bit 1 red
+; bit 2 blue
+; bit 3 black
+;
+; BLACK,RED,ORANGE,YELLOW,GREEN
+; BLUE,PURPLE,RAINBOW,CLEAR
+;
+COLORTBL BYT 8,2,3,1,5,4,6
+RAINBOW  BYT $80,0
+;
+; Black ribbon mod
+;
+; 1 color,4 color,3 color
+; 1 only draws to yellow plane!!!
+;
+BLACKTBL BYT 1,8,7
+;
+; Rainbow colors
+;
+RBTBL    BYT 1,1,1,2,2,3,3,3
+         BYT 4,4,4,5,5,5,6,6
+;
+; Double 4 bits to 8 bits
+;
+DBLTBL   HEX 00030C0F
+         HEX 30333C3F
+         HEX C0C3CCCF
+         HEX F0F3FCFF
+;-----------
+******** *************************
+;-----------
+;
+PRZ      EPZ $80
+;
+PYEND    EPZ PRZ
+PXCOOR   EPZ PRZ+1
+PYCOOR   EPZ PRZ+2
+PYCOORSV EPZ PRZ+3
+;
+PXCOUNT  EPZ PRZ+4
+PYCOUNT  EPZ PRZ+5
+;
+PBUILD   EPZ PRZ+6
+PYSPACE  EPZ PRZ+7
+;
+PBUFSAVL EPZ PRZ+8
+PBUFSAVH EPZ PRZ+9
+PBUFL    EPZ PRZ+10
+PBUFH    EPZ PRZ+11
+PBUFOFF  EPZ PRZ+12
+PRRIBBON EPZ PRZ+13
+;
+; Print buffer A=# of scan lines
+; to print.
+;
+; Returns: SEC=ESC pressed
+;          CLC=entire buffer printed
+;
+PRINBUFF STA PYEND
+;
+         JSR MPRINT
+;
+         LDA #0
+;
+; Print single line of buffer
+;
+CLPRLOP1 STA PYCOORSV
+;
+; Calculate buffer address
+;
+         LSR 
+         TAY 
+         LDA #0
+         ROR 
+         STA PBUFSAVL
+         TYA 
+         ADC /CLBUFFER
+         STA PBUFSAVH
+;
+; COLOR?
+;
+         LDA COLORPR
+         BEQ >0
+         LDA #3
+^0       STA PRRIBBON
+         BEQ >1
+;---
+;
+; Loop here for color
+;
+CLPRCOL1 LDX PRRIBBON
+         JSR COLORCHG
+;
+; Check to see if all zeros
+;
+^1       JSR CLBUFZER
+         BEQ CLPRSKP1
+;
+; Tell printer how many bytes
+;
+         LDX #BUFWIDTH
+         LDY /BUFWIDTH
+         JSR SENDGC
+;
+         LDX #0
+;
+; Output line of data
+;
+CLPRLOP2 STX PXCOOR
+         LDX #0
+;
+; Output 8 bytes
+;
+CLPRLOP3 STX PXCOUNT
+         LDX PBUFSAVL
+         LDA PBUFSAVH
+         STX PBUFL
+         STA PBUFH
+         LDX #0
+         STX PBUILD
+         LDY PYCOORSV
+;
+; Output 1 byte
+;
+; X=counter, 0-6
+; Y=Y-coordinate
+;
+CLPRLOP4 STX PYCOUNT
+         STY PYCOOR
+;
+         LDY PXCOOR
+         LDA (PBUFL),Y
+         LDX PXCOUNT
+         AND PBITS8,X
+         BEQ >1
+;
+         LDY PYCOUNT
+         LDA PBITS7,Y
+         ORA PBUILD
+         STA PBUILD
+;
+^1       LDA PBUFL
+         EOR #$80
+         STA PBUFL
+         BNE *+4
+         INC PBUFH
+;
+         LDY PYCOOR
+         INY 
+         LDX PYCOUNT
+         INX 
+         CPY PYEND
+         BEQ >2
+         CPX #7
+         BLT CLPRLOP4
+;
+^2       STX PYSPACE
+         LDA PBUILD
+         JSR GCOUT
+;
+         LDX PXCOUNT
+         INX 
+         CPX #8
+         BLT CLPRLOP3
+;
+         LDX PXCOOR
+         INX 
+         CPX #BUFWIDTH/8
+         BLT CLPRLOP2
+;
+; CR without LF
+;
+CLPRSKP1 LDA #CR
+         JSR COUT1
+;
+; If color then go to next plane
+;
+         LDA COLORPR
+         BEQ >0
+         LDA PBUFSAVH
+         CLC 
+         ADC #$10
+         STA PBUFSAVH
+         DEC PRRIBBON
+         BMI >0
+         JMP CLPRCOL1
+;
+; Now do LF
+;
+^0       LDX PYSPACE
+         LDY #1
+         JSR CRLF
+;
+         JSR CHECKESC
+;
+         LDA PYCOORSV
+         CLC 
+         ADC PYSPACE
+         CMP PYEND
+         CLC 
+         BEQ >9
+         JMP CLPRLOP1
+^9       RTS 
+;
+; Bit lookup tables
+;
+PBITS8   HEX 80
+PBITS7   HEX 40201008040201
+;-----------
+;
+; Check current buffer for zeros
+;
+; BEQ=this line is all zeros
+; BNE=this line contains data
+;
+CLBUFZER LDY PBUFSAVL
+         LDA PBUFSAVH
+         STY PBUFL
+         STA PBUFH
+;
+; Calculate how many lines to check
+;
+         LDA PYEND
+         SEC 
+         SBC PYCOORSV
+         CMP #7
+         BLT *+4
+         LDA #7
+         STA PYSPACE
+         TAX 
+;
+^0       LDY #0
+^1       LDA (PBUFL),Y
+         BNE >2
+         INY 
+         BPL <1
+         LDA PBUFL
+         EOR #$80
+         STA PBUFL
+         BNE *+4
+         INC PBUFH
+         DEX 
+         BNE <0
+^2       RTS 
+;-----------
+;
+; Check for <ESC>, if yes then
+; show pausing message and allow
+; another <ESC> to abort.
+;
+CHECKESC JSR POLEKEY
+         CMP #ESC
+         BNE <2
+         JSR DEVICEON
+         JSR MPAUSE
+         SEI 
+         PHP 
+         JSR DEVICEOF
+         PLP 
+         BCC <2
+         JMP ABORT
+;-----------
+;
+;
+;
+         USR "PCAL",ORG
+;
+         ICL "S:COMMON"

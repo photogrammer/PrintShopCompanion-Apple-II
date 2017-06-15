@@ -1,0 +1,864 @@
+         NLS 
+         TTL "S:HELLO"
+         NOG 
+;
+ORG      =   $800
+;
+; 05/27/85
+; 09/10/85 last mod (Font stuff)
+;
+; Hello Program for
+;
+; The Print Shop Companion Disk
+;
+; by Roland Gustafsson
+;
+HAS128K  =   $27F
+;
+DAT      EPZ $00
+;
+TMP0     EPZ DAT
+TMP1     EPZ DAT+1
+TMP2     EPZ DAT+2
+TMP3     EPZ DAT+3
+LDPROG   EPZ DAT+4
+LDPOINT  EPZ DAT+5
+LDPADR   EPZ DAT+6
+LDLENGTH EPZ DAT+7
+LDDIRECT EPZ DAT+8
+;
+ICONS    =   $4000
+;
+YHI      =   $9100
+YLO      =   $91C0
+SELCTION =   $95F5
+;
+; SUBPAK entry points:
+;
+SP       =   $E000
+;
+PRINT    =   SP
+CLSCREEN =   SP+3
+WITEBORD =   SP+6
+ESCBACK  =   SP+9
+PICDRAW  =   SP+12
+;
+DEVICENW =   SP+15
+DEVICEON =   SP+18
+DEVICEOF =   SP+21
+DEVICERD =   SP+24
+DEVICEST =   SP+27
+SCALING  =   SP+30
+;
+POLEBTN  =   SP+31
+POLEKEY  =   SP+34
+GETKEY   =   SP+37
+SELECT   =   SP+40
+;
+SETTYPE  =   SP+43
+GETFILE  =   SP+46
+SAVEFILE =   SP+49
+TYPELEN  =   SP+52
+FLSTART  =   SP+53
+FLLENGTH =   SP+55
+BLOAD    =   SP+57
+BSAVE    =   SP+60
+DOSCR    =   SP+63
+ERROR    =   SP+66
+;
+MUSIC    =   SP+69
+FLSHINIT =   SP+72
+JMPVECTS =   SP+75
+LINES    =   SP+78
+PARSE    =   SP+81
+SHOWAROW =   SP+84
+NUMBER   =   SP+87
+WAITPSD  =   SP+90
+WAITCD   =   SP+93
+ANYKEY   =   SP+96
+CHKPRINT =   SP+99
+BOOP     =   SP+102
+GETINIT  =   SP+105
+GETBYTE  =   SP+108
+INPUT    =   SP+111
+CLS1     =   SP+114
+PRINTGRP =   SP+117
+RTOS     =   SP+120
+RTOSPARM EPZ $3A
+;
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+PRPIC    =   19
+PRRTAB   =   20
+PRRTAB2  =   21
+PRKERN   =   22
+RTOSINV  =   23
+GOOBER   =   24
+;
+ESC      =   27
+;
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+;
+START    JMP MAINMENU
+         JMP FGETMAIN
+         JMP FGETPSD
+         JMP FGETCD
+;-----------
+TXTTPS   BYT 'THE PRINT SHOP',0
+TXTC     BYT 'COMPANION',0
+;
+TXTAPRET BYT 'AND '
+TXTPRET  BYT 'PRESS'
+TXTSRET  BYT ' '
+TXTRET   BYT '<RETURN>',0
+;-----------
+MAINMENU JSR LOADINIT
+         LDA #$2C
+         STA MAINMENU
+;
+         LDX #$FF
+         TXS 
+         JSR WITEBORD
+         JSR PRINT
+         BYT RTOSWITE,1,16,38,15
+         BYT PRINVR,PRCNTR,PRBIG
+         BYT PRSPC,15
+         .DA #PRLOC,140,#1
+         .DA #PRSTR,TXTTPS,#CR
+         .DA #PRSTR,TXTC,#CR,#0
+;
+         JSR LOADICON
+;
+         JSR PRINT
+         .DA #PRLOC,140,#36
+         BYT PRCNTR
+         BYT CR,'MAIN MENU',CR
+;
+         .DA #PRLOC,76,#66
+         BYT 'GRAPHIC EDITOR+',CR
+         BYT 'BORDER EDITOR',CR
+         BYT 'FONT EDITOR',CR
+         BYT 'TILE MAGIC',CR
+         BYT 'CREATURE MAKER',CR
+         BYT 'CALENDAR',CR
+         BYT 'SETUP',CR
+         BYT 'EXIT PROGRAM',CR
+;
+; ICON border
+;
+ICONY    =   71
+         BYT RTOSWITE,21,ICONY-2,15,2
+         BYT RTOSWITE,21,ICONY+53,15,2
+         BYT RTOSANY,$70,20,ICONY-2,1,57
+         BYT RTOSANY,$07,36,ICONY-2,1,57
+;
+         BRK 
+         JSR SHOWBOTM
+;
+         LDA #1
+SELPROG  CMP #6
+         BEQ DOWEIRD
+WEIRDONE LDY SELCTION
+         JSR SELECT
+         BYT 2+128,18,65,8
+         ADR DRAWICON
+         STY SELCTION
+         BCS SELPROG
+;
+; Version requested?
+;
+         TAX 
+         BMI >0
+;
+         JSR CLRBOTM
+         LDY SELCTION
+         JSR JMPVECTS
+         ADR RUNGE
+         ADR RUNBE
+         ADR RUNFE
+         ADR RUNTM
+         ADR RUNCM
+         ADR RUNCA
+         ADR RUNSE
+         ADR EXIT
+;
+;-----------
+;
+^0       JSR PRINT
+         BYT PRCNTR,PRINVR
+         .DA #PRLOC,140,#184
+         BYT 'VERSION 1.2',CR
+         BRK 
+         JMP WEIRDONE
+;
+CLRBOTM  JSR PRINT
+         BYT RTOSWITE,0,184,40,7,0
+         RTS 
+;-----------
+DOWEIRD  BEQ DOWEIRD2
+;-----------
+;
+; Exit!
+;
+EXIT     JSR PRINT
+         BYT RTOSBLAK,1,31,38,152
+         .DA #PRLOC,140,#80
+         BYT PRCNTR
+         BYT 'PLEASE INSERT ANOTHER DISK',CR
+         BYT CR
+         .DA #PRSTR,TXTAPRET
+         BYT CR,0
+         JSR ESCBACK
+         JSR GETKEY
+         CMP #CR
+         BEQ >0
+         JMP MAINMENU
+;
+^0       JSR DEVICERD
+         BCS >1
+         ASL 
+         BMI <0
+^1       JSR DEVICEOF
+         JMP ($FFFC)
+;-----------
+;
+; Useless code for fun
+;
+DOWEIRD2 LDX #$00
+         LDY #$BF
+^0       LDA YLO,X
+         STA TMP0
+         LDA YLO,Y
+         STA YLO,X
+         STA TMP2
+         LDA TMP0
+         STA YLO,Y
+;
+         LDA YHI,X
+         STA TMP1
+         LDA YHI,Y
+         STA YHI,X
+         STA TMP3
+         LDA TMP1
+         STA YHI,Y
+;
+         TYA 
+         PHA 
+         LDY #39
+^1       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         DEY 
+         BPL <1
+         PLA 
+         TAY 
+;
+         DEY 
+         INX 
+         CPX #$60
+         BLT <0
+         JMP WEIRDONE
+;-----------
+;
+; Run the Creature Maker.
+;
+RUNCM    LDY #6
+         JSR BLOAD2
+         BNE RUNCM
+         LDA #6
+         HEX 2C
+;
+; Run the Graphic editor.
+;
+RUNGE    LDA #0
+         HEX 2C
+;
+; Run Tile magic.
+;
+RUNTM    LDA #3
+         STA >9+1
+         JSR LOADEDIT
+^0       LDY #3
+         JSR BLOAD2
+         BNE <0
+^9       JMP $4000
+;-----------
+;
+; Run the Border editor.
+;
+RUNBE    LDY #4
+         JSR BLOAD2
+         BNE RUNBE
+         JSR LOADSUPP
+         JMP $4000
+;-----------
+;
+; Run the Font editor.
+;
+RUNFE    JSR LOADEDIT
+^0       LDY #5
+         JSR BLOAD2
+         BNE <0
+         JMP $6000
+;-----------
+;
+; Run the setup program.
+;
+RUNSE    LDY #8
+         JSR BLOAD2
+         BNE RUNSE
+         JMP $5800
+;-----------
+;
+; Run the calendar program
+;
+RUNCA    LDY #7
+         JSR BLOAD2
+         BNE RUNCA
+         JMP $4000
+;-----------
+;
+; Load stuff from disk:
+;
+LOADINIT JSR POLEKEY
+         CMP #ESC
+         BEQ >2
+;
+^0       JSR BLOAD
+         BYT 'PRCOMS',0
+         BNE <0
+;
+^1       JSR BLOAD
+         BYT 'CONFIG',0
+         BNE <1
+         RTS 
+;
+^2       JMP $1000
+;-----------
+;
+; Load MAINMENU icons
+;
+LOADICON LDY #0
+         JSR BLOAD2
+         BNE LOADICON
+         RTS 
+;-----------
+;
+; Load EDIT routines
+;
+LOADEDIT LDY #2
+         JSR BLOAD2
+         BNE LOADEDIT
+;---
+;
+; Load the SUPP file, which is saved
+; onto data disks automatically by
+; the SAVEFILE routine.
+;
+LOADSUPP LDY #1
+         JSR BLOAD3
+         BNE LOADSUPP
+         RTS 
+;-----------
+;
+; BLOAD a file from the COMPANION
+; disk. If error and ESC is pressed,
+; then re-run the MAINMENU program.
+;
+BLOAD2   LDA #2
+         HEX 2C
+BLOAD3   LDA #0
+         STA TMP0
+         STY TMP1
+         LDA LPFLAGS,Y
+         BMI >0
+         CLC 
+         LDA #1
+         JSR WAITCD
+         BCS >1
+         JSR PRINT
+         BYT GOOBER,0
+^0       LDY TMP1
+         LDA TMP0
+         STA $B00D
+         JMP LOADPROG
+^1       JMP MAINMENU
+;-----------
+;
+; Draw ICON on screen
+;
+DRAWICON LDA ICONADR,X
+         STA RTOSPARM+4
+         LDA ICONADR+1,X
+         STA RTOSPARM+5
+         LDX #3
+^0       LDA ICONLOC,X
+         STA RTOSPARM,X
+         DEX 
+         BPL <0
+         LDA #$B1
+         LDY #RTOSPARM+4
+         JMP RTOS
+;
+ICONLOC  BYT 21,ICONY,15,53
+;
+L        =   15*53
+;
+ICONADR  ADR ICONS
+         ADR ICONS+L
+         ADR ICONS+L*2
+         ADR ICONS+L*3
+         ADR ICONS+L*4
+         ADR ICONS+L*5
+         ADR ICONS+L*6
+         ADR ICONS+L*7
+;-----------
+;
+; Show message at bottom of screen
+;
+SHOWBOTM LDA SELCTION
+         BPL >0
+;
+; First time booting, so display
+; message
+;
+; Force SETUP
+;
+         LDA #6
+         STA SELCTION
+         JSR PRINT
+         BYT PRCNTR
+         BYT PRSPC,10
+         .DA #PRLOC,140,#150
+         BYT 'WELCOME TO',CR
+         .DA #PRSTR,TXTTPS
+         BYT ' '
+         .DA #PRSTR,TXTC
+         BYT '!',CR
+         .DA #PRSTR,TXTPRET
+         BYT ' TO RUN SETUP',CR
+         BRK 
+         RTS 
+;---
+;
+; Regular message
+;
+^0       JSR ARROWS
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#152
+         BYT 'USE       AND'
+         .DA #PRSTR,TXTSRET,#CR
+         BYT 'TO MAKE SELECTION.  OR, USE',CR
+         BYT 'MOUSE, JOYSTICK, OR KOALAPAD',CR
+         BRK 
+;---
+;
+; Draw either left/right arrows
+; or up/down arrows, depending on
+; machine type.
+;
+AROWX    =   13
+AROWY    =   152
+;
+ARROWS   LDA $FA68
+         CMP #$C0
+         BEQ ARROW2E
+         LDA $FBB3
+         CMP #$06
+         BEQ ARROW2E
+;---
+; LEFT
+         JSR PICDRAW
+         BYT AROWX,AROWY,1,6
+         HEX 810C06C1060C
+; RIGHT
+         JSR PICDRAW
+         BYT AROWX+2,AROWY,1,6
+         HEX 811830C13018
+         RTS 
+;---
+; DOWN
+ARROW2E  JSR PICDRAW
+         BYT AROWX,AROWY,1,7
+         HEX 0808086B3E1C08
+; UP
+         JSR PICDRAW
+         BYT AROWX+2,AROWY,1,7
+         HEX 081C3E6B080808
+         RTS 
+;-----------
+;
+; Enter with Y=0-8 load file.
+; If 128k, then load from AUX memory,
+; if program isn't there yet, then
+; load from disk and transfer it.
+;
+LOADPROG STY LDPROG
+         LDA #0
+         STA LDPOINT
+         LDX #$FF
+^0       DEY 
+         BMI >2
+^1       INX 
+         LDA FILEINFO,X
+         BNE <1
+         INX 
+         INX 
+         LDA FILEINFO,X
+         CLC 
+         ADC LDPOINT
+         STA LDPOINT
+         BNE <0
+;
+; Modify BLOAD filename parameter
+;
+^2       LDY #$FF
+^3       INX 
+         INY 
+         LDA FILEINFO,X
+         STA BLOADMOD,Y
+         BNE <3
+         LDA #$60
+         STA BLOADMOD+1,Y
+;
+; Get starting/length info
+;
+         LDA FILEINFO+1,X
+         STA LDPADR
+         LDA FILEINFO+2,X
+         STA LDLENGTH
+;
+; Is this module already loaded?
+;
+         LDY LDPROG
+         LDA #1
+         LDX LPFLAGS,Y
+         BMI LPMOVE
+;
+; Since program isn't loaded, load it!
+;
+         JSR BLOADPRO
+         BNE >1
+         BIT HAS128K
+         BPL >0
+;
+; Move program into AUX memory
+;
+         LDA #0
+         JSR LPMOVE
+         LDX LDPROG
+         SEC 
+         ROR LPFLAGS,X
+;
+^0       LDA #0
+^1       RTS 
+;---
+;
+; Move routine.
+;
+; Given A=0, MAIN->AUX
+;       A=1,  AUX->MAIN
+;
+; LDPROG   = program address
+; LDPOINT  = pointer into AUX table
+; LDLENGTH = length in 2k chunks
+;
+; Set ALTZP, init zpage, and move
+; routine down to $80
+;
+LPMOVE   STA LDDIRECT
+;
+         STA $C009
+         LDX #LP80LEN-1
+^0       LDA LP80,X
+         STA $80,X
+         DEX 
+         BPL <0
+         STA $C008
+;
+; Move the program
+;
+^1       LDY LDPOINT
+         INC LDPOINT
+         LDX LPADDR,Y
+         LDY LDPADR
+         TYA 
+         CLC 
+         ADC #8
+         STA LDPADR
+;
+; X=AUX address, Y=program address
+;
+         LDA LDDIRECT
+         STA $C009
+         STX TMP1
+         STY TMP3
+         BNE >2
+         STY TMP1
+         STX TMP3
+^2       LDY #0
+         STY TMP0
+         STY TMP2
+         JSR $80
+         STA $C008
+         DEC LDLENGTH
+         BNE <1
+         RTS 
+;-----------
+;
+; Routine that sits at $0080
+;
+LP80     TAX 
+         STA $C002,X
+         EOR #1
+         TAX 
+         STA $C004,X
+         LDX #8
+^0       LDA (TMP0),Y
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+         STA $C004
+         STA $C002
+         RTS 
+LP80LEN  =   *-LP80
+;-----------
+;
+; 24x8k available
+;
+LPADDR   HEX 4048505860687078
+         HEX 80889098A0A8B0B8
+         HEX D0D8E0E8F0F81018
+;-----------
+;
+; <filename>,0,<loadadr>,<2k pages>
+;
+FILEINFO BYT 'ICONS',0,$40,4
+         BYT '[CD],A4096',0,$10,1
+         BYT 'EDIT',0,$50,2
+         BYT 'GREDIT',0,$40,2
+         BYT 'BOEDIT',0,$40,3
+         BYT 'FOEDIT',0,$60,3
+         BYT 'CRDATA',0,$60,3
+         BYT 'CALEN',0,$40,4
+         BYT 'SETUP',0,$58,1
+;---
+;
+; If minus, then that program has
+; already been loaded.
+;
+LPFLAGS  DFS 9,0
+;
+;---------------
+;
+; Font selection menus
+;
+FGY1     =   60
+FGY2     =   45
+FGY3     =   FGY2-16
+;
+TXTCAF   BYT 'CHOOSE A FONT:',0
+;-----------
+FGET0    BYT 'REFERENCE FONT',0
+FGET1    BYT 'FROM PRINT SHOP DISK',0
+         BYT 'FROM COMPANION DISK',0
+         BYT 'FROM OTHER DISK',0
+         BYT 'NO FONT',0
+;
+; Get Menu selection Y=default
+;
+FGETMAIN STY >2+1
+         LDY #FGET0
+         LDA /FGET0
+         BCS >0
+         LDY #FGET1
+         LDA /FGET1
+^0       STY >1+0
+         STA >1+1
+;
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#FGY1
+         .DA #PRSTR,TXTCAF,#CR
+         BYT CR,CR,0
+;
+         JSR PRINTGRP
+         BYT PRCNTR,4
+^1       ADR $FFFF
+;
+^2       LDY #00
+         JSR SELECT
+         BYT 7,26,FGY1+23,4
+         ADR RTS
+RTS      RTS 
+;-----------
+;
+; Get FONT from Print Shop disk
+;
+FGETPSD  STY >0+1
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#FGY2
+         .DA #PRSTR,TXTCAF,#CR
+         BYT CR,CR
+         BYT 'RSVP',CR
+         BYT 'ALEXIA',CR
+         BYT 'NEWS',CR
+         BYT 'TECH',CR
+         BYT 'PARTY',CR
+         BYT 'BLOCK',CR
+         BYT 'TYPEWRITER',CR
+         BYT 'STENCIL',CR,0
+;
+^0       LDY #00
+         JSR SELECT
+         BYT 12,16,FGY2+23,8
+         ADR RTS
+         STY >9+1
+         BCS >9
+;
+         INY 
+         TYA 
+         ORA #'0'
+         STA >1+1
+         JSR CLS1
+         SEC 
+         JSR WAITPSD
+         BCS >9
+         JSR BLOAD
+^1       BYT 'F1',0
+         CLC 
+         BEQ >9
+         LDA #8
+         JSR ERROR
+         SEC 
+;
+^9       LDY #00
+         RTS 
+;-----------
+;
+; Get FONT from Companion disk
+;
+FTEXT    BYT 'FONT.',0
+;
+FGETCD   STY >0+1
+         JSR CLS1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#FGY3
+         .DA #PRSTR,TXTCAF,#CR
+         BYT CR,CR,0
+         JSR PRINTGRP
+         BYT PRCNTR,12
+         ADR CDFONTS
+;
+^0       LDY #00
+         JSR SELECT
+         BYT 12,16,FGY3+23,12
+         ADR RTS
+         STY >9+1
+         BCS >9
+         LDX #$FF
+;
+; Find filename
+;
+^1       DEY 
+         BMI >3
+^2       INX 
+         LDA CDFONTS,X
+         BNE <2
+         BEQ <1
+;
+; Move filename to BLOAD name buffer
+;
+^3       LDY #0
+^4       LDA FTEXT,Y
+         BEQ >5
+         STA BLOADMOD,Y
+         INY 
+         BNE <4
+;
+^5       INX 
+         INY 
+         LDA CDFONTS,X
+         STA BLOADMOD-1,Y
+         BNE <5
+         LDA #$60
+         STA BLOADMOD,Y
+;
+; Load the file
+;
+         JSR CLS1
+^6       CLC 
+         LDA #1
+         JSR WAITCD
+         BCS >9
+         JSR PRINT
+         BYT GOOBER,0
+         JSR BLOADPRO
+         CLC 
+         BEQ >9
+         LDA #8
+         JSR ERROR
+         SEC 
+;
+^9       LDY #00
+         RTS 
+;
+;---
+;
+; Names of Companion Disk fonts
+;
+CDFONTS  BYT 'BALLOON',0
+         BYT 'OHIO',0
+         BYT 'PLATFORM',0
+         BYT 'DECO',0
+         BYT 'ANGLE',0
+         BYT 'LOWER CASE',0
+         BYT 'ORIENT',0
+         BYT 'CABARET',0
+         BYT 'GATSBY',0
+         BYT 'SALOON',0
+         BYT 'SANDWICH',0
+         BYT 'REPORTER',0
+;-----------
+;
+; BLOAD mod routine
+;
+BLOADPRO JSR BLOAD
+BLOADMOD: 
+;-----------
+;
+;
+;
+         USR "O:HELLO",ORG
+         END 

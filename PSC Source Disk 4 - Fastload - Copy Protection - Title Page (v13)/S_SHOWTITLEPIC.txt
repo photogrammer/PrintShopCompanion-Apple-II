@@ -1,0 +1,115 @@
+         NLS 
+         TTL "S:SHOWTITLEPIC"
+ORG      =   $9000
+;
+; Vertical hires screen decompacter
+; by Roland Gustafsson
+;
+DAT      EPZ $80
+;
+TEMP     EPZ DAT
+SRCLO    EPZ DAT+1
+SCRHI    EPZ DAT+2
+COMPREPT EPZ DAT+3
+COMPSCRN EPZ DAT+4
+TMP0     EPZ DAT+5
+TMP1     EPZ DAT+6
+;
+YLO      =   $1E00
+YHI      =   $1F00
+;
+         ORG ORG
+         OBJ $800
+;-----------
+;
+; Create YBASE table
+;
+         LDX #0
+^0       TXA 
+         PHA 
+         AND #$C0
+         STA TMP0
+         LSR 
+         LSR 
+         ORA TMP0
+         STA TMP0
+         PLA 
+         STA TMP1
+         ASL 
+         ASL 
+         ASL 
+         ROL TMP1
+         ASL 
+         ROL TMP1
+         ASL 
+         ROR TMP0
+         LDA TMP1
+         AND #$1F
+         ORA #$20
+         STA YHI,X
+         LDA TMP0
+         STA YLO,X
+         INX 
+         CPX #$C0
+         BCC <0
+;
+; Point to title page
+;
+         LDY #TITLEPIC
+         LDA /TITLEPIC
+         STY SRCLO
+         STA SCRHI
+;
+         LDX #0
+         LDY #0
+;
+^1       LDA YLO,X
+         STA COMPSCRN
+         LDA YHI,X
+         STA COMPSCRN+1
+         JSR COMPGET
+         AND #$7F
+         STA (COMPSCRN),Y
+         INX 
+         CPX #$C0
+         BLT <1
+         LDX #0
+         INY 
+         CPY #$28
+         BLT <1
+         RTS 
+;
+; Get a byte from compacted data
+;
+COMPGET  LDA #00
+         BPL >0
+         DEC COMPREPT
+         BNE >1
+         LSR COMPGET+1
+         BPL >1
+;
+^0       JSR COMPGET2
+         BMI >2
+^1       RTS 
+;
+^2       STA COMPGET+1
+         JSR COMPGET2
+         STA COMPREPT
+         JMP COMPGET
+;
+COMPGET2 STY >0+1
+         LDY #00
+         LDA (SRCLO),Y
+         INC SRCLO
+         BNE >0
+         INC SCRHI
+^0       LDY #00
+         AND #$FF
+         RTS 
+;
+TITLEPIC: 
+;
+;
+;
+         USR "O:SHOWTITLEPIC",ORG
+         END 

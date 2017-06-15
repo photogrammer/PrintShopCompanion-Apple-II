@@ -1,0 +1,330 @@
+;
+; S:BOEDIT4
+;
+;-----------
+;
+; Print border
+;
+BPWIDTH  =   120
+CRLF     =   $1803
+SENDGC   =   $1806
+GCOUT    =   $1809
+;
+PRINTBR  LDA #24
+         JSR PRINTBR2
+         JSR PRINTBR2
+         LDA #120
+         JSR PRINTBR2
+         JSR PRINTBR2
+         LDX #12
+         LDY #1
+         JMP CRLF
+;
+PRINTBR2 STA TMP2
+         LDX #BPWIDTH
+         LDY #0
+         STY TMP0
+         JSR SENDGC
+         LDA #32
+         JSR PRINTBR3
+         LDX TMP2
+^0       LDA #23
+         STA TMP1
+^1       LDY BORDBASE+4,X
+         LDA FLIPPER,Y
+         JSR GCOUT
+         INX 
+         INC TMP0
+         DEC TMP1
+         BNE <1
+         INX 
+         TXA 
+         CLC 
+         ADC #24
+         TAX 
+         CPX #96
+         BLT <0
+         LDA #BPWIDTH
+         SEC 
+         SBC TMP0
+         JSR PRINTBR3
+         LDX #7
+         LDY #1
+         JSR CRLF
+         LDA TMP2
+         SEC 
+         SBC #24
+         RTS 
+;
+; Output X zero bytes
+;
+PRINTBR3 TAX 
+^0       LDA #0
+         JSR GCOUT
+         INC TMP0
+         DEX 
+         BNE <0
+         RTS 
+;-----------
+;
+; Get a border from the original
+; Print Shop. All of them are stored
+; in here in packed format.
+;
+GETPSDSK JSR GETTEXT
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#26
+         .DA #PRSTR,CABTEXT,#CR
+         BYT PRVTAB,66
+         BYT 'THIN LINE',CR
+         BYT 'DOUBLE LINE',CR
+         BYT 'THICK LINE',CR
+         BYT 'BEADS',CR
+         BYT 'LATTICE',CR
+         BYT 'FLORAL',CR
+         BYT 'STARS',CR
+         BYT 'HEARTS',CR
+         BYT 'WICKER',CR
+         BRK 
+^0       LDY #00
+         JSR SELECT
+         BYT 11,18,65,9
+         ADR GETPSHOW
+         BCS >1
+;
+; Unpack actual data and store it
+;
+         STY <0+1
+         TYA 
+         ASL 
+         TAX 
+         LDA PSBRDTBL,X
+         STA TMP0
+         LDA PSBRDTBL+1,X
+         STA TMP1
+         LDA #48
+         STA TMP4
+         LDY #BORDBASE+4
+         LDA /BORDBASE+4
+         JSR GETPSUNP
+         CLC 
+^1       RTS 
+;-----------
+;
+; Given X=table pointer, unpack
+; data into MINIBUFF and display it
+;
+GETPSHOW LDA BORDBASE
+         PHA 
+         LDA PSSCRTBL,X
+         STA TMP0
+         LDA PSSCRTBL+1,X
+         STA TMP1
+         LDA #28
+         STA TMP4
+         LDY #MINIBUFF
+         LDA /MINIBUFF
+         JSR GETPSUNP
+;
+; Got the border in buffer, now
+; display it
+;
+         LDX #6
+         LDY #39
+         STX MINIX
+         STY MINIY
+         LDX #14
+         LDY #9
+         SEC 
+         JSR MINITUR2
+         PLA 
+         STA BORDBASE
+         RTS 
+;-----------
+;
+; Given TMP4=28 for screen, 48 for
+; printer data. A,Y=dest buffer.
+;
+GETPSUNP STY >3+1
+         STA >3+2
+;
+; TMP4=TMP4 * 3
+;
+         LDA TMP4
+         STA TMP2
+         ASL 
+         ADC TMP2
+         STA TMP4
+;
+         LDY #7
+         CPX #2*2
+         BLT >0
+;
+         LDY #0
+         LDA TMP2
+;
+^0       STY BORDBASE
+;
+; First unpack border into buffer.
+; For 1 and 2 all 3 sections
+; are defined and info byte=7
+;
+; For the rest, decompress 3 times,
+; until X=LEN*3 (TMP4)
+;
+; TMP2=counter
+; TMP3=repeat counter
+;
+         LDX #0
+^1       PHA 
+         STA TMP2
+         LDY #$FF
+^2       LDA #1
+         STA TMP3
+         INY 
+         LDA (TMP0),Y
+         BPL >3
+         AND #$7F
+         STA TMP3
+         INY 
+         LDA (TMP0),Y
+^3       STA $FFFF,X
+         INX 
+         DEC TMP2
+         BEQ >4
+         DEC TMP3
+         BNE <3
+         BEQ <2
+;
+^4       PLA 
+         CPX TMP4
+         BLT <1
+         RTS 
+;-----------
+;
+PSBRDTBL ADR PSBRD1
+         ADR PSBRD2
+         ADR PSBRD3
+         ADR PSBRD4
+         ADR PSBRD5
+         ADR PSBRD6
+         ADR PSBRD7
+         ADR PSBRD8
+         ADR PSBRD9
+;
+PSSCRTBL ADR PSSCR1
+         ADR PSSCR2
+         ADR PSSCR3
+         ADR PSSCR4
+         ADR PSSCR5
+         ADR PSSCR6
+         ADR PSSCR7
+         ADR PSSCR8
+         ADR PSSCR9
+;
+; Borders from original Print Shop
+; disk in compressed format.
+;
+PSBRD1   HEX 827F9600827F9501
+         HEX 9900970100827F96
+         HEX 00827F9600
+;
+PSSCR1   HEX 827F030003000300
+         HEX 0300030003000300
+         HEX 0300030003000300
+         HEX 03000300827F9A00
+         HEX 0300030003000300
+         HEX 0300030003000300
+         HEX 0300030003000300
+         HEX 03000300
+;-------
+PSBRD2   HEX 827F89008A40827F
+         HEX 00827F9501009701
+         HEX 00970100827F8900
+         HEX 827F8B00827F8900
+         HEX 827F8B00
+;
+PSSCR2   HEX 827F030003000300
+         HEX 0300030003000360
+         HEX 0360036003600360
+         HEX 036003837F8C0082
+         HEX 7F8C009C03
+;-------
+PSBRD3   HEX 977F00977F00
+;
+PSSCR3   HEX 9C7F
+;-------
+PSBRD4   HEX 00030F1F1C3D303A
+         HEX 3075606A6075603A
+         HEX 3035381E1F0F0382
+         HEX 00407078383C0C5C
+         HEX 0C2E0656062E065C
+         HEX 0C2C5C8278704000
+;
+PSSCR4   HEX 4003700F18192C34
+         HEX 0C3126640E712664
+         HEX 0C312C341819700F
+         HEX 40038200
+;-------
+PSBRD5   HEX 7182738274820C82
+         HEX 1C8221618221821C
+         HEX 820C827482737100
+         HEX 4782678217821882
+         HEX 1C8242438242821C
+         HEX 8218821782674700
+;
+PSSCR5   HEX 477167731774180C
+         HEX 821C022084630220
+         HEX 821C180C17746773
+         HEX 4771
+;-------
+PSBRD6   HEX 0001020A16821211
+         HEX 091D84231D091182
+         HEX 12160A0201820060
+         HEX 10141A821222646E
+         HEX 84716E642282121A
+         HEX 14106000
+;
+PSSCR6   HEX 82004001380E2412
+         HEX 24125C1D62236223
+         HEX 5C1D24122412380E
+         HEX 40018300
+;-------
+PSBRD7   HEX 008301830382070F
+         HEX 3F7F3F0F82078303
+         HEX 8301860083408260
+         HEX 707C7E7C70826083
+         HEX 408600
+;
+PSSCR7   HEX 0001000140034003
+         HEX 6007781F7E7F781F
+         HEX 6007400340030001
+         HEX 00018300
+;-------
+PSBRD8   HEX 8200018203820682
+         HEX 0C1830703018820C
+         HEX 8206820301830038
+         HEX 7C7E46840307060C
+         HEX 180C06078403467E
+         HEX 7C3800
+;
+PSSCR8   HEX 82001C0E3E1F6739
+         HEX 4330033007380E82
+         HEX 1C0E380760014085
+         HEX 00
+;-------
+PSBRD9   HEX 827F8348824F8948
+         HEX 827F8340827F0082
+         HEX 7F8301827F890982
+         HEX 798309827F00
+;
+PSSCR9   HEX 827F19401940797F
+         HEX 194C194C194C194C
+         HEX 194C194C7F4F014C
+         HEX 014C827F
+;-----------
+;
+;
+;
+         ICL "S:BOEDIT5"

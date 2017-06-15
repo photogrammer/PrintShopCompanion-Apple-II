@@ -1,0 +1,433 @@
+;
+; S:GREDIT3
+;
+; Print Shop Companion
+;
+; Tile Magic
+;
+; by Roland Gustafsson
+;    Copyright 1985
+;
+TZ       EPZ $80
+;
+TMXSTART EPZ TZ
+TMYSTART EPZ TZ+1
+TMXPOS   EPZ TZ+2
+TMYPOS   EPZ TZ+3
+TMXQTR   EPZ TZ+4
+TMYQTR   EPZ TZ+5
+TMCOLOR  EPZ TZ+6
+TMCOUNT  EPZ TZ+7
+TMBCOUNT EPZ TZ+8
+;
+TILEXMAX =   88
+TILEYMAX =   52
+;
+;
+TILEMAGC LDA #ESC
+         STA TILEMOD
+         JSR SETMAX
+;
+         JSR CLSCREEN
+         JSR PRINT
+         BYT RTOSWITE,0,0,25,16
+         BYT PRCNTR,PRINVR
+         .DA #PRLOC,88,#4
+         .DA #PRSTR,TXTTM
+         BYT CR,0
+         JSR DOMAGIC
+;
+ESC4TILE LDA #0
+         JSR SAVESPEC
+         BCC >0
+         JMP TILEMAGC
+;
+^0       JSR JMPVECTS
+         ADR TILESAVE
+         ADR GREDIT2
+         ADR MAINMENU
+;-----------
+;
+; Save the Tile
+;
+TILESAVE JSR SETTYPE
+         BYT 'GRAPHIC',0
+TXTTM    BYT 'TILE MAGIC',0
+         BYT 0
+         BYT 4
+         ADR EDITBUFF
+         ADR $240
+         JSR SAVEFILE
+         JMP ESC4TILE
+;-----------
+;
+; Helpful instructions for our
+; favorite person, the consumer.
+;
+DOMAGIC  JSR BLAKRITE
+         JSR PRINT
+         BYT RTOSWITE,26,0,14,2
+         BYT PRBIG,PRCNTR
+         BYT PRSPC,16
+         .DA #PRLOC,231,#16
+         BYT 'TILE',CR
+         BYT 'MAGIC',CR,0
+;
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,231,#83
+         .DA #PRSTR,TXTRET,#CR
+         BYT 'TO CHANGE',CR
+         BYT 'PATTERN',CR,CR,CR
+         BYT '<ESC>',CR
+         BYT 'TO "FREEZE"',CR
+         BYT 'TILE',CR
+         BRK 
+;
+; Do the fireworks
+;
+; Same as Kaleidoscope 1 from
+; the original Print Shop.
+;
+         JSR BUFFSAVE
+NEXTTILE JSR SETTRP
+         JSR CLRBUFF
+         JSR SHOWGR
+;
+LTRP     LDA #$40
+         STA TMXSTART
+         LDA #0
+         STA TMYSTART
+         STA TMCOLOR
+         LDA #12
+         STA STRTFLAG
+LTRP2    LDA $C05F
+         ADC $C059
+         ADC $C05D
+         ADC TMXSTART
+         STA TMXSTART
+         STA TMXPOS
+         LDA TMYPOS
+         ROL 
+         EOR TMXPOS
+         STA TMYPOS
+         STA TMYSTART
+         DEC TMCOLOR
+         LDX #26
+         LDA STRTFLAG
+         BEQ LTRP2A
+         LDX #2
+         DEC STRTFLAG
+LTRP2A   STX TMCOUNT
+LTRP2B   INC TMCOLOR
+         LDA TMCOLOR
+         AND #3
+         CMP #3
+         BEQ LTRP2B
+         CMP #0
+         BNE LTRP2C
+         LDA STRTFLAG
+         BNE LTRP2B
+LTRP2C   DEC TMCOUNT
+         BEQ LTRP2
+         JSR SETC
+LTRP3    JSR PUT4
+         JSR BTNCHK
+         BPL LTRP8
+         CMP #$0D
+         BEQ NEXTTILE
+         RTS 
+;
+LTRP8    LDA TMYPOS
+;
+YTRIP    DFS 6,0
+;
+         STA TMYQTR
+         LDA TMXPOS
+         SEC 
+         SBC TMYQTR
+         STA TMXPOS
+;
+XTRIP    DFS 6,0
+;
+         CLC 
+         ADC TMYPOS
+         STA TMYPOS
+         CMP TMYSTART
+         BNE LTRP3
+         LDA TMXPOS
+         CMP TMXSTART
+         BNE LTRP3
+         BEQ LTRP2B
+;
+PUT4     LDA TMXPOS
+         LSR 
+         LSR 
+         TAX 
+         LDA RANGE44,X
+         STA TMXQTR
+;
+         LDA TMYPOS
+         LSR 
+         LSR 
+         LSR 
+         TAX 
+         LDA RANGE26,X
+         STA TMYQTR
+;
+         LDA #TILEXMAX/2
+         CLC 
+         ADC TMXQTR
+         TAX 
+         LDA #TILEYMAX/2
+         CLC 
+         ADC TMYQTR
+         TAY 
+         JSR XYPLOT
+         LDA #TILEXMAX/2
+         SEC 
+         SBC TMXQTR
+         TAX 
+         JSR XYPLOT
+         LDA #TILEYMAX/2
+         SEC 
+         SBC TMYQTR
+         TAY 
+         JSR XYPLOT
+         LDA #TILEXMAX/2
+         CLC 
+         ADC TMXQTR
+         TAX 
+;
+XYPLOT   CPY #TILEYMAX
+         BGE XYDONE
+         CPX #TILEXMAX
+         BGE XYDONE
+;
+         STX XCOOR
+         STY YCOOR
+TMXYMOD  JSR $FFFF
+         LDX XCOOR
+         LDY YCOOR
+XYDONE   RTS 
+;-----------
+;
+; Check for CR
+;
+BTNCHK   DEC TMBCOUNT
+         LDA TMBCOUNT
+         AND #$7F
+         BNE >0
+         JMP POLEBTN
+^0       LDA #0
+         RTS 
+;
+; Set color
+;
+SETC     LDX #SETBIT
+         LDY /SETBIT
+         LDA TMCOLOR
+         AND #2
+         BNE >0
+         LDX #CLRBIT
+         LDY /CLRBIT
+;
+^0       STX TMXYMOD+1
+         STY TMXYMOD+2
+         RTS 
+;
+; Set trip format
+;
+SETTRP   LDA TRIPN
+         ASL 
+         ADC TRIPN
+         ASL 
+         TAX 
+         LDY #0
+^0       LDA XTRPS,X
+         STA XTRIP,Y
+         LDA YTRPS,X
+         STA YTRIP,Y
+         INX 
+         INY 
+         CPY #6
+         BLT <0
+         LDX TRIPN
+         INX 
+         CPX #11
+         BNE >1
+         LDX #0
+^1       STX TRIPN
+         RTS 
+;X1
+XTRPS    LSR 
+         LSR 
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+;X2
+         LSR 
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;X3
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;X4
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;X5
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;X6
+         LSR 
+         LSR 
+         LSR 
+         CLC 
+         ADC TMXPOS
+;X7
+         LSR 
+         LSR 
+         NOP 
+         CLC 
+         ADC TMXPOS
+;X8
+         LSR 
+         NOP 
+         NOP 
+         CLC 
+         ADC TMXPOS
+;X9
+         LSR 
+         LSR 
+         LSR 
+         SEC 
+         SBC TMXPOS
+;X10
+         LSR 
+         LSR 
+         NOP 
+         SEC 
+         SBC TMXPOS
+;X11
+         LSR 
+         NOP 
+         NOP 
+         SEC 
+         SBC TMXPOS
+;Y1
+YTRPS    LSR 
+         LSR 
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+;Y2
+         LSR 
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;Y3
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;Y4
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;Y5
+         LSR 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+         NOP 
+;Y6
+         LSR 
+         LSR 
+         LSR 
+         CLC 
+         ADC TMYPOS
+;Y7
+         LSR 
+         LSR 
+         NOP 
+         CLC 
+         ADC TMYPOS
+;Y8
+         LSR 
+         NOP 
+         NOP 
+         CLC 
+         ADC TMYPOS
+;Y9
+         LSR 
+         LSR 
+         LSR 
+         SEC 
+         SBC TMYPOS
+;Y10
+         LSR 
+         LSR 
+         NOP 
+         SEC 
+         SBC TMYPOS
+;Y11
+         LSR 
+         NOP 
+         NOP 
+         SEC 
+         SBC TMYPOS
+;
+;----------
+;
+TRIPN    HEX 03
+STRTFLAG HEX 00
+;
+; Lookup tables for getting
+; range
+;
+; X= 0-44
+;
+RANGE44  HEX 0001010203030405
+         HEX 0606070808090A0A
+         HEX 0B0C0C0D0E0F0F10
+         HEX 1111121313141515
+         HEX 16171718191A1A1B
+         HEX 1C1C1D1E1E1F2020
+         HEX 2122232324252526
+         HEX 27272829292A2B2C
+;
+; X= 0-26
+;
+RANGE26  HEX 0001020303040506
+         HEX 070808090A0B0C0C
+         HEX 0D0E0F1011111213
+         HEX 141515161718191A
+;
+;
+;
+         ICL "S:GREDIT4"

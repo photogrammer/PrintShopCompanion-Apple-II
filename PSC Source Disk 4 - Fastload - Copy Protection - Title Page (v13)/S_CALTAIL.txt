@@ -1,0 +1,150 @@
+         NLS 
+         TTL "S:CALTAIL"
+ORG      =   $7800
+;
+; Routine that sits at $5D00
+;
+; Loads $5D00.63FF from disk or
+; AUX memory, depending on 128k
+; sectors 9-F
+;
+HAS128K  =   $27F
+;
+VOLUME   =   $B7EB
+TRACK    =   $B7EC
+SECTOR   =   $B7ED
+BUFLO    =   $B7F0
+BUFHI    =   $B7F1
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+;
+; Enter here when loading from disk
+;
+         CLC 
+         HEX B0
+;
+; Enter here when data is already
+; in AUX memory (at $1800)
+;
+         SEC 
+;
+         LDY #0
+^0       LDA $5D00,Y
+         STA ORG,Y
+         INY 
+         BNE <0
+         JMP *+3
+;---
+         BCS FROMAUX
+;---
+;
+; Load from disk track 0
+; sector 09-0F
+;
+         STY BUFLO
+         STY VOLUME
+         STY TRACK
+         LDX #$0F
+         LDY #$63
+;
+^2       STX SECTOR
+         STY BUFHI
+^3       JSR $3E3
+         JSR $3D9
+         BCS <3
+         LDX SECTOR
+         LDY BUFHI
+         DEY 
+         DEX 
+         CPX #9
+         BGE <2
+;
+; 128k?
+;
+         BIT HAS128K
+         BPL EXECUTE
+;
+; YES
+;
+; Move $5D00.63FF to AUX mem $1800
+;
+         LDY #0
+         STA $C005
+^0       LDA $5D00,Y
+         STA $1800,Y
+         LDA $5E00,Y
+         STA $1900,Y
+         LDA $5F00,Y
+         STA $1A00,Y
+         LDA $6000,Y
+         STA $1B00,Y
+         LDA $6100,Y
+         STA $1C00,Y
+         LDA $6200,Y
+         STA $1D00,Y
+         LDA $6300,Y
+         STA $1E00,Y
+         INY 
+         BNE <0
+         STA $C004
+;
+; Patch so it won't go to disk
+; next time (4000: JMP $5D02)
+;
+         STA $C009
+         LDA #2
+         STA $E001
+         STA $C008
+         BNE EXECUTE
+;-----------
+;
+; Move 1/1800 to $5D00.63FF
+;
+FROMAUX  STA $C009
+         LDY #MOVERLEN-1
+^0       LDA MOVER,Y
+         STA $100,Y
+         DEY 
+         BPL <0
+         JSR $100
+         STA $C008
+;---
+;
+; Jump to CALENDAR
+;
+EXECUTE  JMP $4003
+;-----------
+;
+; MOVER routine sits on AUX stack
+; switches in AUX and moves it to
+; MAIN $5D00.63FF
+;
+MOVER    STA $C003
+         LDY #0
+^0       LDA $1800,Y
+         STA $5D00,Y
+         LDA $1900,Y
+         STA $5E00,Y
+         LDA $1A00,Y
+         STA $5F00,Y
+         LDA $1B00,Y
+         STA $6000,Y
+         LDA $1C00,Y
+         STA $6100,Y
+         LDA $1D00,Y
+         STA $6200,Y
+         LDA $1E00,Y
+         STA $6300,Y
+         INY 
+         BNE <0
+         STA $C002
+         RTS 
+MOVERLEN =   *-MOVER
+;-----------
+;
+;
+;
+         USR "O:CALTAIL",ORG
+         END 

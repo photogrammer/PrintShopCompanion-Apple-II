@@ -1,0 +1,1060 @@
+;
+; S:SUBPAK2
+;
+COUT     ORA #$80
+         JMP $FDED
+;-----------
+TXTINIT  BYT 'INITIALIZE',0
+;
+TXTPRET  BYT 'PRESS '
+TXTRET   BYT '<RETURN>',0
+TXTCA    BYT 'CHOOSE A ',0
+;
+TXTINDRV BYT 'IN '
+TXTDRIVE BYT 'DRIVE  ',0
+;
+TXTDD    BYT 'DATA'
+TXTSD    BYT ' '
+TXTD     BYT 'DISK',0
+;
+PSTEXT   BYT 'PRINT SHOP',0
+CTEXT    BYT 'COMPANION',0
+DTEXT    BYT 'DATA',0
+TXTPAK   BYT 'PRESS ANY KEY',0
+;-----------
+;
+; Clear screen and display
+; the standard white border
+;
+WITEBORD JSR CLSCREEN
+         JSR PRINT
+         BYT RTOSWITE,0,0,1,192
+         BYT RTOSWITE,39,0,1,192
+         BYT RTOSWITE,1,0,38,16
+         BYT RTOSWITE,1,183,38,9
+         BRK 
+         JMP PCHEKSUM
+;-----------
+;
+; Check for keypress BPL=no key
+;                    BMI=key in A
+;
+POLEBTN  LDY #0
+         JSR DEVICERD
+         BCS POLEKEY
+         ASL 
+         BMI POLEKEY
+         BCC POLEKEY
+         LDA #$8D
+         BNE >0
+;
+POLEKEY  LDA $C000
+         BMI >0
+         LDA #0
+         RTS 
+;
+^0       PHP 
+         BIT $C010
+         CMP #$FF
+         BEQ >1
+         CMP #$E0
+         BLT >1
+         AND #$DF
+^1       AND #$7F
+         PLP 
+^2       RTS 
+;
+; Get a key
+;
+GETKEY   BIT $C010
+^0       JSR POLEBTN
+         BPL <0
+         RTS 
+;-----------
+;
+; JSR PICDRAW
+; BYT <xstart>,<ystart>,<width>,<height>
+; HEX <compressed data>
+;
+; TMP0=Start X
+; TMP1=Start Y
+; TMP2=width
+; TMP3=height
+; TMP4=Repeat counter
+;
+PICDRAW  JSR GETINIT
+PICDRAW2 LDX #0
+         STX TMP4
+^0       JSR GETBYTE
+         STA TMP0,X
+         INX 
+         CPX #4
+         BLT <0
+;
+         LDX TMP1
+^1       LDA TMP0
+         CLC 
+         ADC YBASELO,X
+         STA HIRES
+         LDA YBASEHI,X
+         STA HIRES+1
+         LDY #0
+;
+^2       JSR PICBYTE
+         STA (HIRES),Y
+         INY 
+         CPY TMP2
+         BLT <2
+         INX 
+         DEC TMP3
+         BNE <1
+         RTS 
+;
+PICBYTE  LDA TMP4
+         BEQ >0
+;
+PICREPT  LDA #00
+         DEC TMP4
+         BPL >1
+;
+^0       JSR GETBYTE
+         BMI >2
+;
+^1       RTS 
+;
+^2       PHA 
+         ASL 
+         ASL 
+         LDA #$00
+         BCC >3
+         LDA #$7F
+^3       STA PICREPT+1
+         PLA 
+         AND #%00111111
+         STA TMP4
+         BPL PICBYTE
+;-----------
+;
+; "PRESS ANY KEY TO CONTINUE..."
+;
+ANYKEY   LDY #173
+         HEX 2C
+ANYKEY2  LDY #185
+         STY >0+3
+         JSR PRINT
+^0       .DA #PRLOC,140,#00
+         BYT PRCNTR
+         .DA #PRSTR,TXTPAK,' TO '
+         BYT 'CONTINUE...',NOCR,0
+;
+         JSR GETKEY
+         SEC 
+         RTS 
+;-----------
+;
+; "<ESC> TO GO BACK"
+;
+ESCBACK  JSR PRINT
+         .DA #PRLOC,140,#184
+         BYT PRCNTR,PRINVR
+         BYT '<ESC> TO GO BACK',CR,0
+         SEC 
+         RTS 
+;-----------
+;
+; JSR SETTYPE
+; BYT '<typetext>',0
+; BYT '<header text>',0
+; BYT '<fileprefix>',0
+; BYT <filelength for CATALOG>
+; ADR <startaddress>
+; ADR <length>
+;
+; Get type text "GRAPHIC"
+;
+SETTYPE  JSR GETINIT
+         LDY #0
+^0       JSR GETBYTE
+         STA TYPETEXT,Y
+         BEQ >0
+         INY 
+         BNE <0
+;
+; Get header text "GRAPHIC EDITOR+"
+;
+^0       LDY #0
+^1       JSR GETBYTE
+         STA HEADTEXT,Y
+         BEQ >0
+         INY 
+         BNE <1
+;
+; Get file prefix "BORD."
+;
+^0       LDY #0
+^1       JSR GETBYTE
+         STA FLPREFIX,Y
+         BEQ >0
+         INY 
+         BNE <1
+;
+; Get CAT length, loadadr, length
+;
+^0       LDY #0
+^1       JSR GETBYTE
+         STA TYPELEN,Y
+         INY 
+         CPY #5
+         BLT <1
+         RTS 
+;
+TYPETEXT DFS 10,0
+HEADTEXT DFS 16,0
+;-----------
+;
+; 0=Save file
+; 1=Load file
+;
+SAVEGET  HEX 00
+;
+FLPREFIX DFS 6,0
+;
+; The following routines assume
+; that SETTYPE was done.
+;
+; Get a file, if SEC then get from
+; COMPANION disk which is drive one.
+; Else, use the DATADRIV parameter.
+;
+GETFILE  STA GETCSIDE
+         LDA DATADRIV
+         PHA 
+         LDY #DTEXT
+         LDX /DTEXT
+         BCS >0
+;
+         LDY #CTEXT
+         LDX /CTEXT
+         LDA #1
+;
+^0       STA DATADRIV
+         STY GET1MOD+1
+         STX GET1MOD+2
+         LDA #1
+         JSR DOFILE
+         PLA 
+         STA DATADRIV
+         RTS 
+;-----------
+;
+; Save file
+;
+SAVEFILE LDA #0
+         SEC 
+         ROR INITFLAG
+         SEC 
+;
+DOFILE   STA SAVEGET
+         ROR MASTMOD
+;
+         LDA DATADRIV
+         STA $AA68
+         ORA #'0'
+         CMP #'1'
+         BNE *+4
+         LDA #' '
+         STA TXTDRIVE+6
+;
+         JSR WITEBORD
+         JSR ESCBACK
+         JMP DISKLOP2
+;
+DISKLOOP JSR CLS1
+DISKLOP2 JSR PRINT
+         BYT PRINVR,PRRITE
+         .DA #PRLOC,149,#4
+         .DA #PRSTR,HEADTEXT
+         BYT ':',CR,0
+;
+         LDA SAVEGET
+         BEQ >0
+;
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         .DA #PRLOC,160,#1
+         BYT 'GET',CR
+         BYT PRSMAL,PRNORM
+         BYT PRCNTR
+         .DA #PRLOC,140,#52
+         .DA #PRSTR,TXTCA
+         .DA #PRSTR,TYPETEXT
+         BYT ':',CR
+         .DA #PRLOC,15,#92,#PRLEFT
+         BYT 'PLACE '
+GET1MOD  .DA #PRSTR,$FFFF
+         .DA #PRSTR,TXTSD
+         BYT ' ',NOCR,0
+         JMP >1
+;
+^0       JSR PRINT
+         BYT PRBIG,PRINVR
+         .DA #PRLOC,160,#1
+         BYT 'SAVE',CR
+         BRK 
+         JSR INIT?
+         BCC *+3
+         RTS 
+;
+         JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#48
+         BYT PRCNTR
+         BYT 'TO SAVE '
+         .DA #PRSTR,TYPETEXT
+         BYT ' YOU ARE',CR
+         BYT 'WORKING ON:',CR
+         BYT PRLEFT
+         .DA #PRLOC,15,#92
+         BYT 'PLACE '
+         .DA #PRSTR,TXTINIT
+         BYT 'D '
+         .DA #PRSTR,TXTDD,#CR
+         BRK 
+;
+^1       JSR PRINT
+         .DA #PRSTR,TXTINDRV,#CR
+         .DA #PRLOC,15,#116
+         BYT 'TYPE IN NAME OF '
+         .DA #PRSTR,TYPETEXT
+         BYT ' OR ',CR
+         .DA #PRSTR,TXTPRET
+         BYT ' FOR '
+         .DA #PRSTR,TYPETEXT
+         BYT ' LIST',CR,CR,'>',NOCR,0
+;
+         JSR INPUTNAM
+         BCS DISKQUIT
+;
+         LDA #00
+MASTMOD  =   *-1
+         BMI >0
+;
+; Getting from Companion disk
+; so make sure it is in drive.
+;
+         CLC 
+         LDA #00
+GETCSIDE =   *-1
+         JSR WAITCD
+         BCC >1
+         BCS >5
+;
+; Getting/Saving to other disk
+; so make sure that Companion
+; or Print Shop disk is not in
+; drive.
+;
+^0       JSR REMOMAST
+         BCS DISKQUIT
+;
+^1       JSR NOPROT
+         LDA FILENAME
+         BEQ CATALOG
+;
+         LDA SAVEGET
+         BEQ >0
+;
+         JSR BLOADTY
+         JMP >3
+;
+^0       JSR SAVESUPP
+         BNE >4
+         JSR VERIFYTY
+         BEQ >1
+         CMP #6
+         BEQ >2
+         BNE >4
+^1       LDA #99
+         JSR ERROR
+         CMP #CR
+         BNE >5
+         JSR CLS1
+         JSR DELETETY
+         BNE >4
+^2       JSR BSAVETY
+;
+^3       CLC 
+         BEQ DISKQUIT
+^4       JSR ERROR
+^5       JMP DISKLOOP
+;
+DISKQUIT BCC >0
+         LDA SAVEGET
+         BNE >0
+         SEC 
+         ROR INITFLAG
+         JMP DISKLOOP
+^0       RTS 
+;
+DISKERR  LDA #8
+         JSR ERROR
+         JMP DISKLOOP
+;
+; CATALOG disk
+;
+CATALOG  JSR CLS2
+         JSR PRINT
+         .DA #PRLOC,140,#20,#PRCNTR
+         BYT 'LIST OF '
+         .DA #PRSTR,TYPETEXT
+         BYT 'S ON THIS'
+         .DA #PRSTR,TXTSD
+         BYT ':',CR,0
+         LDA #$FF
+         STA CATPAGE
+         STA CATCOUNT
+         JSR CATINIT
+         BCS DISKERR
+;
+^0       INC CATCOUNT
+         JSR CATFILE
+         BCS DISKERR
+         BNE CATDONE
+         STA CATFLMOD
+         STY CATFLMOD+1
+         INC CATPAGE
+         LDA CATPAGE
+         EOR #15
+         BNE >1
+         STA CATPAGE
+         JSR ANYKEY
+         CMP #ESC
+         BEQ CATDONE2
+         JSR CLS2
+;
+^1       LDA #00
+CATPAGE  =   *-1
+         ASL 
+         ASL 
+         ASL 
+         ADC #36
+         STA CATYMOD
+         JSR PRINT
+         .DA #PRLOC,64
+CATYMOD  HEX FF
+         .DA #PRSTR
+CATFLMOD ADR $FFFF
+         BYT CR,0
+         JMP <0
+;
+CATDONE  LDA #00
+         BNE >0
+         JSR PRINT
+         .DA #PRLOC,140,#64,#PRCNTR
+         BYT 'NONE',CR,0
+;
+^0       JSR ANYKEY
+CATDONE2 JMP DISKLOOP
+;
+CATCOUNT =   CATDONE+1
+;
+; Input file name
+;
+INPUTNAM LDA #0
+         STA FILENAME
+         JSR INPUT
+         ADR FILENAME
+         BYT MAXFLEN
+         ADR 27
+         BYT 140
+         RTS 
+;
+; Filename that user enters
+;
+FILENAME DFS MAXFLEN+1,0
+;-----------
+;
+; DOS commands:
+;  0=VERIFY
+;  2=BLOAD
+;  4=BSAVE
+;  6=DELETE
+;
+DOSCOMM  LDA DOSCOMM2,X
+         STA TMPLO
+         LDA DOSCOMM2+1,X
+         STA TMPHI
+         LDY #0
+^0       LDA (TMPLO),Y
+         BEQ >1
+         JSR COUT
+         INY 
+         BNE <0
+^1       RTS 
+;
+DOSCOMM2 ADR >0
+         ADR >1
+         ADR >2
+         ADR >3
+;
+^0       BYT 13,4,'VERIFY',0
+^1       BYT 13,4,'BLOAD',0
+^2       BYT 13,4,'BSAVE',0
+^3       BYT 13,4,'DEL',0
+;-----------
+;
+; JSR BLOAD
+; BYT 'FILENAME',0
+;
+VERIFY   LDX #0
+         HEX 2C
+BLOAD    LDX #2
+         HEX 2C
+BSAVE    LDX #4
+         HEX 2C
+DELETE   LDX #6
+;
+         STX TMPLO
+         JSR GETINIT
+         LDA #1
+CHK4MOD  =   *-1
+         JSR CHK4DISK
+         BCS >2
+         LDX TMPLO
+         JSR DOSCOMM
+;
+^1       JSR GETBYTE
+         BEQ DOSCR
+         JSR COUT
+         JMP <1
+;
+^2       JSR GETBYTE
+         BNE <2
+         LDA #8
+         RTS 
+;
+; DOS stuff for TYPE file
+;
+VERIFYTY LDX #0
+         HEX 2C
+BLOADTY  LDX #2
+         HEX 2C
+BSAVETY  LDX #4
+         HEX 2C
+DELETETY LDX #6
+         STX TMP0
+         JSR DOSCOMM
+;
+; Print the filename with prefix
+;
+PRINFILE LDY #0
+^0       LDA FLPREFIX,Y
+         BEQ >1
+         JSR COUT
+         INY 
+         BNE <0
+;
+^1       LDY #0
+^2       LDA FILENAME,Y
+         BEQ >3
+         JSR COUT
+         INY 
+         BNE <2
+;
+; Print params:
+;
+^3       LDA TMP0
+         BEQ >0
+         CMP #6
+         BEQ >0
+;
+         LDA #'A'
+         LDX FLSTART
+         LDY FLSTART+1
+         JSR >1
+         LDA TMP0
+         CMP #2
+         BEQ >0
+;
+         LDA #'L'
+         LDX FLLENGTH
+         LDY FLLENGTH+1
+         JSR >1
+^0       JMP DOSCR
+;
+^1       PHA 
+         LDA #','
+         JSR COUT
+         PLA 
+         JSR COUT
+         LDA #'$'
+         JSR COUT
+         JMP $F940
+;
+DOSCR    LDX #$4C
+         LDY #DOSERROR
+         LDA /DOSERROR
+         STX $A6D8
+         STY $A6D9
+         STA $A6DA
+         TSX 
+         STX DOSERROR+1
+         JSR CROUT
+         LDA #0
+         RTS 
+;
+; ERROR! fix stack pointer,
+; close file, reset I/O hooks
+;
+DOSERROR LDX #00
+         TXS 
+         JSR $A316
+         JSR $3EA
+         LDA $AA5C
+         RTS 
+;
+; Error handling subroutine
+;
+ERROR    STA >2+1
+         JSR CLS1
+         JSR MUSIC
+         JSR PRINT
+         .DA #PRLOC,140,#64,#0
+         LDX #$FD
+^1       INX 
+         INX 
+         INX 
+         LDA ERRORADR,X
+         BEQ >3
+^2       CMP #00
+         BNE <1
+;
+^3       LDA ERRORADR+1,X
+         STA TMPLO
+         LDA ERRORADR+2,X
+         STA TMPHI
+         JMP (TMPLO)
+;
+ERRORADR .DA #4,ERROR4
+         .DA #6,ERROR6
+         .DA #9,ERROR9
+         .DA #10,ERROR10
+         .DA #99,ERROR99
+         .DA #0,ERROR8
+;
+NOPROT   LDA #0
+         HEX 2C
+PROT     LDA #2
+         STA $B00D
+         RTS 
+;
+ERROR4   JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTD
+         BYT ' IS WRITE PROTECTED',CR,0
+         JMP ANYKEY
+;
+ERROR6   JSR PRINT
+         .DA #PRLOC,140,#48
+         BYT PRCNTR
+         BYT 'CANNOT FIND',CR,CR
+         .DA #PRSTR,FILENAME,#CR,#CR
+         BYT 'ON THIS'
+         .DA #PRSTR,TXTSD,#CR,#0
+         JMP ANYKEY
+;
+ERROR8   JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTD
+         BYT ' ERROR OCCURRED',CR,0
+         JMP ANYKEY
+;
+ERROR9   JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTD
+         BYT ' IS FULL',CR,0
+         JMP ANYKEY
+;
+ERROR10  JSR PRINT
+         BYT PRCNTR
+         BYT 'FILE IS LOCKED',CR,0
+         JMP ANYKEY
+;
+ERROR99  JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#56
+         BYT 'WARNING:',CR,CR,CR
+         BYT 'THE OLD CONTENTS OF',CR,CR
+         .DA #PRSTR,FILENAME,#CR,#CR
+         BYT 'WILL BE LOST WHEN',CR
+         BYT 'THIS FILE IS SAVED',CR
+         BYT PRVTAB,167
+         .DA #PRSTR,TXTPRET
+         BYT ' TO SAVE',CR
+         BYT 'OR',CR,0
+         JMP GETKEY
+;-----------
+;
+; Read CATALOG routine
+;
+; JSR CATINIT to initialize
+;
+; JSR CATFILE to get a filename
+;
+; SEC=disk error
+;
+; CLC=no disk error:
+;  BNE=no more files
+;  BEQ=file found:
+;   A=lo byte\
+;   Y=hi byte--address of text
+;
+CATINIT  LDA DATADRIV
+         JSR CHK4DISK
+         BCS CATEND2
+         LDA #0
+         STA TMP2
+         LDY #17
+         JMP READSECT
+;
+CATEND   LDX #$FF
+         CLC 
+CATEND2  RTS 
+;
+CATFILE  LDA TMPLO
+         CLC 
+         ADC #$23
+         STA TMPLO
+         BCC >0
+         INC TMPHI
+^0       DEC TMP2
+         BPL >1
+;
+         LDY SECTBUFF+1
+         LDA SECTBUFF+2
+         BEQ CATEND
+         JSR READSECT
+         BCS CATEND2
+         LDY #SECTBUFF-24
+         LDA /SECTBUFF-24
+         STY TMPLO
+         STA TMPHI
+         LDA #7
+         STA TMP2
+         BNE CATFILE
+;
+; Check filename
+;
+; Deleted? end of cat?
+;
+^1       LDY #0
+         LDA (TMPLO),Y
+         BMI CATFILE
+         BEQ CATEND
+;
+; Binary file?
+;
+         LDY #2
+         LDA (TMPLO),Y
+         AND #$7F
+         CMP #4
+         BNE CATFILE
+;
+; Correct length?
+;
+         LDA TYPELEN
+         BEQ >2
+         LDY #$21
+         LDA (TMPLO),Y
+;
+; Accept 33 or 34 for hires pictures
+;
+         CMP #33
+         BNE *+4
+         LDA #34
+         CMP TYPELEN
+         BNE CATFILE
+;
+^2       LDY #2
+         LDX #$FF
+^3       INX 
+         INY 
+         LDA FLPREFIX,X
+         BEQ >4
+         ORA #$80
+         CMP (TMPLO),Y
+         BEQ <3
+         BNE CATFILE
+;
+^4       STY CATFILE2+1
+;
+         LDY #$20
+^5       LDA (TMPLO),Y
+         EOR #$A0
+         BNE >6
+         STA (TMPLO),Y
+         DEY 
+         BPL <5
+;
+^6       LDA (TMPLO),Y
+         AND #$7F
+         STA (TMPLO),Y
+         DEY 
+         BNE <6
+;
+         LDA TMPLO
+         LDY TMPHI
+         CLC 
+CATFILE2 ADC #8
+         BCC >7
+         INY 
+^7       CLC 
+         LDX #0
+         RTS 
+;-----------
+IOB      =   $B7E8
+;
+; Read a sector
+; A=sector, Y=track
+; X=command
+;
+READSECT LDX #1
+         STA IOB+5
+         LDA DATADRIV
+         STA IOB+2
+READSCT2 STY IOB+4
+         LDA #0
+         STA IOB+3
+         LDY #SECTBUFF
+         LDA /SECTBUFF
+         STY IOB+8
+         STA IOB+9
+         STX IOB+12
+         JSR $3E3
+         JMP $3D9
+;-----------
+;
+; Position head over track 17
+; and check for a disk.
+;
+CHK4DISK STA $AA68
+         STA IOB+2
+;
+         LDY $BD00
+         CPY #$4C
+         CLC 
+         BEQ >3
+         CMP #1
+         BEQ >0
+;
+; If drive 2, then if first time,
+; read data. If error, then recal
+; and try again.
+;
+         LDX IOB+1
+         JSR $BE8E
+         LDA $4F8,Y
+         BPL >0
+         LDA #18*2
+         STA $4F8,Y
+         JSR >0
+         BCC >3
+         JSR $BE8E
+         LDA #$A0
+         STA $4F8,Y
+;
+^0       LDY #17
+         LDX #0
+         JSR READSCT2
+         LDX IOB+1
+         LDA $C089,X
+         LDA #32
+         STA TMP0
+;
+^1       JSR $B944
+         BCC >2
+         DEC TMP0
+         BNE <1
+^2       LDA $C088,X
+^3       RTS 
+;-----------
+;
+; Wait for user to insert the
+; Print Shop, Companion,
+; or data disk.
+;
+WAITTBL1 BYT PSTEXT
+         BYT CTEXT
+WAITTBL2 HBY PSTEXT
+         HBY CTEXT
+WAITTBL3 BYT 1,3
+;---
+;
+; Wait for PS disk
+;
+WAITPSD  LDX #0
+         TXA 
+         HEX 2C
+;---
+;
+; Wait for Comp disk, side given
+; in A: 0=either side
+;       1=side A
+;       2=side B
+;
+WAITCD   LDX #1
+;
+WAITDISK STA WAITSIDE
+         TAY 
+         BEQ >0
+         ORA #'@'
+         STA TXTSIDE+6
+         LDY #' '
+^0       STY TXTSIDE
+;
+         LDA WAITTBL1,X
+         STA WAITANY1+1
+         LDA WAITTBL2,X
+         STA WAITANY1+2
+         LDA WAITTBL3,X
+         STA >2+1
+;
+         JSR PROT
+         BCS >4
+;
+^1       LDA #1
+         JSR READVTOC
+         BCS >3
+^2       CMP #00
+         BNE >3
+;
+; Is a specific side requested?
+;
+         LDA #00
+WAITSIDE =   *-1
+         BEQ WAITNOPE
+         CMP SECTBUFF+$FE
+         BNE >3
+WAITNOPE CLC 
+         RTS 
+;
+^3       JSR MUSIC
+^4       JSR CLS3
+         LDY #' '
+         LDA DATADRIV
+         LSR 
+         BEQ *+4
+         LDY #'1'
+         STY >5+9
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#80
+         BYT 'PLEASE PLACE'
+         .DA #PRSTR,TXTSIDE
+         BYT CR
+         BYT 'THE "'
+WAITANY1 .DA #PRSTR,$FFFF
+         BYT '"'
+         .DA #PRSTR,TXTSD,#CR
+^5       BYT 'IN DRIVE 1',CR,0
+         JSR ANYKEY
+         PHA 
+         JSR CLS3
+         PLA 
+         CMP #ESC
+         BNE <1
+^9       RTS 
+;
+TXTSIDE  BYT ' SIDE A OF',0
+;-----------
+;
+; Enter with A=drive parm
+;
+; Read in VTOC sector
+; Return with A=ID byte for that
+; disk. 1:Print Shop side 1
+;       3:Companion disk
+;
+; SEC:error
+;
+READVTOC JSR CHK4DISK
+         BCS >0
+         LDX #1
+         LDY #17
+         LDA #0
+         STA IOB+5
+         JSR READSCT2
+^0       LDA SECTBUFF+$FF
+         RTS 
+;-----------
+;
+; Display message if printer
+; SETUP was never run.
+;
+CHKPRINT STA >1+0
+         LDA $95F7
+         BEQ >0
+         CLC 
+         RTS 
+;
+^0       JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR,PRCSPACE,1
+         BYT '"SETUP" WAS NEVER RUN '
+^1       BYT '- '
+         .DA #PRSTR,TXTPAK,#CR
+         BRK 
+         JSR GETKEY
+         SEC 
+         RTS 
+;-----------
+;
+; Check to see if the SUPP file
+; is on the disk.
+;
+SAVESUPP LDA MENULAST
+         EOR #CALENDAR
+         BEQ >9
+         LDA DATADRIV
+         STA CHK4MOD
+         JSR VERIFY
+         BYT '[CD]',0
+         BEQ >9
+         JSR SWAP6300
+         JSR BSAVE
+         BYT '[CD],A$6300,L$800',0
+         PHA 
+         JSR SWAP6300
+         PLA 
+^9       PHA 
+         LDA #1
+         STA CHK4MOD
+         PLA 
+         RTS 
+;
+SWAP6300 LDX #8
+         LDY #0
+         LDA #$63
+         STY TMP0
+         STA TMP1
+         LDA #$10
+         STY TMP2
+         STA TMP3
+^0       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:SUBPAK3"

@@ -1,0 +1,844 @@
+         TTL "S:FOEDIT"
+; S:FOEDIT1
+         NOG 
+ORG      =   $4000
+ORGLOAD  =   $6000
+ORGDIFF  =   ORGLOAD-ORG
+TAILORG  =   $9600
+;
+; 08/02/85
+; 09/10/85 last mod
+;
+; Font Editor main control
+;
+; The Print Shop Companion
+;
+;    Copyright 1985
+; by Roland Gustafsson
+;
+;
+XOFF     =   1
+XOFF2    =   XOFF*7
+YOFF     =   38
+FONTW    =   48
+FONTH    =   38
+;
+SDX      =   113
+SDY      =   YOFF+4
+SDW      =   4
+SDH      =   9
+;---
+FONTBUFF =   $5FF4
+MAXLEN   =   $1800
+;
+FONT1BUF =   $6000
+FONT1W   =   FONT1BUF
+FONT1H   =   FONT1BUF+$3B
+FONT1AL  =   FONT1BUF+$76
+FONT1AH  =   FONT1BUF+$B1
+FONT1BEG =   FONT1BUF+$EC
+;
+FONT2BUF =   $7800
+FONT2W   =   FONT2BUF
+FONT2H   =   FONT2BUF+$3B
+FONT2AL  =   FONT2BUF+$76
+FONT2AH  =   FONT2BUF+$B1
+FONT2BEG =   FONT2BUF+$EC
+;
+UFONTBUF =   $8500
+UFONTW   =   UFONTBUF
+;
+DAT      EPZ $00
+;
+LENLO    EPZ DAT
+LENHI    EPZ DAT+1
+;
+OLDCHAR  EPZ DAT+2
+OLDLEN   EPZ DAT+3
+;
+NEWCHAR  EPZ DAT+4
+NEWWITH  EPZ DAT+5
+NEWHITE  EPZ DAT+6
+NEWLEN   EPZ DAT+7
+;
+ACC1LO   EPZ DAT+8
+ACC1HI   EPZ DAT+9
+ACC2LO   EPZ DAT+10
+ACC2HI   EPZ DAT+11
+REMLO    EPZ DAT+12
+REMHI    EPZ DAT+13
+;
+SAVED?   EPZ DAT+14
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+START    JMP MOVEPROG+ORGDIFF
+         JMP MOVEREFS
+;-----------
+         ASC "COPYRIGHT 1985 "
+         ASC "ROLAND GUSTAFSSON"
+;
+TXTCTRL  BYT 'CTRL-',0
+TXTTOCLR BYT ' TO CLEAR ',0
+TXTTOPRN BYT ' TO PRINT ',0
+;-----------
+;
+; Set default font to MEDIUM REFERENCE
+;
+START2   JSR MOVUFONT
+         LDY #1
+         JSR SGRFONT2
+;-----------
+;
+; Draw Font Editor main screen
+;
+SCR1MAIN JSR SCREEN1
+         JSR SHOWDONE
+;
+^0       JSR LOADCHAR
+         LSR REFFLAGS
+         JSR SHOWGR
+         ASL REFFLAGS
+         JSR SHOWCURR
+         JSR GETKEY
+         JSR >1
+         BCC <0
+         BCS SCR1MAIN
+;
+^1       JSR PARSE
+         .DA #'G'-$40,SCR1GET
+         .DA #'S'-$40,SCR1SAVE
+         .DA #'Q'-$40,SCR1QUIT
+         .DA #'C'-$40,SCR1CLR
+         .DA #'P'-$40,SCR1PRIN
+         .DA #CR,SCR1EDIT
+         .DA #'@',SCR1SKIP
+         .DA #' ',SCR1SKIP
+         BRK 
+         SEC 
+         SBC #$20
+         CMP #'Z'-$1F
+         BGE SCR1SKIP
+         STA OLDCHAR
+SCR1SKIP CLC 
+         RTS 
+;-----------
+;
+; Clear the "done bit" flags
+;
+SCR1CLR  JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#184
+         .DA #PRSTR,TXTPRET
+         .DA #PRSTR,TXTTOCLR
+         BYT 'LIST',CR
+         BRK 
+         JSR WAITCR
+         BNE >1
+;
+         LDY #'Z'-$20
+^0       LDA FONT1W,Y
+         AND #$7F
+         STA FONT1W,Y
+         DEY 
+         BPL <0
+         JSR BLAKDONE
+         JSR SHOWDONE
+;
+^1       JMP BLAKBOTM
+;-----------
+SCR1PRIN JSR CKPRINT
+         BCS <1
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET
+         .DA #PRSTR,TXTTOPRN
+         .DA #PRSTR,TXTFONT,#CR
+         BRK 
+         JSR WAITCR
+         BNE <1
+         JSR DEVICEOF
+         JSR PRINFONT
+         JSR DEVICEON
+         SEC 
+         RTS 
+;-----------
+;
+; Load the character to edit
+;
+SCR1EDIT JSR SHOWGR
+         JSR BUFFSAVE
+;
+; Edit without reloading char or
+; messing with the UNDO buffer.
+;
+^0       JSR SCR2RITE
+         JSR EDITCHAR
+         BCS >3
+;
+; Left justify the character
+;
+         JSR LEFTJUST
+;
+; Now select where to store this
+; character.
+;
+         JSR BLAKDONE
+         JSR SHOWDONE
+         JSR BLAKBOTM
+;
+SCR3AGAN JSR SCR3RITE
+         LDA OLDCHAR
+         STA NEWCHAR
+;
+^1       LDY #SC3Y1+25
+         JSR SCR3KEY
+         PHA 
+         JSR BLAKBOTM
+         PLA 
+         CMP #CR
+         BEQ SCR3ESTR
+         CMP #ESC
+         BEQ <0
+;
+         CMP #'@'
+         BEQ >2
+         CMP #'!'
+         BCC >2
+         CMP #'Z'+1
+         BCS >2
+         SBC #$1F
+         STA NEWCHAR
+         BNE <1
+;
+; Attempt to store NEWCHAR
+;
+SCR3ESTR JSR SCR3ALRY
+         BCS SCR3AGAN
+         SEC 
+         ROR SAVED?
+         JSR SAVECHAR
+         BCC >5
+         ASL SAVED?
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#185
+         BYT 'NOT ENOUGH ROOM ! '
+         BYT 'SEE MANUAL.',NOCR,0
+;
+^2       JSR BOOP
+         JMP SCR3AGAN
+;
+^3       JSR CMPCHAR
+         BEQ >4
+         JSR CMPCHAR
+         JSR BLAKBOTM
+         JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#185
+         BYT PRCSPACE,1
+         BYT '<ESC> TO MAIN SCREEN WILL ERASE CHANGES',CR,0
+         JSR GETKEY
+         CMP #ESC
+         BEQ >4
+         JMP <0
+;
+^4       JSR BLAKDONE
+;
+^5       JSR SHOWDONE
+         JSR TOP1
+         JSR SCR1RITE
+         CLC 
+         RTS 
+;-----------
+BLAKDONE JSR PRINT
+         BYT RTOSBLAK,16,32,9,126,0
+         RTS 
+;-----------
+;
+; Save the graphic
+;
+SCR1SAVE JSR CALCHEAD
+;
+         LDY LENLO
+         LDA LENHI
+         STY SETLEN
+         STA SETLEN+1
+         JSR SETADR
+         JSR SAVEFILE
+         BCS >0
+         LSR SAVED?
+^0       SEC 
+         RTS 
+;-----------
+;
+; Get a font
+;
+TXTGET   BYT 'GET',0
+;
+SCR1GET  LDX #TXTGET
+         LDY /TXTGET
+         JSR NEEDSAVE
+         JSR GETTEXT
+         JSR SETADR
+^0       LDY #00
+         SEC 
+         JSR FGETMAIN
+         BCS >1
+         STY <0+1
+         JSR SCR1GET2
+         BCS <0
+         LDA #0
+;
+; Special secret command!
+; type password during GET
+; and press ESC to double the
+; font in memory. MAY CRASH
+; if font is too big...
+;
+^1       EOR #6
+         BNE >2
+         INC DUBLMOD
+         JSR SGMOVE
+         DEC DUBLMOD
+;
+^2       SEC 
+         RTS 
+;---
+SCR1GET2 JSR JMPVECTS
+         ADR SGRFONT
+         ADR SGPSD
+         ADR SGCD
+         ADR SGOD
+;---
+;
+; Get from Print Shop disk
+;
+SGPSD    LDY #00
+         JSR FGETPSD
+         STY SGPSD+1
+         BCS >9
+         STY TMP5
+         JMP SGMOVE
+;---
+;
+; Get from Companion disk
+;
+SGCD     LDY #00
+         JSR FGETCD
+         STY SGCD+1
+         BCS >9
+         JMP SGMOVE
+;---
+;
+; Get font from other disk
+;
+SGOD     SEC 
+         JSR GETFILE
+         LDY #11
+         STY TMP5
+         BCC SGMOVE
+^9       RTS 
+;---
+;
+; Select reference size font
+;
+SGRFY    =   60
+;
+SGRFONT  JSR MOVUFONT
+         JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#SGRFY
+         BYT PRCNTR
+         BYT 'CHOOSE SIZE:',CR
+         BYT CR
+         BYT 'SMALL',CR
+         BYT 'MEDIUM',CR
+         BYT 'LARGE',CR,0
+;
+^0       LDY #00
+         JSR SELECT
+         BYT 15,10,SGRFY+15,3
+         ADR RTS
+         BCS <9
+         STY <0+1
+;
+SGRFONT2 TYA 
+         PHA 
+         JSR MOVEFONT
+         PLA 
+         CLC 
+         ADC #8
+         TAY 
+         JMP SGSETREF
+;---
+;
+; Save $8000.8FFF
+;
+SGMOVE   JSR CLS1
+         JSR SWAPD000
+;
+; Move font data to buffer2
+;
+         LDY #0
+         LDA /FONT1BUF
+         STY TMP0
+         STA TMP1
+         LDA /FONT2BUF
+         STY TMP2
+         STA TMP3
+         LDX #$18
+^1       LDA (TMP0),Y
+         STA (TMP2),Y
+         INY 
+         BNE <1
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <1
+;
+; Now do lint removal and unpacking
+;
+         LDY #0
+DUBLMOD  =   *-1
+         JSR MOVEFONT
+         JSR SWAPD000
+;
+; Set the reference lines
+;
+         LDA FONT1W+$20
+         STA REFX1
+         LDA FONT1H+$20
+         STA REFY1
+         LDA FONT1AL+$20
+         STA REFY2
+;
+         LDA FONT1AH+$20
+         CMP #$58
+         BLT >0
+;
+; If no reference lines, then use
+; lookup table
+;
+         LDY TMP5
+SGSETREF LDA PSREFX1,Y
+         STA REFX1
+         LDA PSREFY1,Y
+         STA REFY1
+         LDA PSREFY2,Y
+         STA REFY2
+;
+^0       LDA #'A'-$20
+         STA OLDCHAR
+         LSR SAVED?
+         CLC 
+         RTS 
+;
+; Reference line lookup table
+; First 8 are for Print Shop fonts
+; then 3 are for the reference fonts
+; the last one is the default
+;
+PSREFX1  BYT 35,27,23,21,19,15,10,12
+         BYT 6,13,27,13
+PSREFY1  BYT 15,10,12,9,9,7,7,6
+         BYT 2,5,11,5
+PSREFY2  BYT 29,29,25,24,24,17,16,14
+         BYT 6,13,27,13
+;---
+;
+; SWAP $D000 area
+;
+SWAPD000 BIT $C083
+         BIT $C083
+         LDY #0
+         LDA #$80
+         STY TMP0
+         STA TMP1
+         LDA #$D0
+         STY TMP2
+         STA TMP3
+         LDX #16
+^0       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <0
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <0
+         RTS 
+;-----------
+;
+; GET text window
+;
+GETTEXT  JSR WITEBORD
+         JSR PRINT
+         BYT PRINVR,PRRITE
+         .DA #PRLOC,149,#4
+         .DA #PRSTR,TXTFEDIT
+         BYT ':',CR
+         BYT PRBIG,PRLEFT
+         .DA #PRLOC,160,#1
+         BYT 'GET',CR,0
+         JMP ESCBACK
+;-----------
+;
+; Set load/save parameters
+;
+SETADR   JSR SETTYPE
+TXTFONT  BYT 'FONT',0
+TXTFEDIT BYT 'FONT EDITOR',0
+         BYT 'FONT.',0
+         BYT 0
+         ADR FONTBUFF
+SETLEN   ADR 0
+         RTS 
+;-----------
+;
+; Quit the editor
+;
+TXTQUIT  BYT 'QUIT',0
+;
+SCR1QUIT LDX #TXTQUIT
+         LDY /TXTQUIT
+         JSR NEEDSAVE
+         PHP 
+         JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#184
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET,' TO '
+         .DA #PRSTR,TXTGTMM,#NOCR,#0
+         JSR WAITCR
+         BNE >0
+         JMP MAINMENU
+^0       JSR BLAKBOTM
+         PLP 
+         RTS 
+;-----------
+TXTGTMM  BYT 'GO TO MAIN MENU',0
+TXTPRET  BYT 'PRESS '
+TXTRET   BYT '<RETURN>',0
+;-----------
+;
+; Draw initial screen
+;
+SCREEN1  JSR CLSCREEN
+         JSR TOP1
+;
+; Edit box
+;
+         JSR PRINT
+         BYT RTOSANY,$7E,XOFF-1,YOFF-6,1,12+3*FONTH
+         BYT RTOSWITE,XOFF,YOFF-6,14,12+3*FONTH
+         BYT RTOSANY,$0F,XOFF+14,YOFF-6,1,12+3*FONTH
+         BRK 
+         JSR LINES
+         BYT 'H'
+         BYT GRAY,XOFF2-4,YOFF-4,8+2*FONTW
+         BYT GRAY,XOFF2-4,YOFF-3,8+2*FONTW
+         BYT GRAY,XOFF2-4,YOFF+2+3*FONTH,8+2*FONTW
+         BYT GRAY,XOFF2-4,YOFF+3+3*FONTH,8+2*FONTW
+         BYT 1
+         JSR LINES
+         BYT 'V'
+         BYT GRAY,XOFF2-4,YOFF-4,8+3*FONTH
+         BYT GRAY,XOFF2-3,YOFF-4,8+3*FONTH
+         BYT GRAY,XOFF2+2+2*FONTW,YOFF-4,8+3*FONTH
+         BYT GRAY,XOFF2+3+2*FONTW,YOFF-4,8+3*FONTH
+         BYT 1
+;
+; Right side of SCREEN1
+;
+S1SPC    =   18
+SC1Y1    =   20
+SC1Y2    =   SC1Y1+67
+;
+SCR1RITE JSR BLAKRITE
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#SC1Y1
+         BYT 'SELECT',CR
+         BRK 
+         JSR MESS1
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         BYT 'TO EDIT',CR
+;
+         BYT RTOSWITE,26,SC1Y2,14,2
+;
+         BYT PRSPC,S1SPC
+         BYT PRLEFT
+         .DA #PRLOC,XEDGE,#SC1Y2+9
+         .DA #PRSTR,TXTCTRL,'G',#CR
+         .DA #PRSTR,TXTCTRL,'S',#CR
+         .DA #PRSTR,TXTCTRL,'P',#CR
+         .DA #PRSTR,TXTCTRL,'C',#CR
+         .DA #PRSTR,TXTCTRL,'Q',#CR
+         BYT PRRITE
+         .DA #PRLOC,279,#SC1Y2+9+4
+         .DA #PRSTR,TXTFONT,#CR
+         .DA #PRSTR,TXTFONT,#CR
+         .DA #PRSTR,TXTFONT,#CR
+         BYT 'LIST',CR
+         .DA #PRLOC,279,#SC1Y2+5
+         BYT 'GET',CR
+         BYT 'SAVE',CR
+         BYT 'PRINT',CR
+         BYT PRSPC,S1SPC+4
+         BYT 'CLEAR',CR
+         BYT 'QUIT',CR
+         BYT RTOSWITE,26,SC1Y2+91,14,2
+;
+MUY      =   YOFF+124
+         BYT PRLEFT
+         .DA #PRLOC,3,#MUY
+         BYT 'MEMORY USED:   %',CR
+         BRK 
+         JSR CALCMEM
+         LDX #16
+         LDY #MUY
+         JMP NUMBER
+;-----------
+MESS1    JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTCHAR,#CR
+         BYT 'USING THE',CR
+         BYT 'KEYBOARD',CR
+         BYT CR,0
+         RTS 
+;-----------
+;
+; Show the current letter
+;
+SCY      =   MUY+9
+SCX1     =   108
+SCX2     =   16
+SCX2B    =   SCX2*7
+;
+SHOWCURR LDA OLDCHAR
+         CLC 
+         ADC #$20
+         STA >0+0
+         JSR PRINT
+         BYT PRRITE
+         .DA #PRLOC,SCX1,#SCY
+         .DA #PRSTR,TXTCHAR
+         BYT ':',NOCR
+         BYT RTOSWITE,SCX2,SCY-1,2,9
+         .DA #PRHTAB,SCX2B+7
+         BYT PRCNTR
+         BYT PRINVR
+^0       BYT ' ',NOCR,0
+         RTS 
+;-----------
+;
+; Top line of screen
+;
+TOPX     =   140
+;
+TOP      JSR PRINT
+         BYT RTOSWITE,0,0,40,16
+         BYT PRRITE,PRINVR
+         .DA #PRLOC,TOPX,#4
+         .DA #PRSTR,TXTFEDIT
+         BYT ':',CR
+         .DA #PRLOC,TOPX+5,#1
+         BRK 
+         RTS 
+;
+TOP1     JSR TOP
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'MAIN',CR,0
+         RTS 
+;
+T2X      =   105
+T2Y      =   74
+TOP2     JSR BLAKDONE
+         JSR PRINT
+         BYT RTOSWITE,17,T2Y-2,7,35
+         BYT PRCNTR,PRINVR
+         .DA #PRLOC,143,#T2Y
+         BYT PRCSPACE,1
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTCTRL,'S',#CR
+         BYT 'WHEN',CR
+         BYT 'DONE',CR
+         BYT PRCSPACE,2
+         BYT RTOSWITE,0,0,26,16
+         BYT PRRITE
+         .DA #PRLOC,T2X,#4
+         .DA #PRSTR,TXTFEDIT
+         BYT ':',CR
+         .DA #PRLOC,T2X+5,#1
+         BYT PRBIG,PRLEFT
+         BYT 'EDIT',CR,0
+         RTS 
+;
+TOP3     JSR TOP
+         JSR PRINT
+         BYT PRBIG,PRINVR
+         BYT 'STORE',CR,0
+         RTS 
+;-----------
+;
+; Right side of SCREEN3
+;
+SC3Y1    =   YOFF+11
+SC3Y2    =   164
+;
+TXTTSA   BYT 'TO STORE AS',0
+;
+SCR3RITE JSR PRINT
+         BYT RTOSBLAK,26,16,14,169,0
+         JSR TOP3
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#SC3Y1
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         .DA #PRSTR,TXTTSA,#CR
+         BYT PRVTAB,SC3Y1+36
+         BYT 'OR STORE AS',CR
+         BYT 'A DIFFERENT',CR
+         BRK 
+         JSR MESS1
+;
+         JSR PRINT
+         BYT RTOSWITE,26,SC3Y2-5,14,2
+         BYT PRVTAB,SC3Y2
+         BRK 
+         JMP >0
+;---
+;
+; Error message for right side
+; of screen 3, when user tries
+; to save character more than
+; once.
+;
+SC3Y9    =   SC3Y1-12
+SCR3RIT2 JSR BLAKRITE
+         JSR MUSIC
+         JSR PRINT
+         BYT RTOSANY,$60,26,SC3Y9-8,1,132
+         BYT RTOSANY,$60,39,SC3Y9-8,1,132
+         BYT RTOSWITE,27,SC3Y9-8,13,2
+         BYT RTOSWITE,27,SC3Y9+122,13,2
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#SC3Y9
+         BYT 'WARNING !',CR
+         BYT CR
+         BYT 'YOU HAVE',CR
+         BYT 'ALREADY',CR
+         BYT 'STORED A',CR
+         .DA #PRSTR,TXTCHAR,#CR
+         BYT PRSPC,2,CR,PRSPC,8
+         BYT 'AS:       ',CR
+         BYT PRSPC,2,CR,PRSPC,8
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         BYT PRSPC,12
+         BYT 'TO STORE',CR
+         BYT 'OR',CR
+         BRK 
+;---
+^0       JSR PRINT
+         BYT PRCNTR
+         BYT '<ESC> TO',CR
+         BYT 'GO BACK',CR
+         BRK 
+         RTS 
+;---
+;
+; Show NEWCHAR and get key
+;
+SCR3KEY  STY SLOP0
+         STY SLOP2
+         INY 
+         STY SLOP1
+;
+         LDA NEWCHAR
+         CLC 
+         ADC #$20
+         STA >0+0
+         JSR PRINT
+         BYT RTOSBLAK,32,SC3Y1+25,2,9
+SLOP0    =   *-3
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#SC3Y1+26
+SLOP1    =   *-1
+^0       BYT '?',CR,0
+;---
+         ASL TMP0
+^0       JSR SCR3CURS
+         JSR FLSHINIT
+         ASL FLASHLO
+         ROL FLASHHI
+^1       JSR POLEBTN
+         BMI >2
+         DEC FLASHLO
+         BNE <1
+         DEC FLASHHI
+         BPL <1
+         BMI <0
+;
+SCR3CURS JSR PRINT
+         BYT RTOSINV,32,SC3Y1+25,2,9,0
+SLOP2    =   *-4
+         INC TMP0
+^2       RTS 
+;-----------
+;
+; Check to see if this char has
+; already been stored. If so,
+; display message. SEC=<ESC>
+; CLC=ok to store.
+;
+SCR3ALRY LDY NEWCHAR
+         LDA FONT1W,Y
+         BPL >1
+         JSR SCR3RIT2
+^0       LDY #SC3Y9+49
+         JSR SCR3KEY
+         CMP #ESC
+         BEQ >2
+         CMP #CR
+         BEQ >1
+         JSR BOOP
+         JMP <0
+;
+^1       CLC 
+^2       RTS 
+;-----------
+;
+; Wait for return key
+; with flashing bottom line
+;
+WAITCR   JSR PRINT
+         BYT RTOSINV,0,183,40,9,0
+         JSR FLSHINIT
+^0       JSR POLEBTN
+         BNE >1
+         DEC FLASHLO
+         BNE <0
+         DEC FLASHHI
+         BPL <0
+         BMI WAITCR
+;
+^1       CMP #CR
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:FOEDIT2"

@@ -1,0 +1,1189 @@
+         TTL "S:PCAL"
+; S:PCAL1
+         NOG 
+ORG      =   $F00
+;-----------
+;
+; APPLE!
+;
+; 6/17/86 mod for color
+;
+;
+; CALENDAR DRAW/PRINT
+;
+;-----------
+DCZ      EPZ $70
+;
+DCDAYOWK EPZ DCZ
+DCTMP0   EPZ DCZ+1
+;
+WKPIECE  EPZ DCZ+2
+;
+; COLOR stuff:
+;
+COLOR    EPZ DCZ+3
+YMAX     EPZ DCZ+4
+YCLIP    EPZ DCZ+5
+YSIZE    EPZ DCZ+6
+;
+COLOR0   EPZ DCZ+7
+COLOR1   EPZ DCZ+8
+COLOR2   EPZ DCZ+9
+COLOR3   EPZ DCZ+10
+;
+LORESL   EPZ DCZ+11
+LORESH   EPZ DCZ+12
+;
+STRTDATE EPZ DCZ+13
+;
+; COLOR:color to use when drawing
+; YMAX :maximum Y-coordinate when drawing
+;       128 for B/W, 32 for color
+; YCLIP:Y-value to subract when drawing
+;       into buffer. Set to 0,32,64,96
+;       when drawing top line.
+; YSIZE:size of buffer to draw to during
+;       MAGIPRIN routine.
+;
+;-----------
+;
+; Monthly calendar date info
+; CDM=margin at left edge
+; CDW=width of each day
+; CDH=height
+;
+CDM      =   5
+CDW      =   135
+CDH      =   90
+;
+; Weekly calendar position info
+;
+WDRWX1   =   4
+WDRWY1   =   9
+WDRWX2   =   250
+WDRWY2   =   9
+;
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP DOCALEN
+         JMP EDITDRAW
+         JMP EDITYOFF
+         JMP STRCROP
+;-----------
+;
+; Save $4000.4FFF 
+;
+DOCALEN  TSX 
+         STX STACK
+         JSR SWAPD000
+;---
+;
+; Set color variables
+;
+         LDA #128
+         LDX COLORPR
+         BEQ >0
+         LDA #32
+^0       STA YMAX
+;
+         LDA BLACKTBL,X
+         STA COLORTBL
+;
+; Move color bytes over from COBUFF
+;
+         LDX #3
+^1       LDA COLORPR
+         BEQ >2
+         LDA DCOLOR0,X
+         LDY COLORFLG
+         INY 
+         BEQ >2
+         LDA #0
+^2       STA COLOR0,X
+         DEX 
+         BPL <1
+;---
+;
+; First skip down 28
+;
+DOCALENL JSR INSUFONT
+         LDA #28
+         JSR SPACE
+;---
+;
+; Now draw graphics and month/year
+; and print it.
+;
+         LDX #DOTOP
+         LDY /DOTOP
+         LDA #128
+         JSR MAGIPRIN
+;---
+;
+; Now do actual calendar part
+;
+         JSR DOCENTER
+;---
+;
+; Credit line at bottom
+;
+         JSR DOCREDIT
+;---
+;
+; Decrement COPYCONT
+;
+         LDA COPYCONT
+         BEQ ABORT
+         DEC COPYCONT
+         BNE DOCALENL
+;-----------
+;
+; Go here to abort printout
+; and when done!
+;
+ABORT    LDX #00
+STACK    =   *-1
+         TXS 
+         JSR STSCREEN
+;
+; Make sure that kerning
+; is off.
+;
+         LDA #0
+         STA SPARM+11
+         STA COPYCONT
+;
+; Swap program with print buffer
+;
+SWAPD000 BIT $C08B
+         BIT $C08B
+         LDX #0
+         LDY #0
+         STY TMP0
+         LDA #$40
+         STY TMP2
+         STA TMP3
+;
+^0       LDA SWAPBUFR,X
+         BEQ >2
+         STA TMP1
+^1       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <1
+         INC TMP3
+         INX 
+         BNE <0
+;
+^2       BIT $C083
+         BIT $C083
+         RTS 
+;
+SWAPBUFR HEX D0D1D2D3D4D5D6D7
+         HEX D8D9DADBDCDDDEDF
+         HEX 9899
+         BRK 
+;-----------
+;
+; Blank spaces!
+;
+SPACE    TAX 
+         BEQ >2
+^0       PHA 
+         LDX #12
+         CMP #12
+         BGE >1
+         TAX 
+^1       STX TMP0
+         LDY #1
+         JSR CRLF
+         PLA 
+         SEC 
+         SBC TMP0
+         BNE <0
+^2       JMP CLRPBUFF
+;-----------
+;
+; Self adjusting draw routine
+; for drawing areas larger than
+; the maximum 32 lines for color.
+;
+; Given X,Y = address of routine,
+;        A  = buffer size
+;
+; The routine will repeatedly call
+; the draw routine and print as much
+; as possible each pass. In B/W mode
+; the whole buffer will be done in
+; a single pass. In color mode, it
+; can take up to 4 passes for 128
+; byte tall buffers.
+;
+MAGIPRIN STX >1+1
+         STY >1+2
+         STA YSIZE
+         LDA #0
+^0       STA YCLIP
+         JSR CLRPBUFF
+^1       JSR $FFFF
+;
+; Print MIN (YSIZE-YCLIP,YMAX) lines
+;
+         LDA YSIZE
+         SEC 
+         SBC YCLIP
+         CMP YMAX
+         BLT >2
+         LDA YMAX
+^2       JSR PRINBUFF
+;
+         LDA YCLIP
+         CLC 
+         ADC YMAX
+         CMP YSIZE
+         BLT <0
+;
+         LDA #0
+         STA YCLIP
+         RTS 
+;-----------
+;
+; Draw center of calendar
+;
+DOCENTER LDA CLTYPE
+         BEQ DOMONTH
+         JMP DOWEEKLY
+;-----------
+;
+; Monthly calendar
+;
+; First space down
+;
+DOMONTH  CLC 
+         LDA MNLAST
+         ADC MNFDAY
+         LDY #0-4
+;
+^0       INY 
+         SEC 
+         SBC #7
+         BEQ >1
+         BCS <0
+;
+^1       LDA SPCTABLE,Y
+         PHA 
+         CLC 
+         ADC #16
+         JSR SPACE
+;
+; Now draw days of the week
+;
+         JSR DRAWDAYS
+         LDA #24
+         JSR PRINBUFF
+;
+; Now do actual calendar
+;
+         JSR DOAMONTH
+;
+; Space down last amount
+;
+         PLA 
+         JMP SPACE
+;
+SPCTABLE BYT 90,45,0
+;-----------
+;
+; Draw days of the week
+;
+DRAWDAYS LDA COLOR2
+         STA COLOR
+         JSR PRINT
+         .DA #PRLOC,CDM+CDW/2,#0
+         BYT PRCNTR,PRBIG,'SUN',NOCR
+         BYT PRRTAB2,CDW,'MON',NOCR
+         BYT PRRTAB2,CDW,'TUE',NOCR
+         BYT PRRTAB2,CDW,'WED',NOCR
+         BYT PRRTAB2,CDW,'THU',NOCR
+         BYT PRRTAB2,CDW,'FRI',NOCR
+         BYT PRRTAB2,CDW,'SAT',NOCR
+         BRK 
+         RTS 
+;-----------
+;
+; Do credit line
+;
+DOCREDIT LDA COLOR3
+         STA COLOR
+         LDA #25
+         JSR SPACE
+         LDY #33
+         JSR GETTEXT
+         JSR PRINT
+         BYT PRCNTR,PRBIG
+         .DA #PRLOC,480,#0
+         .DA #PRSTR,TEXTBUFF,#CR,#0
+         LDA #30
+         JMP PRINBUFF
+;-----------
+;
+; 0:left
+; 1:right
+; 2:left & right
+; 3:row of 6 (or 3 for double size)
+; 4:tiled
+; 5-9:same as above, but double size
+;
+; Draw graphic(s) into buffer
+;
+DRAWGRS  LDA GRSEL
+         EOR #NOGR
+         BEQ >9
+;
+         LDA GROPTION
+         LDX #0
+         CMP #5
+         BCC >0
+;
+         SBC #5
+         INX 
+;
+^0       LDY O2TBL1,X
+         STY O2
+         LDY O2TBL2,X
+         STY O3+3
+         LDY O2TBL3,X
+         STY >2+0
+         TAX 
+;
+; X-option
+;
+^1       LDA O1TBL,X
+         STA O1
+;
+; X-position
+;
+         LDY O3TBLL,X
+         LDA O3TBLH,X
+         STY O3+1
+         STA O3+2
+;
+; Character spacing
+;
+         LDA O4TBL,X
+         STA O4+1
+;
+; # of graphics to plot
+;
+         LDA O5TBL,X
+         CLC 
+^2       NOP 
+         ADC #0
+         TAY 
+;
+; Build string
+;
+         LDA #0
+^3       STA TEXTBUFF,Y
+         LDA #'@'
+         DEY 
+         BPL <3
+;
+         STX >4+1
+;
+         JSR PRINT
+O1       BYT PRLEFT
+O2       BYT PRSMAL
+O3       .DA #PRLOC,0,#0
+O4       BYT PRCSPACE,0
+         .DA #PRSTR,TEXTBUFF,#CR,#0
+;
+; If L+R then go back and do the
+; right side.
+;
+^4       LDX #00
+         DEX 
+         CPX #1
+         BEQ <1
+^9       RTS 
+;
+O1TBL    BYT PRLEFT,PRRITE,PRLEFT,PRCNTR,PRCNTR
+;
+O2TBL1   BYT PRSMAL,PRBIG
+O2TBL2   BYT 26,0
+O2TBL3   BYT $EA,$4A
+;
+O3TBLL   BYT 0,958,0,480,480
+O3TBLH   HBY 0,958,0,480,480
+;
+O4TBL    BYT 0,0,0,86,0
+;
+O5TBL    BYT 1,1,1,6,10
+;-----------
+;
+; Do MONTHLY calendar
+;
+DOAMONTH LDA #1
+         STA STRTDATE
+;
+^0       LDX #DOAWEEK
+         LDY /DOAWEEK
+;
+         LDA STRTDATE
+         CLC 
+         ADC #6
+         CMP MNLAST
+         LDA #CDH
+         ADC #0
+;
+         PHA 
+         JSR MAGIPRIN
+         LDA DATE
+         STA STRTDATE
+         PLA 
+         EOR #CDH
+         BEQ <0
+         RTS 
+;-----------
+;
+; Do a week
+;
+DOAWEEK  LDA STRTDATE
+         STA DATE
+;
+         LDA MNFDAY
+         LDY DATE
+         DEY 
+         BEQ >0
+         LDA #0
+^0       STA DCDAYOWK
+;
+^1       LDX DCDAYOWK
+         LDY DWXL,X
+         LDA DWXH,X
+;
+         JSR DWDATE
+         INC DATE
+;
+         INC DCDAYOWK
+         LDA DCDAYOWK
+         EOR #7
+         BNE <1
+         RTS 
+;---
+DWXL     BYT CDM,CDM+CDW,CDM+CDW*2
+         BYT CDM+CDW*3,CDM+CDW*4
+         BYT CDM+CDW*5,CDM+CDW*6
+DWXH     HBY CDM,CDM+CDW,CDM+CDW*2
+         HBY CDM+CDW*3,CDM+CDW*4
+         HBY CDM+CDW*5,CDM+CDW*6
+;---
+;
+; Print rectangle and date with
+; info, if any.
+;
+; Set X,Y offsets
+;
+DWDATE   STY XOFFLO
+         STA XOFFHI
+         LDY #0
+         STY YOFF
+;
+; Always draw top line
+;
+         JSR DWHLINE
+;
+; Valid date?
+;
+         LDY DATE
+         CPY MNLAST
+         BLT >0
+         BEQ >0
+         RTS 
+;
+; Draw the data inside the box
+;
+^0       DEY 
+         JSR GETEDIT
+         LDY #$FF
+         JSR EDITDRAW
+;
+; Now put frame around date
+;
+; left edge
+;
+         LDX #0
+         JSR DWVLINE
+         INX 
+         JSR DWVLINE
+;
+; right edge
+;
+         LDX #CDW
+         JSR DWVLINE
+         INX 
+         JSR DWVLINE
+;
+; bottom line
+;
+         LDY #CDH
+         JSR DWHLINE
+;
+; Update lores screen
+;
+^0       JMP UPLRK
+;---
+;
+; Given Y, do X=0-(CDW+1)
+;
+DWHLINE  LDX #0
+^0       JSR DWPLOT
+         INX 
+         CPX #CDW+2
+         BLT <0
+         RTS 
+;---
+;
+; Given X, do Y=0-(CDH)
+;
+DWVLINE  LDY #0
+^0       JSR DWPLOT
+         INY 
+         CPY #CDH
+         BLT <0
+         RTS 
+;---
+;
+; Plot point with XOFFSET adjust
+; for monthly calendar
+;
+DWPLOT   STX DWPLOTSX
+         STY DWPLOTSY
+;
+; Compute X,Y
+;
+         TXA 
+         CLC 
+         ADC XOFFLO
+         TAX 
+         LDA XOFFHI
+         ADC #0
+         TAY 
+         LDA DWPLOTSY
+         JSR PLOTDOT
+         LDX #00
+DWPLOTSX =   *-1
+         LDY #00
+DWPLOTSY =   *-1
+         RTS 
+;-----------
+;
+; Plot point into buffer
+;
+; Enter with X,Y:Xcoor
+;             A :Ycoor
+;
+PLOTDOT  STA YCUR
+         SEC 
+         SBC YCLIP
+         CMP YMAX
+         BGE DOTPLOTX
+;
+         STX PLXSAVE
+         STY PLYSAVE
+;
+; Compute address into yellow plane
+;
+         LSR 
+         PHA 
+         LDA #0
+         ROR 
+         STA TMP0
+         PLA 
+         ADC /CLBUFFER
+         STA TMP1
+;
+; Compute bit position
+; X=Xcoor mod 8
+;
+         STX TMP3
+         TXA 
+         AND #7
+         TAX 
+         LDA PBITS8,X
+         STA TMP2
+;
+; Compute byte offset
+; Y=Xcoor/8
+;
+         TYA 
+         LSR 
+         ROR TMP3
+         LSR 
+         LDA TMP3
+         ROR 
+         LSR 
+         STA TMP3
+;
+; Set color
+;
+         LDY COLOR2
+^0       LDA COLORTBL,Y
+         STA COLORTMP
+         BPL >1
+;
+; Rainbow!
+;
+         LDA YCUR
+         AND #$0F
+         TAX 
+         LDY RBTBL,X
+         BPL <0
+;
+^1       LDY TMP3
+;
+; Set bits!
+;
+^2       LSR COLORTMP
+         BCC >3
+         LDA TMP2
+         ORA (TMP0),Y
+         STA (TMP0),Y
+;
+; Point to next plane
+;
+^3       LDA TMP1
+         CLC 
+         ADC #$10
+         STA TMP1
+         CMP /CLBUFFER+$4000
+         BGE >4
+         LDA COLORPR
+         BNE <2
+;
+^4       LDX #00
+PLXSAVE  =   *-1
+         LDY #00
+PLYSAVE  =   *-1
+;
+DOTPLOTX RTS 
+;-----------
+;
+; Draw top of calendar
+;
+DOTOP    LDA COLOR1
+         STA COLOR
+         JSR DRAWGRS
+         LDA COLOR0
+         STA COLOR
+;;;;;;;; JMP DRAWMY
+;-----------
+;
+; Draw month and year
+;
+DRAWMY   LDA FONTSEL
+         CMP #NOFONT
+         BEQ >9
+         JSR INSCFONT
+;
+         LDX #0
+         LDY #31
+         JSR >0
+         LDX #1
+         LDY #32
+         JSR >0
+         JMP INSUFONT
+;
+^0       LDA #1
+         STA DRAWKERN
+;
+         LDA DRAWMYT1,X
+         STA DRAWSIZE
+;
+         LDA DRAWMYT2,X
+         STA DRAWMYM2
+;
+         LDA DRAWMYT3,X
+         STA DRAWYOFF
+;
+         JSR GETTEXT
+;---
+;
+; Scan through the string to find the
+; tallest letter in the string.
+;
+         LDY #0
+         STY TMP2
+;
+^0       LDA TEXTBUFF+1,Y
+         BEQ >2
+         TAX 
+         LDA CFONTH-$20,X
+DRAWMYM2 ASL 
+         CMP TMP2
+         BLT >1
+         STA TMP2
+^1       INY 
+         BNE <0
+;---
+;
+; Subtract 1/2 height of height
+;
+^2       LSR TMP2
+         LDA DRAWYOFF
+         SEC 
+         SBC TMP2
+         STA DRAWYOFF
+;
+; Now set options
+;
+         LDA TEXTBUFF
+         ASL 
+         TAX 
+         LDA DSNORMAL,X
+         STA TMP2
+         LDA DSNORMAL+1,X
+         STA DRAWEOR
+;-----------
+;
+; Using tables, draw the string.
+;
+^0       LDX TMP2
+         INC TMP2
+;
+         LDA DSOTBL0,X
+         BPL >1
+;
+; DONE!
+;
+^9       RTS 
+;---
+;
+^1       EOR #00
+DRAWEOR  =   *-1
+         STA DRAWOPT
+;
+         LDA #480
+         CLC 
+         ADC DSXTBL0,X
+         STA DRAWX
+;
+         LDA #00
+DRAWYOFF =   *-1
+         CLC 
+         ADC DSYTBL0,X
+         STA DRAWY
+;---
+;
+; Draw text into buffer
+;
+         JSR PRINT
+         BYT PRCSPACE,3
+DRAWOPT  BYT PRINVR
+DRAWSIZE BYT PRBIG
+         BYT PRKERN,1
+DRAWKERN =   *-1
+         BYT PRCNTR
+         .DA #PRLOC,480,#00
+DRAWX    =   *-3
+DRAWY    =   *-1
+         BYT PRSTR
+         ADR TEXTBUFF+1
+         BYT CR
+         BYT PRKERN,0
+         BRK 
+;
+         SEC 
+         ROR DRAWKERN
+         JMP <0
+;---
+;
+; 0=month, 1=year
+;
+DRAWMYT1 BYT PRBIG,PRSMAL
+DRAWMYT2 ASL 
+         NOP 
+DRAWMYT3 BYT 40,100
+;---
+;
+; Pointers to parameters for String
+; Draw subroutine.
+;
+; <pointer>,<eortbl>
+;
+DSNORMAL BYT 0,0
+DSOUTLIN BYT 0,PRNORM^PRINVR
+DS3D     BYT 16,0
+;---
+;
+; Option tables
+;
+DSOTBL0  DFS 14,PRINVR
+         BYT PRNORM
+         HEX FF
+;
+DSOTBL1  BYT PRINVR,PRNORM
+         BYT PRINVR,PRNORM
+         BYT PRINVR,PRNORM
+         BYT PRINVR,PRNORM
+         HEX FF
+;---
+;
+; X offsets for
+;
+DSXTBL0  BYT 0,1,2,3,4
+         BYT 0,1,3,4,0
+         BYT 1,2,3,4,2
+         HEX FF
+DSXTBL1  BYT 0,1,2,3,4,5,6,7
+;
+; Y offsets
+;
+DSYTBL0  BYT 0,0,0,0,0
+         BYT 1,1,1,1,2
+         BYT 2,2,2,2,1
+         HEX FF
+DSYTBL1  BYT 0,1,2,3,4,5,6,7
+;-----------
+;
+; Do weekly calendar
+;
+; Space down 13
+;
+DOWEEKLY LDA #13
+         JSR SPACE
+;
+         LDA #0
+         LDX MNDATE
+         LDY MNFDAY
+;
+^0       STA WKPIECE
+         STX DATE
+         STY DCDAYOWK
+;
+         LDX #DOWEEK2
+         LDY /DOWEEK2
+         LDA WKPIECE
+         CMP #6
+         LDA #81
+         ADC #0
+         JSR MAGIPRIN
+;
+         LDX DATE
+         INX 
+         CPX MNLAST
+         BEQ >1
+         BLT >1
+         LDX #1
+^1       LDY DCDAYOWK
+         INY 
+         CPY #7
+         BLT >2
+         LDY #0
+^2       LDA WKPIECE
+         CLC 
+         ADC #1
+         CMP #7
+         BLT <0
+         CLC 
+         RTS 
+;---
+;
+; Enter with Y=0-6 for day of week
+; A=0-6 section. DATE=date!
+;
+DOWEEK2  LDA WKPIECE
+         ASL 
+         ASL 
+         PHA 
+         LDY DCDAYOWK
+         JSR MAKEWTXT
+;
+; Draw lines
+;
+         LDX #959
+         LDY /959
+^0       LDA #0
+         JSR PLOTDOT
+         LDA #81
+         JSR PLOTDOT
+         DEX 
+         BNE <0
+         DEY 
+         BPL <0
+;
+; Draw day of week and date and
+; position the cursor for the rest
+; of the data.
+;
+         JSR MAKEDTXT
+;
+         LDA COLOR2
+         STA COLOR
+;
+         JSR PRINT
+         BYT PRBIG,PRSPC,25
+         .DA #PRLOC,WDRWX1,#WDRWY1
+         .DA #PRSTR,WEEKTEXT,#CR
+         BYT PRRTAB2,50
+         BYT PRCNTR
+         .DA #PRSTR,DATETEXT,#CR
+         .DA #PRLOC,WDRWX2,#WDRWY2
+         BRK 
+;
+; Now draw the 4 strings
+;
+         LDA COLOR3
+         STA COLOR
+;
+         PLA 
+         TAY 
+         JSR >0
+^0       JSR >1
+;
+; Draw string
+;
+^1       STY >2+1
+         JSR GETTEXT
+         JSR PRINT
+         BYT PRBIG
+         BYT PRSPC,16
+         .DA #PRSTR,TEXTBUFF,#CR,#0
+;
+^2       LDY #00
+         INY 
+         RTS 
+;-----------
+;
+; Draw the date and all the data
+; typed in for this date.
+; Given EDITBUFF.
+;
+EDITDRAL LDY XOFFLO
+         LDA XOFFHI
+         STY >0+1
+         STA >0+2
+         LDY YOFF
+         STY >0+3
+;
+         JSR MAKEDTXT
+;
+; # is printed with LINE color
+;
+         LDA COLOR2
+         STA COLOR
+;
+         JSR PRINT
+^0       .DA #PRLOC,0,#0
+         BYT PRKERN,0
+         BYT PRRTAB2,10
+         BYT PRSPC,6,CR
+         BYT PRBIG
+         .DA #PRSTR,DATETEXT,#CR,#0
+;
+; Now draw the strings until the
+; end is reached.
+;
+         LDA COLOR3
+         STA COLOR
+;
+         LDY #0
+^1       TYA 
+         PHA 
+         JSR EDITDRAW
+         PLA 
+         TAY 
+         INY 
+         BCC <1
+         RTS 
+;-----------
+;
+; Print a line of the EDITBUFF given
+; in Y (0-7). SEC=if off bottom.
+;
+EDITDRAW CPY #$FF
+         BEQ EDITDRAL
+;
+         JSR EDITYOFF
+         BCS >9
+;
+; Set size parameter
+;
+         LDA EDITBUFF,X
+         LSR SPARM+8
+         LSR 
+         ROL SPARM+8
+;
+; Now set Xoption parameters
+;
+         AND #3
+         TAY 
+         LDA EDITXTYP,Y
+         STA SPARM+1
+;
+; Set coordinates
+;
+         LDA EDITXLO,Y
+         CLC 
+         ADC XOFFLO
+         STA SPARM+2
+         LDA EDITXHI,Y
+         ADC XOFFHI
+         STA SPARM+3
+;
+         LDA TMP0
+         ADC YOFF
+         ADC #DTCYMARG
+         STA SPARM+4
+;
+; Strip off extra characters
+;
+         LDX #DTCXMAX
+         LDY /DTCXMAX
+         LDA /UFONT
+         JSR STRCROP
+;
+; Now print the string
+;
+         JSR STROUT
+         CLC 
+^9       RTS 
+;---
+;
+; Left, Center, Right
+;
+EDITXTYP BYT 0,2,1
+EDITXLO  BYT DTCXMARG
+         BYT DTCXMARG+DTCXMAX/2
+         BYT DTCXMARG+DTCXMAX
+EDITXHI  HBY DTCXMARG
+         HBY DTCXMARG+DTCXMAX/2
+         HBY DTCXMARG+DTCXMAX
+;-----------
+;
+; Calculate the following based
+; on line # in Y.
+;
+; RETURNS:
+;
+;TMP0:Y offset
+;TMP1:size (8 or 16)
+;TMP2.3:address of string
+;
+;   X:offset into EDITBUFF
+;   Y:unchanged
+; SEC:forget it, no room
+;
+; CLC:ok
+;
+EDITYOFF LDX #0
+         STX TMP0
+^0       LDA EDITBUFF,X
+         LSR 
+         LDA #8
+         BCC >1
+         ASL 
+^1       STA TMP1
+         TXA 
+         CMP EDITOFF,Y
+         BEQ >2
+         LDA TMP0
+         ADC TMP1
+         STA TMP0
+         TXA 
+         ADC #32
+         TAX 
+         BNE <0
+;
+^2       CLC 
+         LDA TMP0
+         ADC TMP1
+         CMP #65
+         BCC >9
+;
+; Try small letter
+;
+         LDA TMP1
+         CMP #8
+         BEQ >9
+         LSR 
+         STA TMP1
+         ADC TMP0
+         CMP #65
+         BCS >9
+         LSR EDITBUFF,X
+         ASL EDITBUFF,X
+;
+; set TMP2.3
+;
+^9       INX 
+         STX TMP2
+         LDA /EDITBUFF
+         STA TMP3
+         DEX 
+         RTS 
+;
+EDITOFF  HEX 0020406080A0C0E0
+;-----------
+;
+; Chop letters off string until
+; it fits on line, given:
+;      A:Font address
+;      X:lo byte maxwidth
+;      Y:hi byte maxwidth
+; TMP2.3:string address
+;
+STRCROP  STX STRCROP0
+         STY STRCROP1
+         JSR FINSTALL
+;
+         LDA SPARM+1
+         PHA 
+;
+; Set STROUT to return width value
+;
+         LDA #3
+         STA SPARM+1
+;
+; Point to string
+;
+         LDY TMP2
+         LDA TMP3
+         STY SPARM+9
+         STA SPARM+10
+;
+; Strip off letters until string
+; fits on line.
+;
+^0       JSR STROUT
+         CMP /00
+STRCROP1 =   *-1
+         BNE >1
+         CPY #00
+STRCROP0 =   *-1
+^1       BLT >3
+;
+; Strip off a character
+;
+         LDY #$FF
+^2       INY 
+         LDA (TMP2),Y
+         BNE <2
+         DEY 
+         STA (TMP2),Y
+         BPL <0
+;
+^3       PLA 
+         STA SPARM+1
+         RTS 
+;-----------
+;
+;
+;
+         ICL "S:PCAL2"

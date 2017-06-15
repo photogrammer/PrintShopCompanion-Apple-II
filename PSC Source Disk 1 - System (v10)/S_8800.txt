@@ -1,0 +1,285 @@
+         NLS 
+         TTL "S:8800"
+ORG      =   $8800
+         NOG 
+;
+; Routines for pages $8800 & $8900
+;
+;------------
+*
+*        AGE ROUTINES
+*        AR PAGE
+*        NT STRING
+*
+TADDR    EPZ $08
+XSAVE    EPZ $09
+YSAVE    EPZ $0A
+*
+KBCODE   EQU $C000
+KBSTROBE EQU $C010
+*------- ----
+         ORG ORG
+         OBJ $800
+*------- ----
+TCLEAR   JMP $FC58
+         JMP TPRINT
+*
+CURSX    HEX 00
+CURSY    HEX 00
+STRADDR  HEX 0000
+INMAX    HEX 00
+VOPTION  HEX 80
+RETFLAG  HEX 00
+*
+         JMP DOIT
+*
+TEXTLO   HEX 0080008000800080
+         HEX 28A828A828A828A8
+         HEX 50D050D050D050D0
+*
+TEXTHI   HEX 0404050506060707
+         HEX 0404050506060707
+         HEX 0404050506060707
+*------- -------------
+TPRINT   LDA TADDR
+         PHA 
+         LDA TADDR+1
+         PHA 
+         JSR >0
+         PLA 
+         STA TADDR+1
+         PLA 
+         STA TADDR
+         RTS 
+*------- -----------
+*        TEXT STRING
+*
+^0       LDX CURSY
+         LDA TEXTLO,X
+         STA TADDR
+         LDA TEXTHI,X
+         STA TADDR+1
+         LDA STRADDR
+         STA TLDA+1
+         LDA STRADDR+1
+         STA TLDA+2
+         LDY CURSX
+         LDX #00
+         STX RETFLAG
+^1       JSR TLDA
+         BEQ >2
+         AND #$3F
+         ORA VOPTION
+         STA (TADDR),Y
+         INX 
+         INY 
+         CPX INMAX
+         BNE <1
+^2       RTS 
+*------- -----------
+*         DISPLAY MULTIPLE LINES
+*        STRADDR
+*        ITIAL CURSY
+*        SET TO ZERO
+*         UNTIL $FF FOUND
+*
+DOIT     STX STRADDR
+         STY STRADDR+1
+         STA CURSY
+         LDA #00
+         STA CURSX
+         LDX #40
+         STA INMAX
+         LDA #01
+         STA LCOUNT
+*
+DOIT1    LDA LCOUNT
+         LDX #$80
+         STX VOPTION
+         JSR TPRINT
+         INX 
+         TXA 
+         CLC 
+         ADC STRADDR
+         STA STRADDR
+         BCC DOIT3
+         INC STRADDR+1
+DOIT3    INC CURSY
+         INC LCOUNT
+         JSR TLDA
+         CMP #$FF
+         BNE DOIT1
+         RTS 
+*
+LCOUNT   HEX 00
+*------- ----
+*
+TLDA     LDA $8000,X
+         RTS 
+******** *************
+;-----------
+;
+; Check input device button
+;
+BUTTON   STX XSAVE
+         STY YSAVE
+         JSR DEVICERD
+         LDX XSAVE
+         LDY YSAVE
+         BCS >0
+         ASL 
+         BMI >0
+         BCC >0
+         LDA #13
+         RTS 
+;
+^0       LDA #0
+         RTS 
+;-----------
+;
+; Calc Ybase
+;
+LRKYCALC LDA TEXTLO,X
+         STA TADDR
+         LDA TEXTHI,X
+         STA TADDR+1
+         RTS 
+;-----------
+;
+; PRINT TEXT STRING
+;
+TPRT     JSR LRKYCALC
+         LDY #39
+^0       LDA BUFFER,Y
+         STA (TADDR),Y
+         DEY 
+         BPL <0
+TPDONE   RTS 
+;-----------
+;
+; Substitute code for PRCOMS file
+; that has the lores routines at
+; $9600. This routine is at $8900.
+;
+; LO-RES KALEIDOSCOPE
+;
+BUFFER   =   $380
+;
+DAT      EPZ $E0
+;
+BUFPTR1  EPZ DAT
+BUFPTR2  EPZ DAT+1
+COLORPTR EPZ DAT+2
+LINENO   EPZ DAT+3
+CSTART   EPZ DAT+4
+BYTCNT   EPZ DAT+5
+BYTPTR   EPZ DAT+6
+;---
+SP       =   $E000
+;
+DEVICERD =   SP+24
+;
+; Start at next page
+;
+         DFS $100-*&$FF,0
+;-----------
+         JMP BUTTON
+         DFS 5,$EA
+         JMP LRK
+         JMP UPLRK
+;-----------
+MSG      HEX 7D2A28A89C
+         HEX 112B292CA2
+         HEX 112B2A2CA0
+         HEX 11EAAC2AA0
+         HEX 112A6A29A6
+         HEX 112A6929A2
+         HEX 112A28A89E
+;
+         HEX 73CA2FA89C
+         HEX 4A2B222CA2
+         HEX 4A2B222CA0
+         HEX 73CAA22AA0
+         HEX 428A6229A6
+         HEX 424A6229A2
+         HEX 422A22289E
+;
+         HEX 784227289C
+         HEX 44A228ACA2
+         HEX 44A2282CA0
+         HEX 7912272AA0
+         HEX 41F220A9A6
+         HEX 420A28A9A2
+         HEX 4209C7289E
+;-----------
+;
+; Draw the initial color lines
+;
+LRK      LDA #00
+         STA BUFPTR1
+         STA LINENO
+         LDA CSTART
+         STA COLORPTR
+         LDA #40
+         STA BUFPTR2
+LRK1     LDX COLORPTR
+         LDA COLOR,X
+         LDY BUFPTR1
+LRK2     STA BUFFER,Y
+         INY 
+         CPY BUFPTR2
+         BNE LRK2
+         LDX LINENO
+         JSR TPRT
+         LDA #19
+         SEC 
+         SBC LINENO
+         TAX 
+         JSR TPRT
+         INC BUFPTR1
+         DEC BUFPTR2
+         INC COLORPTR
+         LDA COLORPTR
+         AND #07
+         STA COLORPTR
+         INC LINENO
+         LDA LINENO
+         CMP #10
+         BNE LRK1
+         INC CSTART
+         LDA CSTART
+         AND #07
+         STA CSTART
+         RTS 
+;
+COLOR    HEX BB99DDCC
+         HEX EE667733
+;-----------
+;
+; Rotate the lores colors by one
+;
+UPLRK    LDX #19
+UPLRK2   STX CURSY
+         JSR LRKYCALC
+         LDY #39
+UPLRK3   LDA (TADDR),Y
+         AND #$0F
+         TAX 
+         LDA NEXTC,X
+         STA (TADDR),Y
+         DEY 
+         BPL UPLRK3
+         LDX CURSY
+         DEX 
+         BPL UPLRK2
+         RTS 
+;
+NEXTC    HEX 000000BB
+         HEX 00007733
+         HEX 00DD0099
+         HEX EECC6600
+;-----------
+;
+;
+         USR "O:8800",ORG
+         END 

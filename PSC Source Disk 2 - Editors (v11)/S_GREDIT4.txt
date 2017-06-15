@@ -1,0 +1,376 @@
+;
+; S:GREDIT4
+;
+; Print Shop Companion
+;
+; Creature Maker
+;
+; by Roland Gustafsson
+;    Copyright 1985
+;
+;
+YPOS1    =   93
+YPOS2    =   121
+YPOS3    =   149
+;
+CRPART1  =   18
+CRPART2  =   17
+CRPART3  =   17
+;
+CREATURS =   $6000
+CRCOUNT  =   CREATURS
+;
+;
+CRMAKER  LDA #ESC
+         STA CRMOD
+         JSR SETMAX
+         JSR CLSCREEN
+         LDX #26
+         LDY #13
+         LDA #0
+         JSR SHOWAROW
+;
+         JSR PRINT
+         BYT RTOSWITE,0,0,25,16
+         BYT PRCNTR,PRINVR
+         .DA #PRLOC,88,#4
+         .DA #PRSTR,TXTCMAKE,#CR
+;
+         BYT PRNORM,PRRITE
+         BYT RTOSWITE,26,0,14,2
+         .DA #PRLOC,279,#11
+         BYT PRCSPACE,1,PRSPC,11
+         BYT 'USE UP &',CR
+         BYT 'DOWN TO',CR
+         BYT 'SELECT',CR
+         BYT 'PART. USE',CR
+         .DA #PRHTAB,231
+         BYT PRCSPACE,2
+         BYT PRCNTR
+         BYT 'LEFT & RIGHT',CR
+         BYT 'TO SELECT',CR
+         BYT 'CREATURE.',CR
+;
+         BYT PRINVR
+;
+         BYT RTOSWITE,26,YPOS1,14,2+11
+         BYT PRVTAB,YPOS1+3
+         BYT 'HEAD',CR
+;
+         BYT RTOSWITE,26,YPOS2,14,2+11
+         BYT PRVTAB,YPOS2+3
+         BYT 'BODY',CR
+;
+         BYT RTOSWITE,26,YPOS3,14,2+11
+         BYT PRVTAB,YPOS3+3
+         BYT 'LEGS',CR
+;
+         BYT RTOSWITE,26,177,14,2
+         BRK 
+;
+         LDA PART
+         PHA 
+         LDA #0
+         STA PART
+         JSR MOVEPIEC
+         INC PART
+         JSR MOVEPIEC
+         INC PART
+         JSR MOVEPIEC
+         PLA 
+         STA PART
+;
+; Do the creature selection stuff
+;
+CRMAKER2 JSR BLAKBOTM
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#185
+         .DA #PRSTR,TXTPRET
+         BYT ' '
+         .DA #PRSTR,TXTWD,#CR
+         BRK 
+         JSR CRSELECT
+;
+ESC4CR   LDA #1
+         JSR SAVESPEC
+         BCC >0
+         JMP CRMAKER
+;
+^0       JSR JMPVECTS
+         ADR CRSAVE
+         ADR GREDIT2
+         ADR MAINMENU
+;-----------
+;
+; Save the creature!
+;
+CRSAVE   JSR SETTYPE
+         BYT 'GRAPHIC',0
+TXTCMAKE BYT 'CREATURE MAKER',0
+         BYT 0
+         BYT 4
+         ADR EDITBUFF
+         ADR $240
+         JSR SAVEFILE
+         JMP ESC4CR
+;-----------
+;
+; Build a creature
+;
+CRSELECT JSR SHOWGR
+CRSELEC1 LSR CRARROWF
+;
+CRSELEC2 JSR CRARROWT
+         JSR FLSHINIT
+;
+^0       JSR POLEBTN
+         BMI >1
+         DEC FLASHLO
+         BNE <0
+         DEC FLASHHI
+         BPL <0
+         BMI CRSELEC2
+;
+^1       PHA 
+         JSR CRARROW0
+         PLA 
+         LDX PART
+         LDY PART1,X
+         JSR >2
+         BCS CRSELECT
+         BCC CRSELEC1
+;
+^2       JSR PARSE
+         .DA #'I',CRUP
+         .DA #$0B,CRUP
+         .DA #'M',CRDOWN
+         .DA #$0A,CRDOWN
+         .DA #'J',CRLEFT
+         .DA #$08,CRLEFT
+         .DA #'K',CRRITE
+         .DA #$15,CRRITE
+;
+         .DA #CR,CRDONE
+         .DA #ESC,CRESC
+;
+         BRK 
+         CLC 
+         RTS 
+;
+CRESC    PLA 
+         PLA 
+         PLA 
+         PLA 
+         JSR CMDQUIT2
+         JMP CRMAKER2
+;
+CRDONE   PLA 
+         PLA 
+         RTS 
+;
+CRUP     DEX 
+         BPL >0
+         LDX #1
+;
+CRDOWN   INX 
+         CPX #3
+         BLT >0
+         LDX #0
+^0       STX PART
+         CLC 
+         RTS 
+;
+CRLEFT   DEY 
+         BPL >0
+         LDY CRCOUNT
+         DEY 
+         DEY 
+;
+CRRITE   INY 
+         CPY CRCOUNT
+         BLT >0
+         LDY #0
+^0       TYA 
+         STA PART1,X
+         JSR MOVEPIEC
+         SEC 
+         RTS 
+;-----------
+;
+; Move piece from CRDATA to EDITBUFF
+; and print it's name.
+;
+; PART is given in PART
+; PIECE 0-9 is given in PART1,2 or 3
+;
+MOVEPIEC LDY PART
+         LDA PART1,Y
+         ASL 
+         TAX 
+         LDA CRADR,X
+         ADC CROFFSTL,Y
+         STA TMP0
+         LDA CRADR+1,X
+         ADC CROFFSTH,Y
+         STA TMP1
+;
+         LDA #EDITBUFF
+         ADC CROFFSTL,Y
+         STA TMP2
+         LDA /EDITBUFF
+         ADC CROFFSTH,Y
+         STA TMP3
+;
+         LDA CRLENGTH,Y
+         TAY 
+;
+; Move piece over to EDITBUFF
+;
+^0       DEY 
+         CPY #$FF
+         BEQ >1
+         LDA (TMP0),Y
+         STA (TMP2),Y
+         BLT <0
+;
+; Now print name of that piece
+;
+; First get address of text
+;
+^1       LDA CRCOUNT
+         ASL 
+         TAY 
+         LDA CRADR,Y
+         STA TMP0
+         LDA CRADR+1,Y
+         STA TMP1
+;
+         LDY PART
+         LDX PART1,Y
+;
+         LDY #0
+;
+; Find text location
+;
+^0       DEX 
+         BMI >2
+^1       LDA (TMP0),Y
+         PHA 
+         INC TMP0
+         BNE *+4
+         INC TMP1
+         PLA 
+         BNE <1
+         BEQ <0
+;
+^2       LDY TMP0
+         LDA TMP1
+         STY >5+0
+         STA >5+1
+;
+         JSR GETYPOS
+         ADC #17
+         STA >3+0
+         STA >4+0
+         JSR PRINT
+         BYT RTOSBLAK,29
+^3       BYT 0,11,7
+         .DA #PRLOC,203
+^4       HEX 00
+         BYT PRSTR
+^5       .DA 0000,#CR,#0
+         RTS 
+;-----------
+CRARROWF HEX 00
+;
+; Toggle arrow on or off
+;
+CRARROWT LDA CRARROWF
+         EOR #$80
+         STA CRARROWF
+         BMI CRARROW1
+;
+; Erase arrow
+;
+CRARROW0 JSR GETYPOS
+         ADC #16
+         STA >0+0
+         JSR PRINT
+         BYT RTOSBLAK
+         BYT 26
+^0       BYT 0,3,9,0
+         RTS 
+;
+; Draw arrow
+;
+CRARROW1 JSR GETYPOS
+         ADC #16
+         STA >0+0
+         JSR PICDRAW
+         BYT 26
+^0       BYT 0,3,9
+         HEX 810E8238826001C207C21FC207816001
+         HEX 8138820E00
+         RTS 
+;-----------
+;
+; LOOKUP TABLES....
+;
+CLEN     =   11*52
+;
+C        =   CREATURS+1
+;
+; Address of each piece
+;
+CRADR    ADR C+0*CLEN
+         ADR C+1*CLEN
+         ADR C+2*CLEN
+         ADR C+3*CLEN
+         ADR C+4*CLEN
+         ADR C+5*CLEN
+         ADR C+6*CLEN
+         ADR C+7*CLEN
+         ADR C+8*CLEN
+         ADR C+9*CLEN
+         ADR C+10*CLEN
+;-----------
+;
+; Offsets for each of the 3 parts
+;
+CROFF1   =   0
+CROFF2   =   11*CRPART1
+CROFF3   =   11*CRPART1+CRPART2
+;
+CROFFSTL BYT CROFF1,CROFF2,CROFF3
+CROFFSTH HBY CROFF1,CROFF2,CROFF3
+;
+; Length of each part
+;
+CRLENGTH BYT 11*CRPART1
+         BYT 11*CRPART2
+         BYT 11*CRPART3
+;-----------
+;
+; Y position for each part
+;
+GETYPOS  LDY PART
+         LDA YPOS,Y
+         CLC 
+         RTS 
+;
+YPOS     BYT YPOS1,YPOS2,YPOS3
+;-----------
+;
+; DATA
+;
+PART     HEX 00
+PART1    BRK 
+PART2    BRK 
+PART3    BRK 
+;
+;
+;
+         USR "GREDIT,S4",ORG
+;
+         ICL "S:COMMONEDIT"

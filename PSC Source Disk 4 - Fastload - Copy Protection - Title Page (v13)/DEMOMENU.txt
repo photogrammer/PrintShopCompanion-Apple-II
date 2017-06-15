@@ -1,0 +1,697 @@
+1A00-   4C 07 1A    JMP   $1A07
+1A03-   02          ???
+1A04-   01 00       ORA   ($00,X)
+1A06-   00          BRK
+1A07-   AD 03 1A    LDA   $1A03
+1A0A-   C9 01       CMP   #$01
+1A0C-   F0 32       BEQ   $1A40
+1A0E-   20 00 8E    JSR   $8E00
+1A11-   AD 51 C0    LDA   $C051    rw:TXTSET
+1A14-   A9 00       LDA   #$00
+1A16-   8D 13 8E    STA   $8E13
+1A19-   A9 00       LDA   #$00
+1A1B-   A2 69       LDX   #$69
+1A1D-   A0 1B       LDY   #$1B
+1A1F-   20 10 8E    JSR   $8E10
+1A22-   EE 06 1A    INC   $1A06
+1A25-   AD 03 1A    LDA   $1A03
+1A28-   8D 13 8E    STA   $8E13
+1A2B-   A9 02       LDA   #$02
+1A2D-   8D 05 1A    STA   $1A05
+1A30-   20 A9 1A    JSR   $1AA9
+1A33-   AD 13 8E    LDA   $8E13
+1A36-   8D 03 1A    STA   $1A03
+1A39-   B0 D3       BCS   $1A0E
+1A3B-   C9 01       CMP   #$01
+1A3D-   F0 01       BEQ   $1A40
+1A3F-   60          RTS
+1A40-   20 00 8E    JSR   $8E00
+1A43-   AD 51 C0    LDA   $C051    rw:TXTSET
+1A46-   A9 00       LDA   #$00
+1A48-   8D 06 1A    STA   $1A06
+1A4B-   8D 13 8E    STA   $8E13
+1A4E-   A2 13       LDX   #$13
+1A50-   A0 1D       LDY   #$1D
+1A52-   20 10 8E    JSR   $8E10
+1A55-   AD 04 1A    LDA   $1A04
+1A58-   8D 13 8E    STA   $8E13
+1A5B-   A9 07       LDA   #$07
+1A5D-   8D 05 1A    STA   $1A05
+1A60-   A9 0F       LDA   #$0F
+1A62-   A2 30       LDX   #$30
+1A64-   A0 1F       LDY   #$1F
+1A66-   20 A9 1A    JSR   $1AA9
+1A69-   AD 13 8E    LDA   $8E13
+1A6C-   8D 04 1A    STA   $1A04
+1A6F-   B0 9D       BCS   $1A0E
+1A71-   60          RTS
+1A72-   48          PHA
+1A73-   AD 06 1A    LDA   $1A06
+1A76-   D0 04       BNE   $1A7C
+1A78-   68          PLA
+1A79-   4C 10 8E    JMP   $8E10
+1A7C-   68          PLA
+1A7D-   A9 12       LDA   #$12
+1A7F-   A2 D2       LDX   #$D2
+1A81-   A0 1C       LDY   #$1C
+1A83-   20 10 8E    JSR   $8E10
+1A86-   A9 0D       LDA   #$0D
+1A88-   A2 E6       LDX   #$E6
+1A8A-   A0 1C       LDY   #$1C
+1A8C-   20 10 8E    JSR   $8E10
+1A8F-   A9 0E       LDA   #$0E
+1A91-   A2 01       LDX   #$01
+1A93-   A0 1D       LDY   #$1D
+1A95-   4C 10 8E    JMP   $8E10
+1A98-   8D 10 C0    STA   $C010    r:KBDSTRB
+1A9B-   20 14 8E    JSR   $8E14
+1A9E-   D0 08       BNE   $1AA8
+1AA0-   AD 00 C0    LDA   $C000    r:KBD  w:CLR80COL
+1AA3-   10 F6       BPL   $1A9B
+1AA5-   8D 10 C0    STA   $C010    r:KBDSTRB
+1AA8-   60          RTS
+1AA9-   8D 66 1B    STA   $1B66
+1AAC-   8E 67 1B    STX   $1B67
+1AAF-   8C 68 1B    STY   $1B68
+1AB2-   8D 10 C0    STA   $C010    r:KBDSTRB
+1AB5-   AD 66 1B    LDA   $1B66
+1AB8-   AE 67 1B    LDX   $1B67
+1ABB-   AC 68 1B    LDY   $1B68
+1ABE-   20 72 1A    JSR   $1A72
+1AC1-   20 1E 1B    JSR   $1B1E
+1AC4-   C9 01       CMP   #$01
+1AC6-   F0 40       BEQ   $1B08
+1AC8-   C9 FF       CMP   #$FF
+1ACA-   F0 2E       BEQ   $1AFA
+1ACC-   20 14 8E    JSR   $8E14
+1ACF-   D0 0A       BNE   $1ADB
+1AD1-   AD 00 C0    LDA   $C000    r:KBD  w:CLR80COL
+1AD4-   10 DF       BPL   $1AB5
+1AD6-   8D 10 C0    STA   $C010    r:KBDSTRB
+1AD9-   29 7F       AND   #$7F
+1ADB-   C9 0D       CMP   #$0D
+1ADD-   F0 17       BEQ   $1AF6
+1ADF-   C9 1B       CMP   #$1B
+1AE1-   F0 15       BEQ   $1AF8
+1AE3-   C9 15       CMP   #$15
+1AE5-   F0 21       BEQ   $1B08
+1AE7-   C9 0A       CMP   #$0A
+1AE9-   F0 1D       BEQ   $1B08
+1AEB-   C9 08       CMP   #$08
+1AED-   F0 0B       BEQ   $1AFA
+1AEF-   C9 0B       CMP   #$0B
+1AF1-   F0 07       BEQ   $1AFA
+1AF3-   4C B5 1A    JMP   $1AB5
+1AF6-   18          CLC
+1AF7-   60          RTS
+1AF8-   38          SEC
+1AF9-   60          RTS
+1AFA-   CE 13 8E    DEC   $8E13
+1AFD-   D0 17       BNE   $1B16
+1AFF-   AD 05 1A    LDA   $1A05
+1B02-   8D 13 8E    STA   $8E13
+1B05-   4C 16 1B    JMP   $1B16
+1B08-   AE 13 8E    LDX   $8E13
+1B0B-   EC 05 1A    CPX   $1A05
+1B0E-   D0 02       BNE   $1B12
+1B10-   A2 00       LDX   #$00
+1B12-   E8          INX
+1B13-   8E 13 8E    STX   $8E13
+1B16-   A9 10       LDA   #$10
+1B18-   8D 64 1B    STA   $1B64
+1B1B-   4C B5 1A    JMP   $1AB5
+1B1E-   20 49 1B    JSR   $1B49
+1B21-   CE 64 1B    DEC   $1B64
+1B24-   D0 15       BNE   $1B3B
+1B26-   EE 64 1B    INC   $1B64
+1B29-   AD 63 1B    LDA   $1B63
+1B2C-   D0 12       BNE   $1B40
+1B2E-   AD 61 C0    LDA   $C061    r:BUTN0
+1B31-   0D 62 C0    ORA   $C062    r:BUTN1
+1B34-   29 80       AND   #$80
+1B36-   0D 65 1B    ORA   $1B65
+1B39-   F0 05       BEQ   $1B40
+1B3B-   A9 00       LDA   #$00
+1B3D-   AA          TAX
+1B3E-   A8          TAY
+1B3F-   60          RTS
+1B40-   A9 01       LDA   #$01
+1B42-   8D 63 1B    STA   $1B63
+1B45-   AD 65 1B    LDA   $1B65
+1B48-   60          RTS
+1B49-   A9 28       LDA   #$28
+1B4B-   20 A8 FC    JSR   $FCA8    F8ROM:WAIT
+1B4E-   A2 01       LDX   #$01
+1B50-   20 1E FB    JSR   $FB1E    F8ROM:PREAD
+1B53-   A2 00       LDX   #$00
+1B55-   C0 10       CPY   #$10
+1B57-   B0 01       BCS   $1B5A
+1B59-   CA          DEX
+1B5A-   C0 F0       CPY   #$F0
+1B5C-   90 01       BCC   $1B5F
+1B5E-   E8          INX
+1B5F-   8E 65 1B    STX   $1B65
+1B62-   60          RTS
+1B63-   00          BRK
+1B64-   0F          ???
+1B65-   00          BRK
+1B66-   00          BRK
+1B67-   00          BRK
+1B68-   00          BRK
+1B69-   20 20 20    JSR   $2020
+1B6C-   20 20 20    JSR   $2020
+1B6F-   20 20 20    JSR   $2020
+1B72-   20 20 20    JSR   $2020
+1B75-   20 20 2A    JSR   $2A20
+1B78-   2A          ROL
+1B79-   2A          ROL
+1B7A-   2A          ROL
+1B7B-   2A          ROL
+1B7C-   2A          ROL
+1B7D-   2A          ROL
+1B7E-   2A          ROL
+1B7F-   2A          ROL
+1B80-   2A          ROL
+1B81-   2A          ROL
+1B82-   2A          ROL
+1B83-   00          BRK
+1B84-   20 20 20    JSR   $2020
+1B87-   20 20 20    JSR   $2020
+1B8A-   20 20 20    JSR   $2020
+1B8D-   20 20 20    JSR   $2020
+1B90-   20 20 2A    JSR   $2A20
+1B93-   20 20 20    JSR   $2020
+1B96-   20 20 20    JSR   $2020
+1B99-   20 20 20    JSR   $2020
+1B9C-   20 2A 00    JSR   $002A
+1B9F-   20 20 20    JSR   $2020
+1BA2-   20 20 20    JSR   $2020
+1BA5-   20 20 20    JSR   $2020
+1BA8-   20 20 20    JSR   $2020
+1BAB-   20 20 2A    JSR   $2A20
+1BAE-   20 57 45    JSR   $4557
+1BB1-   4C 43 4F    JMP   $4F43
+1BB4-   4D 45 21    EOR   $2145
+1BB7-   20 2A 00    JSR   $002A
+1BBA-   20 20 20    JSR   $2020
+1BBD-   20 20 20    JSR   $2020
+1BC0-   20 20 20    JSR   $2020
+1BC3-   20 20 20    JSR   $2020
+1BC6-   20 20 2A    JSR   $2A20
+1BC9-   20 20 20    JSR   $2020
+1BCC-   20 20 20    JSR   $2020
+1BCF-   20 20 20    JSR   $2020
+1BD2-   20 2A 00    JSR   $002A
+1BD5-   20 20 20    JSR   $2020
+1BD8-   20 20 20    JSR   $2020
+1BDB-   20 20 20    JSR   $2020
+1BDE-   20 20 20    JSR   $2020
+1BE1-   20 20 2A    JSR   $2A20
+1BE4-   2A          ROL
+1BE5-   2A          ROL
+1BE6-   2A          ROL
+1BE7-   2A          ROL
+1BE8-   2A          ROL
+1BE9-   2A          ROL
+1BEA-   2A          ROL
+1BEB-   2A          ROL
+1BEC-   2A          ROL
+1BED-   2A          ROL
+1BEE-   2A          ROL
+1BEF-   00          BRK
+1BF0-   00          BRK
+1BF1-   2D 2D 2D    AND   $2D2D
+1BF4-   2D 2D 2D    AND   $2D2D
+1BF7-   2D 2D 2D    AND   $2D2D
+1BFA-   2D 2D 2D    AND   $2D2D
+1BFD-   2D 2D 2D    AND   $2D2D
+1C00-   2D 2D 2D    AND   $2D2D
+1C03-   2D 2D 2D    AND   $2D2D
+1C06-   2D 2D 2D    AND   $2D2D
+1C09-   2D 2D 2D    AND   $2D2D
+1C0C-   2D 2D 2D    AND   $2D2D
+1C0F-   2D 2D 2D    AND   $2D2D
+1C12-   2D 2D 2D    AND   $2D2D
+1C15-   2D 2D 2D    AND   $2D2D
+1C18-   2D 00 00    AND   $0000
+1C1B-   55 53       EOR   $53,X
+1C1D-   45 20       EOR   $20
+1C1F-   41 52       EOR   ($52,X)
+1C21-   52 4F       EOR   ($4F)
+1C23-   57          ???
+1C24-   20 4B 45    JSR   $454B
+1C27-   59 53 20    EOR   $2053,Y
+1C2A-   54          ???
+1C2B-   4F          ???
+1C2C-   20 4D 41    JSR   $414D
+1C2F-   4B          ???
+1C30-   45 20       EOR   $20
+1C32-   41 20       EOR   ($20,X)
+1C34-   53          ???
+1C35-   45 4C       EOR   $4C
+1C37-   45 43       EOR   $43
+1C39-   54          ???
+1C3A-   49 4F       EOR   #$4F
+1C3C-   4E 00 41    LSR   $4100
+1C3F-   4E 44 20    LSR   $2044
+1C42-   50 52       BVC   $1C96
+1C44-   45 53       EOR   $53
+1C46-   53          ???
+1C47-   20 3C 52    JSR   $523C
+1C4A-   45 54       EOR   $54
+1C4C-   55 52       EOR   $52,X
+1C4E-   4E 3E 00    LSR   $003E
+1C51-   00          BRK
+1C52-   00          BRK
+1C53-   00          BRK
+1C54-   00          BRK
+1C55-   00          BRK
+1C56-   00          BRK
+1C57-   00          BRK
+1C58-   00          BRK
+1C59-   00          BRK
+1C5A-   00          BRK
+1C5B-   00          BRK
+1C5C-   2D 2D 2D    AND   $2D2D
+1C5F-   2D 2D 2D    AND   $2D2D
+1C62-   2D 2D 2D    AND   $2D2D
+1C65-   2D 2D 2D    AND   $2D2D
+1C68-   2D 2D 2D    AND   $2D2D
+1C6B-   2D 2D 2D    AND   $2D2D
+1C6E-   2D 2D 2D    AND   $2D2D
+1C71-   2D 2D 2D    AND   $2D2D
+1C74-   2D 2D 2D    AND   $2D2D
+1C77-   2D 2D 2D    AND   $2D2D
+1C7A-   2D 2D 2D    AND   $2D2D
+1C7D-   2D 2D 2D    AND   $2D2D
+1C80-   2D 2D 2D    AND   $2D2D
+1C83-   2D 00 20    AND   $2000
+1C86-   20 4F 52    JSR   $524F
+1C89-   2C 20 54    BIT   $5420
+1C8C-   55 52       EOR   $52,X
+1C8E-   4E 20 4F    LSR   $4F20
+1C91-   56 45       LSR   $45,X
+1C93-   52 20       EOR   ($20)
+1C95-   54          ???
+1C96-   48          PHA
+1C97-   45 20       EOR   $20
+1C99-   44          ???
+1C9A-   49 53       EOR   #$53
+1C9C-   4B          ???
+1C9D-   20 41 4E    JSR   $4E41
+1CA0-   44          ???
+1CA1-   20 52 45    JSR   $4552
+1CA4-   53          ???
+1CA5-   45 54       EOR   $54
+1CA7-   20 54 48    JSR   $4854
+1CAA-   45 00       EOR   $00
+1CAC-   20 20 20    JSR   $2020
+1CAF-   20 43 4F    JSR   $4F43
+1CB2-   4D 50 55    EOR   $5550
+1CB5-   54          ???
+1CB6-   45 52       EOR   $52
+1CB8-   20 54 4F    JSR   $4F54
+1CBB-   20 52 55    JSR   $5552
+1CBE-   4E 20 22    LSR   $2220
+1CC1-   54          ???
+1CC2-   48          PHA
+1CC3-   45 20       EOR   $20
+1CC5-   50 52       BVC   $1D19
+1CC7-   49 4E       EOR   #$4E
+1CC9-   54          ???
+1CCA-   20 53 48    JSR   $4853
+1CCD-   4F          ???
+1CCE-   50 22       BVC   $1CF2
+1CD0-   00          BRK
+1CD1-   FF          ???
+1CD2-   52 55       EOR   ($55)
+1CD4-   4E 20 22    LSR   $2220
+1CD7-   4D 41 52    EOR   $5241
+1CDA-   54          ???
+1CDB-   59 4D 41    EOR   $414D,Y
+1CDE-   54          ???
+1CDF-   49 4F       EOR   #$4F
+1CE1-   4E 53 22    LSR   $2253
+1CE4-   00          BRK
+1CE5-   FF          ???
+1CE6-   00          BRK
+1CE7-   52 55       EOR   ($55)
+1CE9-   4E 20 50    LSR   $5020
+1CEC-   52 49       EOR   ($49)
+1CEE-   4E 54 20    LSR   $2054
+1CF1-   53          ???
+1CF2-   48          PHA
+1CF3-   4F          ???
+1CF4-   50 20       BVC   $1D16
+1CF6-   43          ???
+1CF7-   4F          ???
+1CF8-   4D 50 41    EOR   $4150
+1CFB-   4E 49 4F    LSR   $4F49
+1CFE-   4E 00 FF    LSR   $FF00
+1D01-   00          BRK
+1D02-   55 50       EOR   $50,X
+1D04-   47          ???
+1D05-   52 41       EOR   ($41)
+1D07-   44          ???
+1D08-   45 20       EOR   $20
+1D0A-   55 54       EOR   $54,X
+1D0C-   49 4C       EOR   #$4C
+1D0E-   49 54       EOR   #$54
+1D10-   59 00 FF    EOR   $FF00,Y
+1D13-   20 20 20    JSR   $2020
+1D16-   20 20 20    JSR   $2020
+1D19-   20 20 20    JSR   $2020
+1D1C-   2A          ROL
+1D1D-   2A          ROL
+1D1E-   2A          ROL
+1D1F-   2A          ROL
+1D20-   2A          ROL
+1D21-   2A          ROL
+1D22-   2A          ROL
+1D23-   2A          ROL
+1D24-   2A          ROL
+1D25-   2A          ROL
+1D26-   2A          ROL
+1D27-   2A          ROL
+1D28-   2A          ROL
+1D29-   2A          ROL
+1D2A-   2A          ROL
+1D2B-   2A          ROL
+1D2C-   2A          ROL
+1D2D-   2A          ROL
+1D2E-   2A          ROL
+1D2F-   2A          ROL
+1D30-   2A          ROL
+1D31-   2A          ROL
+1D32-   00          BRK
+1D33-   20 20 20    JSR   $2020
+1D36-   20 20 20    JSR   $2020
+1D39-   20 20 20    JSR   $2020
+1D3C-   2A          ROL
+1D3D-   20 43 4F    JSR   $4F43
+1D40-   4D 49 4E    EOR   $4E49
+1D43-   47          ???
+1D44-   20 41 54    JSR   $5441
+1D47-   54          ???
+1D48-   52 41       EOR   ($41)
+1D4A-   43          ???
+1D4B-   54          ???
+1D4C-   49 4F       EOR   #$4F
+1D4E-   4E 53 20    LSR   $2053
+1D51-   2A          ROL
+1D52-   00          BRK
+1D53-   20 20 20    JSR   $2020
+1D56-   20 20 20    JSR   $2020
+1D59-   20 20 20    JSR   $2020
+1D5C-   2A          ROL
+1D5D-   2A          ROL
+1D5E-   2A          ROL
+1D5F-   2A          ROL
+1D60-   2A          ROL
+1D61-   2A          ROL
+1D62-   2A          ROL
+1D63-   2A          ROL
+1D64-   2A          ROL
+1D65-   2A          ROL
+1D66-   2A          ROL
+1D67-   2A          ROL
+1D68-   2A          ROL
+1D69-   2A          ROL
+1D6A-   2A          ROL
+1D6B-   2A          ROL
+1D6C-   2A          ROL
+1D6D-   2A          ROL
+1D6E-   2A          ROL
+1D6F-   2A          ROL
+1D70-   2A          ROL
+1D71-   2A          ROL
+1D72-   00          BRK
+1D73-   00          BRK
+1D74-   2D 2D 2D    AND   $2D2D
+1D77-   2D 2D 2D    AND   $2D2D
+1D7A-   2D 2D 2D    AND   $2D2D
+1D7D-   2D 2D 2D    AND   $2D2D
+1D80-   2D 2D 2D    AND   $2D2D
+1D83-   2D 2D 2D    AND   $2D2D
+1D86-   2D 2D 2D    AND   $2D2D
+1D89-   2D 2D 2D    AND   $2D2D
+1D8C-   2D 2D 2D    AND   $2D2D
+1D8F-   2D 2D 2D    AND   $2D2D
+1D92-   2D 2D 2D    AND   $2D2D
+1D95-   2D 2D 2D    AND   $2D2D
+1D98-   2D 2D 2D    AND   $2D2D
+1D9B-   2D 00 57    AND   $5700
+1D9E-   45 20       EOR   $20
+1DA0-   48          PHA
+1DA1-   45 52       EOR   $52
+1DA3-   45 20       EOR   $20
+1DA5-   41 54       EOR   ($54,X)
+1DA7-   20 42 52    JSR   $5242
+1DAA-   30 44       BMI   $1DF0
+1DAC-   45 52       EOR   $52
+1DAE-   42          ???
+1DAF-   55 4E       EOR   $4E,X
+1DB1-   44          ???
+1DB2-   20 57 4F    JSR   $4F57
+1DB5-   55 4C       EOR   $4C,X
+1DB7-   44          ???
+1DB8-   20 4C 49    JSR   $494C
+1DBB-   4B          ???
+1DBC-   45 20       EOR   $20
+1DBE-   54          ???
+1DBF-   4F          ???
+1DC0-   00          BRK
+1DC1-   53          ???
+1DC2-   48          PHA
+1DC3-   41 52       EOR   ($52,X)
+1DC5-   45 20       EOR   $20
+1DC7-   57          ???
+1DC8-   49 54       EOR   #$54
+1DCA-   48          PHA
+1DCB-   20 59 4F    JSR   $4F59
+1DCE-   55 20       EOR   $20,X
+1DD0-   41 20       EOR   ($20,X)
+1DD2-   47          ???
+1DD3-   4C 49 4D    JMP   $4D49
+1DD6-   50 53       BVC   $1E2B
+1DD8-   45 20       EOR   $20
+1DDA-   4F          ???
+1DDB-   46 20       LSR   $20
+1DDD-   54          ???
+1DDE-   48          PHA
+1DDF-   45 20       EOR   $20
+1DE1-   46 55       LSR   $55
+1DE3-   54          ???
+1DE4-   55 52       EOR   $52,X
+1DE6-   45 2E       EOR   $2E
+1DE8-   00          BRK
+1DE9-   4D 41 52    EOR   $5241
+1DEC-   54          ???
+1DED-   49 4E       EOR   #$4E
+1DEF-   20 4B 41    JSR   $414B
+1DF2-   48          PHA
+1DF3-   4E 2C 20    LSR   $202C
+1DF6-   4F          ???
+1DF7-   4E 45 20    LSR   $2045
+1DFA-   4F          ???
+1DFB-   46 20       LSR   $20
+1DFD-   54          ???
+1DFE-   48          PHA
+1DFF-   45 20       EOR   $20
+1E01-   41 55       EOR   ($55,X)
+1E03-   54          ???
+1E04-   48          PHA
+1E05-   4F          ???
+1E06-   52 53       EOR   ($53)
+1E08-   20 4F 46    JSR   $464F
+1E0B-   00          BRK
+1E0C-   22          ???
+1E0D-   54          ???
+1E0E-   48          PHA
+1E0F-   45 20       EOR   $20
+1E11-   50 52       BVC   $1E65
+1E13-   49 4E       EOR   #$4E
+1E15-   54          ???
+1E16-   20 53 48    JSR   $4853
+1E19-   4F          ???
+1E1A-   50 22       BVC   $1E3E
+1E1C-   2C 20 48    BIT   $4820
+1E1F-   41 53       EOR   ($53,X)
+1E21-   20 44 45    JSR   $4544
+1E24-   56 45       LSR   $45,X
+1E26-   4C 4F 50    JMP   $504F
+1E29-   45 44       EOR   $44
+1E2B-   20 41 20    JSR   $2041
+1E2E-   4E 45 57    LSR   $5745
+1E31-   00          BRK
+1E32-   41 4E       EOR   ($4E,X)
+1E34-   49 4D       EOR   #$4D
+1E36-   41 54       EOR   ($54,X)
+1E38-   49 4F       EOR   #$4F
+1E3A-   4E 20 54    LSR   $5420
+1E3D-   45 43       EOR   $43
+1E3F-   48          PHA
+1E40-   4E 49 51    LSR   $5149
+1E43-   55 45       EOR   $45,X
+1E45-   20 46 4F    JSR   $4F46
+1E48-   52 20       EOR   ($20)
+1E4A-   54          ???
+1E4B-   48          PHA
+1E4C-   45 20       EOR   $20
+1E4E-   41 50       EOR   ($50,X)
+1E50-   50 4C       BVC   $1E9E
+1E52-   45 20       EOR   $20
+1E54-   49 49       EOR   #$49
+1E56-   2E 00 57    ROL   $5700
+1E59-   45 20       EOR   $20
+1E5B-   48          PHA
+1E5C-   4F          ???
+1E5D-   50 45       BVC   $1EA4
+1E5F-   20 54 4F    JSR   $4F54
+1E62-   20 42 45    JSR   $4542
+1E65-   20 55 53    JSR   $5355
+1E68-   49 4E       EOR   #$4E
+1E6A-   47          ???
+1E6B-   20 54 48    JSR   $4854
+1E6E-   49 53       EOR   #$53
+1E70-   20 45 58    JSR   $5845
+1E73-   43          ???
+1E74-   49 54       EOR   #$54
+1E76-   49 4E       EOR   #$4E
+1E78-   47          ???
+1E79-   00          BRK
+1E7A-   54          ???
+1E7B-   45 43       EOR   $43
+1E7D-   48          PHA
+1E7E-   4E 49 51    LSR   $5149
+1E81-   55 45       EOR   $45,X
+1E83-   20 49 4E    JSR   $4E49
+1E86-   20 55 50    JSR   $5055
+1E89-   43          ???
+1E8A-   4F          ???
+1E8B-   4D 49 4E    EOR   $4E49
+1E8E-   47          ???
+1E8F-   20 50 52    JSR   $5250
+1E92-   4F          ???
+1E93-   44          ???
+1E94-   55 43       EOR   $43,X
+1E96-   54          ???
+1E97-   53          ???
+1E98-   2E 20 20    ROL   $2020
+1E9B-   42          ???
+1E9C-   55 54       EOR   $54,X
+1E9E-   20 46 4F    JSR   $4F46
+1EA1-   52 00       EOR   ($00)
+1EA3-   4E 4F 57    LSR   $574F
+1EA6-   2C 20 48    BIT   $4820
+1EA9-   45 52       EOR   $52
+1EAB-   45 20       EOR   $20
+1EAD-   49 53       EOR   #$53
+1EAF-   20 41 20    JSR   $2041
+1EB2-   4C 49 54    JMP   $5449
+1EB5-   54          ???
+1EB6-   4C 45 20    JMP   $2045
+1EB9-   54          ???
+1EBA-   41 53       EOR   ($53,X)
+1EBC-   54          ???
+1EBD-   45 2E       EOR   $2E
+1EBF-   20 20 48    JSR   $4820
+1EC2-   4F          ???
+1EC3-   4C 44 20    JMP   $2044
+1EC6-   4F          ???
+1EC7-   4E 00 54    LSR   $5400
+1ECA-   4F          ???
+1ECB-   20 59 4F    JSR   $4F59
+1ECE-   55 52       EOR   $52,X
+1ED0-   20 53 45    JSR   $4553
+1ED3-   41 54       EOR   ($54,X)
+1ED5-   53          ???
+1ED6-   2C 20 41    BIT   $4120
+1ED9-   4E 44 20    LSR   $2044
+1EDC-   4D 41 4B    EOR   $4B41
+1EDF-   45 20       EOR   $20
+1EE1-   41 20       EOR   ($20,X)
+1EE3-   53          ???
+1EE4-   45 4C       EOR   $4C
+1EE6-   45 43       EOR   $43
+1EE8-   54          ???
+1EE9-   49 4F       EOR   #$4F
+1EEB-   4E 3A 00    LSR   $003A
+1EEE-   00          BRK
+1EEF-   00          BRK
+1EF0-   00          BRK
+1EF1-   00          BRK
+1EF2-   00          BRK
+1EF3-   00          BRK
+1EF4-   00          BRK
+1EF5-   00          BRK
+1EF6-   2D 2D 2D    AND   $2D2D
+1EF9-   2D 2D 2D    AND   $2D2D
+1EFC-   2D 2D 2D    AND   $2D2D
+1EFF-   2D 2D 2D    AND   $2D2D
+1F02-   2D 2D 2D    AND   $2D2D
+1F05-   2D 2D 2D    AND   $2D2D
+1F08-   2D 2D 2D    AND   $2D2D
+1F0B-   2D 2D 2D    AND   $2D2D
+1F0E-   2D 2D 2D    AND   $2D2D
+1F11-   2D 2D 2D    AND   $2D2D
+1F14-   2D 2D 2D    AND   $2D2D
+1F17-   2D 2D 2D    AND   $2D2D
+1F1A-   2D 2D 2D    AND   $2D2D
+1F1D-   00          BRK
+1F1E-   3C 45 53    BIT   $5345,X
+1F21-   43          ???
+1F22-   3E 20 54    ROL   $5420,X
+1F25-   4F          ???
+1F26-   20 47 4F    JSR   $4F47
+1F29-   20 42 41    JSR   $4142
+1F2C-   43          ???
+1F2D-   4B          ???
+1F2E-   00          BRK
+1F2F-   FF          ???
+1F30-   42          ???
+1F31-   55 42       EOR   $42,X
+1F33-   42          ???
+1F34-   4C 45 53    JMP   $5345
+1F37-   00          BRK
+1F38-   53          ???
+1F39-   50 49       BVC   $1F84
+1F3B-   52 41       EOR   ($41)
+1F3D-   4C 00 57    JMP   $5700
+1F40-   48          PHA
+1F41-   49 52       EOR   #$52
+1F43-   4C 50 4F    JMP   $4F50
+1F46-   4F          ???
+1F47-   4C 00 41    JMP   $4100
+1F4A-   53          ???
+1F4B-   54          ???
+1F4C-   45 52       EOR   $52
+1F4E-   4F          ???
+1F4F-   49 44       EOR   #$44
+1F51-   00          BRK
+1F52-   52 49       EOR   ($49)
+1F54-   50 50       BVC   $1FA6
+1F56-   4C 45 00    JMP   $0045
+1F59-   42          ???
+1F5A-   52 41       EOR   ($41)
+1F5C-   49 4E       EOR   #$4E
+1F5E-   57          ???
+1F5F-   41 56       EOR   ($56,X)
+1F61-   45 00       EOR   $00
+1F63-   43          ???
+1F64-   4F          ???
+1F65-   4E 54 49    LSR   $4954
+1F68-   4E 55 4F    LSR   $4F55
+1F6B-   55 53       EOR   $53,X
+1F6D-   20 22 4D    JSR   $4D22
+1F70-   41 52       EOR   ($52,X)
+1F72-   54          ???
+1F73-   59 4D 41    EOR   $414D,Y
+1F76-   54          ???
+1F77-   49 4F       EOR   #$4F
+1F79-   4E 22 20    LSR   $2022
+1F7C-   44          ???
+1F7D-   45 4D       EOR   $4D
+1F7F-   4F          ???
+1F80-   00          BRK
+1F81-   FF          ???

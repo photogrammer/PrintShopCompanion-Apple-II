@@ -1,0 +1,229 @@
+;
+; S:ICAL6
+;
+; TOPTEXT:edit text for the top of the
+;         calendar.
+;
+;  CREDIT:edit text for credit line.
+;
+TTY1     =   60
+TTY2     =   107
+;
+;-----------
+;
+; Edit text for top of screen
+;
+TOPTEXT  LDA FONTSEL
+         EOR #NOFONT
+         BEQ >1
+;---
+;
+; Initialze toptext input
+;
+         JSR TEINIT
+         ADR TPBLAK
+         ADR TPCROP
+         ADR TPDRAW
+         BYT 238,62,1,1
+;
+         JSR SHOWTOP
+^0       LDY #31
+         JSR TOPEDIT
+         BCS >1
+         LDY #32
+         JSR TOPEDIT
+         BCS <0
+^1       RTS 
+;---
+;
+; Show top of screen
+;
+SHOWTOP  JSR CLS1
+         LDY #TTY1-4
+         LDA #31
+         JSR SHOWTOP1
+         LDY #TTY2-4
+         LDA #32
+         JSR SHOWTOP1
+;
+         JSR PRINT
+         BYT PRCNTR,PRBIG
+         .DA #PRLOC,140,#TTY1-23
+         BYT 'LINE 1',CR
+         BYT PRSMAL
+         BYT PRVTAB,TTY2-16
+         BYT 'LINE 2',CR
+         BRK 
+         JMP SHOWEIAM
+;---
+;
+;  Y for box
+;  A  is string number
+;
+SHOWTOP1 STA ILINE
+         LDX #2
+         LDA #15
+         JSR DRAWBOX
+         LDY ILINE
+         JSR GETTEXT
+         JSR TPFORM
+         JSR TPBLAK
+; JSR TPCROP <<<<<<
+         JMP TPDRAW
+;-----------
+;
+; Now edit one of the strings
+;
+TOPEDIT  STY ILINE
+         LDY ILINE
+         JSR GETTEXT
+TOPEDIT2 JSR TEDIT
+         PHA 
+         LDY ILINE
+         JSR PUTTEXT
+         PLA 
+         JSR PARSE
+         .DA #1,TPCR
+         .DA #2,TPESC
+         .DA #3,TPCTRLI
+         .DA #6,TPCTRLF
+         BRK 
+         JMP TOPEDIT2
+;---
+TPCTRLI  LDA ILINE
+         PHA 
+         SEC 
+         JSR SHOWEI
+         JSR SHOWTOP
+         PLA 
+         TAY 
+         JMP TOPEDIT
+;---
+TPCR     CLC 
+         RTS 
+;
+TPESC    SEC 
+         RTS 
+;---
+;
+; Change form
+;
+TPCTRLF  LDX TEXTBUFF
+         INX 
+         CPX #$83
+         BNE >0
+         LDX #$80
+^0       STX TEXTBUFF
+         JSR TPFORM
+         JMP TOPEDIT2
+;---
+;
+; Show current form
+;
+TPFORM   JSR TPCALC
+         SEC 
+         SBC #14
+         TAY 
+         LDX #2
+         LDA TEXTBUFF
+         CMP #$81
+         BEQ >1
+         CMP #$82
+         BEQ >2
+;
+         JMP FSOLID
+^1       JMP FOUTLINE
+^2       JMP F3D
+;---
+;
+; Returns X,Y:maximum width
+;           A:Y position
+;
+TPCALC   LDY ILINE
+         LDA TPYCALC7-31,Y
+         PHA 
+         LDA TPYCALC8-31,Y
+         TAX 
+         LDA TPYCALC9-31,Y
+         TAY 
+         PLA 
+         RTS 
+;
+TPYCALC7 BYT TTY1,TTY2
+TPYCALC8 BYT 470,940
+TPYCALC9 HBY 470,940
+;---
+;
+; Routine to erase current line
+;
+TPBLAK   JSR TPCALC
+         JSR GTWBLAK2
+         INC TMP2
+         RTS 
+;---
+;
+; Crop off extra characters based
+; on selected font.
+;
+TPCROP   LDA #3
+         STA SPARM+7
+         LDY TMP2
+         LDA TMP3
+         STY SPARM+9
+         STA SPARM+10
+         JSR TPCALC
+         LDA /CLFONT
+         JSR STRCROP
+         LDA /UFONT
+         JMP FINSTALL
+;---
+;
+; Draw current string
+;
+TPDRAW   JSR TPCALC
+         LDX #140
+         LDY #2
+         JMP COMMDRAW
+;-----------
+;-----------
+;
+; Edit credit line
+;
+CREDIT   JSR TEINIT
+         ADR CRBLAK
+         ADR RTS
+         ADR CRDRAW
+         BYT 0,128,2,0
+;
+         JSR ERASMES2
+         LDY #33
+         JSR GETTEXT
+;
+         LDY #0
+         STY CRLINE
+;
+; TEDIT time
+;
+^0       JSR TEDIT
+         JSR PARSE
+         .DA #1,CRYCR
+         .DA #2,CRYESC
+         BRK 
+         JMP <0
+;---
+CRYCR    CLC 
+         HEX 24
+;---
+CRYESC   SEC 
+         PHP 
+         LDY #33
+         JSR PUTTEXT
+         PLP 
+         RTS 
+;-----------
+;
+;
+;
+         USR "ICAL",ORG
+;
+         ICL "S:COMMON"

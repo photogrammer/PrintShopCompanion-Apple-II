@@ -1,0 +1,521 @@
+         NLS 
+         TTL "S:CALUPDATER"
+         NOG 
+ORG      =   $1000
+;-----------
+;
+; Update Print Shop Companion
+; with new color Calendar
+;
+; This program sits on side B
+; of the Print Shop.
+;
+;    Copyright  1985,86
+;   by Roland Gustafsson
+;
+;-----------
+TEMPBUFF =   $1900
+T0BUFFER =   $2000
+BUBUFFER =   $2900
+;-----------
+;
+;
+DAT      EPZ $E0
+;
+TMPLO    EPZ DAT
+TMPHI    EPZ DAT+1
+PRNTFLAG EPZ DAT+2
+CENTER   EPZ DAT+3
+;
+; Used by special read routine:
+;
+TEMP     EPZ DAT+4
+NUMT     EPZ DAT+5
+BUFLO    EPZ DAT+6
+BUFHI    EPZ DAT+7
+;
+SN1      =   $A5
+SN2      =   $DF
+SN3      =   $D4
+CHK      =   $CF
+;-----------
+RESET    =   $0280
+;
+; RWTS parameters
+;
+IOB      =   $B7E8
+;
+SLOT     =   $B7E9
+VOLUME   =   $B7EB
+TRACK    =   $B7EC
+SECTOR   =   $B7ED
+RWTSBUFL =   $B7F0
+RWTSBUFH =   $B7F1
+COMMAND  =   $B7F4
+RWTSERR  =   $B7F5
+;-----------
+;
+; Monitor routines:
+;
+VTAB     =   $FB5B
+HOME     =   $FC58
+TEXT     =   $FB2F
+WAIT     =   $FCA8
+COUT     =   $FDED
+CROUT    =   $FD8E
+COUT1    =   $FDF0
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP START
+         JMP ERROR
+;
+         BYT 'COPYRIGHT 1986 '
+         BYT 'BY ROLAND GUSTAFSSON'
+;-----------
+;
+; Check for master
+;
+; CLC = master is in drive
+; SEC = not master
+;
+CHEKCOMP JSR SEEK34
+         LDX SLOT
+         LDA $C089,X
+         LDA #$2C
+         STA TMPHI
+         LDY #0
+^0       DEY 
+         BNE >1
+         DEC TMPHI
+         BEQ CHKMSTSC
+;
+^1       LDA $C08C,X
+         BPL *-3
+^2       CMP #SN1
+         BNE <0
+         LDA $C08C,X
+         BPL *-3
+^3       CMP #SN2
+         BNE <2
+         LDA $C08C,X
+         BPL *-3
+         CMP #SN3
+         BNE <3
+;
+; Now read VTOC to make sure that
+; this is indeed side A of the
+; Companion disk.
+;
+         LDA #1
+         STA COMMAND
+         LDX #17
+         LDY #0
+         LDA /TEMPBUFF
+         JSR RWTS
+         BCS CHKMSTSC
+         LDY TEMPBUFF+$FE
+         DEY 
+         BNE CHKMSTSC
+         LDY TEMPBUFF+$FF
+         CPY #3
+         BNE CHKMSTSC
+;
+         CLC 
+         HEX B0
+CHKMSTSC SEC 
+         LDX SLOT
+         LDA $C088,X
+         RTS 
+;-----------
+;
+; Turn on drive and seek track 34
+;
+SEEK34   LDA #0
+         STA COMMAND
+         TAY 
+         LDX #34
+;
+; RWTS access routine
+;
+RWTS     STX TRACK
+         STY SECTOR
+         STA RWTSBUFH
+         LDA #0
+         STA RWTSBUFL
+         STA VOLUME
+         LDY #IOB
+         LDA /IOB
+         JSR $B7B5
+         LDX TRACK
+         LDY SECTOR
+         LDA RWTSBUFH
+         RTS 
+;-----------
+HOMECNTR LDA #10
+         HEX 2C
+HOMECNT2 LDA #9
+         PHA 
+         JSR HOME
+         PLA 
+         JMP VTAB
+;-----------
+;
+; Print routine:
+;
+PRINTLFT LSR CENTER
+;
+PRINT    LDA #$FF
+         HEX 2C
+PRINTINV LDA #$3F
+         STA $32
+         LDA #0
+         STA PRNTFLAG
+         PLA 
+         STA TMPLO
+         PLA 
+         STA TMPHI
+^0       INC TMPLO
+         BNE >1
+         INC TMPHI
+^1       LDY #0
+         LDA (TMPLO),Y
+         BEQ >3
+         BIT CENTER
+         BPL >2
+         BIT PRNTFLAG
+         BPL >4
+^2       PHA 
+         JSR COUT1
+         PLA 
+         CMP #$A0
+         BGE <0
+         LSR PRNTFLAG
+         BPL <0
+;
+^3       LDA TMPHI
+         PHA 
+         LDA TMPLO
+         PHA 
+         SEC 
+         ROR CENTER
+         JMP $FE84
+;
+^4       LDA (TMPLO),Y
+         CMP #$A0
+         BLT >5
+         INY 
+         BNE <4
+;
+^5       TYA 
+         LSR 
+         EOR #$FF
+         CLC 
+         ADC #19
+         STA $24
+         SEC 
+         ROR PRNTFLAG
+         JMP <1
+;-----------
+;
+; BEEP Speaker
+;
+BEEP     LDY #$30
+^0       LDA $C030
+         LDA #$11
+         JSR WAIT
+         LDA $C030
+         LDA #$13
+         JSR WAIT
+         DEY 
+         BNE <0
+         RTS 
+;-----------
+;
+; Draw inverse line
+;
+BOTLINE  LDA #23
+INVLINE  JSR $FBC1
+         LDY #39
+         LDA #$20
+^0       STA ($28),Y
+         DEY 
+         BPL <0
+         RTS 
+;-----------
+;
+; Startup screen
+;
+SCREEN1  JSR TEXT
+         JSR HOME
+         LDA #2
+         STA $20
+         LDA #36
+         STA $21
+         LDA #8
+         STA $22
+         LDA #22
+         STA $23
+;
+         LDA #0
+         JSR INVLINE
+         LDA #1
+         JSR INVLINE
+         LDA #2
+         JSR INVLINE
+         JSR BOTLINE
+         LDA #23
+^0       PHA 
+         JSR $FBC1
+         LDY #0
+         LDA #$20
+         STA ($28),Y
+         LDY #39
+         STA ($28),Y
+         PLA 
+         SEC 
+         SBC #1
+         BPL <0
+;
+         JSR PRINTINV
+         HEX 8D
+         ASC "PRINT SHOP COMPANION UPGRADE UTILITY"
+         BRK 
+;
+         LDA #23
+         JSR VTAB
+         JSR PRINTINV
+         ASC "<ESC> TO GO BACK"
+         BRK 
+         RTS 
+;-----------
+;
+; Return to continue
+;
+WAITCR   JSR PRINT
+         HEX 8D8D
+         ASC "PRESS <RETURN> TO CONTINUE"
+         BRK 
+         JMP GETKEY
+;-----------
+;
+; Get key
+;
+; Returns
+;
+; BEQ for CR
+; BNE for ESC
+;
+GETERR   JSR BEEP
+GETKEY   LDA $C000
+         BPL GETKEY
+         BIT $C010
+         CMP #$8D
+         BEQ >0
+         CMP #$9B
+         BNE GETERR
+         ORA #0
+^0       RTS 
+;-----------
+;
+; Simple read routine
+;
+READPROT STA >0+1
+         JSR SEEK34
+         LDX SLOT
+         LDA $C089,X
+ENTRY    LDA #$04
+         STA NUMT
+         LDY #0
+^0       LDA #00
+         STY BUFLO
+         STA BUFHI
+^0       LDA $C08C,X
+         BPL *-3
+RD2      CMP #SN1
+         BNE <0
+         LDA $C08C,X
+         BPL *-3
+RD4      CMP #SN2
+         BNE RD2
+         LDA $C08C,X
+         BPL *-3
+RD6      CMP #SN3
+         BNE RD4
+RD7      LDA $C08C,X
+         BPL RD7
+         ROL 
+         STA TEMP
+RD8      LDA $C08C,X
+         BPL RD8
+         AND TEMP
+         STA (BUFLO),Y
+         INY 
+         BNE RD7
+         ASL $FFFF
+RDCK     LDA $C08C,X
+         BPL RDCK
+         CMP #CHK
+         BNE ENTRY
+         INC BUFHI
+         DEC NUMT
+         BNE RD7
+         LDA $C088,X
+         RTS 
+;-----------
+;-----------
+;
+; The program starts here:
+;
+START    SEC 
+         ROR CENTER
+         JSR SCREEN1
+TRYAGAIN JSR HOME
+         JSR PRINT
+         ASC "PLEASE INSERT SIDE A OF THE"
+         HEX 8D8D
+         ASC "PRINT SHOP COMPANION AND"
+         HEX 8D8D
+         ASC "PRESS <RETURN> TO UPGRADE"
+         BRK 
+         JSR GETKEY
+         BEQ UPGRADE
+EXIT     JSR TEXT
+         JMP HOME
+;-----------
+;
+; Is Companion disk in drive???
+;
+UPGRADE  JSR HOME
+         JSR CHEKCOMP
+         BCC >0
+         JSR BEEP
+         JMP TRYAGAIN
+;
+; Check to see if backup has been made
+;
+^0       LDA /BUBUFFER
+         JSR READPROT
+         LDA BUBUFFER+$3FF
+         BEQ >1
+         JMP OKDOIT
+;
+; Since this disk hasn't been backed
+; up, then don't allow update since
+; the update wipes out the backup
+; function.
+;
+^1       JSR BEEP
+         JSR PRINT
+         ASC "YOU HAVE NOT MADE A BACKUP OF YOUR"
+         HEX 8D
+         ASC "COMPANION DISK. YOU MUST MAKE A"
+         HEX 8D
+         ASC "BACKUP BEFORE THE UPGRADE UTILITY"
+         HEX 8D
+         ASC "CAN BE RUN. SEE SECTION I OF"
+         HEX 8D
+         ASC "COMPANION MANUAL FOR INSTRUCTIONS"
+         HEX 8D
+         ASC "ON MAKING A BACKUP."
+         BRK 
+         JSR WAITCR
+         BEQ EXIT2
+         JMP TRYAGAIN
+EXIT2    JMP EXIT
+;-----------
+;
+; Go ahead with update
+;
+; Companion disk is now in drive
+; and ready for update...
+;
+; Update the Companion disk CALEN
+; program and track zero.
+;
+OKDOIT   JSR HOMECNTR
+         JSR PRINT
+         ASC "UPGRADING COMPANION DISK..."
+         HEX 8D00
+         JSR DOBSAVE
+         JSR DORWTS
+;
+         JSR HOMECNT2
+         JSR PRINT
+         ASC "UPGRADE COMPLETE."
+         BRK 
+         JSR WAITCR
+         BEQ EXIT2
+         JMP TRYAGAIN
+;-----------
+;
+; Handle error from PEEK(222)
+;
+ERROR    JSR HOMECNT2
+         JSR BEEP
+         LDA $DE
+         CMP #4
+         BEQ WPERR
+         CMP #16
+         BEQ WPERR
+;
+; I/O error
+;
+         JSR PRINT
+         ASC "DISK ERROR OCCURRED"
+         BRK 
+         JMP WAITCR
+;
+; Write protect error
+;
+WPERR    JSR PRINT
+         ASC "PLEASE REMOVE THE WRITE PROTECT TAB"
+         BRK 
+         JMP WAITCR
+;-----------
+;
+; BSAVE the new CALEN file on
+; Companion disk.
+;
+DOBSAVE  LDY #0
+^0       LDA BSAVETXT,Y
+         BEQ >1
+         JSR COUT
+         INY 
+         BNE <0
+^1       RTS 
+;
+BSAVETXT HEX 8D84
+         ASC "BSAVECALEN,A$4000,L$1DF8"
+         HEX 8D00
+;-----------
+;
+; Write out stuff for track zero
+; SCT:07 08 09 0A 0B 0C 0D 0E 0F
+; BUF:10 11 5D 5E 5F 60 61 62 63
+; UP: 20 21 22 23 24 25 26 27 28
+;
+DORWTS   LDA #2
+         STA COMMAND
+         LDX #0
+         LDY #$0F
+         LDA /T0BUFFER+$800
+^0       JSR RWTS
+         BCS >1
+         SBC #0
+         DEY 
+         CPY #7
+         BGE <0
+         RTS 
+;
+; Give error to Applesoft
+;
+^1       LDX RWTSERR
+         JMP $D412
+;-----------
+;
+;
+;
+         USR "O:CALUPDATER",ORG
+         END 

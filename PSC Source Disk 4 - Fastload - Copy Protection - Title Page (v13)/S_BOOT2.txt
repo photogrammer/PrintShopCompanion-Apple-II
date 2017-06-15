@@ -1,0 +1,600 @@
+         NLS 
+         TTL "S:BOOT2"
+         NOG 
+ORG      =   $4000
+;
+; The Print Shop Companion
+; DOS and title page loader.
+;
+;    Copyright 1985
+; by Roland Gustafsson
+;
+HAS128K  =   $27F
+SCREEN   =   $7F7
+;-----------
+OUTVEC   =   $FF58
+INPVEC   =   $B6FD
+;
+DAT      EPZ $50
+;
+TMP0     EPZ DAT
+TMP1     EPZ DAT+1
+TMP2     EPZ DAT+2
+TMP3     EPZ DAT+3
+;
+SLOT     EPZ DAT+4
+;
+ERRORS   EPZ DAT+5
+TRACK    EPZ DAT+6
+LASTRK   EPZ DAT+7
+BUF      EPZ DAT+8
+BUFHI    EPZ DAT+9
+;
+CHECKSUM EPZ $26
+ADDRESS  EPZ $2C
+;
+TMP26    EPZ DAT+10
+TMP27    EPZ DAT+11
+;
+; SECTLO.HI points to 16 bytes
+; that specify where to load
+; the current track. If zero
+; is specified, then skip that
+; sector.
+;
+SECTLO   EPZ TMP0
+SECTHI   EPZ TMP1
+;
+TEMPBUF  =   $0200
+TEMPTABL =   TEMPBUF+$70
+READTBL  =   TEMPBUF+$80
+Q6L      EQU $C08C
+;
+;-----------
+         ORG ORG
+         OBJ $800
+;
+         JMP START
+;-----------
+;
+; Standard 16 sector fast loader
+;
+; Read data
+;
+ERR1     SEC 
+         RTS 
+;
+READBUF  STX SLOT
+         TXA 
+         ORA #$8C
+         STA SLTMOD1+1
+         STA SLTMOD2+1
+         STA SLTMOD3+1
+         STA SLTMOD4+1
+         STA SLTMOD5+1
+         LDA BUF
+         LDY BUF+1
+         STA BUFMOD1+1
+         STY BUFMOD1+2
+         SEC 
+         SBC #$54
+         BCS >0
+         DEY 
+         SEC 
+^0       STA BUFMOD2+1
+         STY BUFMOD2+2
+         SBC #$57
+         BCS >0
+         DEY 
+^0       STA BUFMOD3+1
+         STY BUFMOD3+2
+         LDY #$20
+^0       DEY 
+         BEQ ERR1
+;
+^1       LDA Q6L,X
+         BPL <1
+TRYD5    EOR #$D5
+         BNE <0
+         NOP 
+;
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$AA
+         BNE TRYD5
+         NOP 
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$AD
+         BNE TRYD5
+         LDY #$AA
+         LDA #$00
+^0       STA CHECKSUM
+;
+SLTMOD1  LDX Q6L
+         BPL SLTMOD1
+         LDA TABLE1,X
+         STA TEMPBUF,Y
+         EOR CHECKSUM
+         INY 
+         BNE <0
+         LDY #$AA
+         BNE SLTMOD2
+;
+BUFMOD3  STA $FFFF,Y
+;
+SLTMOD2  LDX Q6L
+         BPL SLTMOD2
+         EOR TABLE1,X
+         LDX TEMPBUF,Y
+         EOR TABLE2,X
+         INY 
+         BNE BUFMOD3
+         PHA 
+         AND #$FC
+         LDY #$AA
+;
+SLTMOD3  LDX Q6L
+         BPL SLTMOD3
+         EOR TABLE1,X
+         LDX TEMPBUF,Y
+         EOR TABLE2+1,X
+BUFMOD2  STA $FFFF,Y
+         INY 
+         BNE SLTMOD3
+;
+SLTMOD4  LDX Q6L
+         BPL SLTMOD4
+         AND #$FC
+         LDY #$AC
+^0       EOR TABLE1,X
+         LDX TEMPBUF-2,Y
+         EOR TABLE2+2,X
+BUFMOD1  STA $FFFF,Y
+;
+SLTMOD5  LDX Q6L
+         BPL SLTMOD5
+         INY 
+         BNE <0
+         AND #$FC
+         EOR TABLE1,X
+         LDX SLOT
+         TAY 
+         BNE ERR2
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$DE
+         BEQ NOERR
+;
+; Exit
+;
+ERR2     SEC 
+         HEX 24
+NOERR    CLC 
+         PLA 
+         LDY #$55
+         STA (BUF),Y
+         RTS 
+;-----------
+;
+; SEEK routine
+;
+TRACKSTP ASL 
+         STA TMP26
+TRKLOO   LDA LASTRK
+         STA TMP27
+         SEC 
+         SBC TMP26
+         BEQ RETURN
+         BCS SUBTRK
+         INC LASTRK
+         BCC ADCTRK
+SUBTRK   DEC LASTRK
+ADCTRK   JSR STEP
+         JSR DELAY
+         LDA TMP27
+         AND #$03
+         ASL 
+         ORA SLOT
+         TAY 
+         LDA $C080,Y
+         JSR DELAY
+         BEQ TRKLOO
+STEP     LDA LASTRK
+         AND #$03
+         ASL 
+         ORA SLOT
+         TAY 
+         LDA $C081,Y
+RETURN   RTS 
+;
+DELAY    LDA #$28
+         JMP $FCA8
+;-----------
+;
+; Read address marks
+;
+ADDERR   SEC 
+         RTS 
+;
+ADDMARK  LDY #$FC
+         STY TMP26
+^1       INY 
+         BNE >0
+         INC TMP26
+         BEQ ADDERR
+^0       LDA Q6L,X
+         BPL <0
+TRYD55   CMP #$D5
+         BNE <1
+         NOP 
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$AA
+         BNE TRYD55
+         LDY #$03
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$96
+         BNE TRYD55
+         LDA #$00
+^3       STA TMP27
+^0       LDA Q6L,X
+         BPL <0
+         ROL 
+         STA TMP26
+^0       LDA Q6L,X
+         BPL <0
+         AND TMP26
+         STA ADDRESS,Y
+         EOR TMP27
+         DEY 
+         BPL <3
+         TAY 
+         BNE ADDERR
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$DE
+         BNE ADDERR
+         NOP 
+^0       LDA Q6L,X
+         BPL <0
+         CMP #$AA
+         BNE ADDERR
+         CLC 
+         RTS 
+;
+         DFS $80-$FF&*,$FF
+TABLE1   =   *&$FF00
+;
+         HEX 00000000000000000000000000000000
+         HEX 00000000000000049899080C9C101418
+         HEX A0A1A2A3A4A51C20A8A9AA24282C3034
+         HEX B0B1383C4044484CB85054585C606468
+         HEX C0C1C2C3C4C5C6C7C8C9CA6CCC707478
+         HEX D0D1D27CD4D58084D8888C9094989CA0
+         HEX E0E1E2E3E4A4A8ACE8B0B4B8BCC0C4C8
+         HEX F0F1CCD0D4D8DCE0F8E4E8ECF0F4F8FC
+;
+;  Here is TABLE2
+;
+TABLE2   HEX 00000096020000970100009A0300009B
+         HEX 0002009D0202009E0102009F030200A6
+         HEX 000100A7020100AB010100AC030100AD
+         HEX 000300AE020300AF010300B2030300B3
+         HEX 000002B4020002B5010002B6030002B7
+         HEX 000202B9020202BA010202BB030202BC
+         HEX 000102BD020102BE010102BF030102CB
+         HEX 000302CD020302CE010302CF030302D3
+         HEX 000001D6020001D7010001D9030001DA
+         HEX 000201DB020201DC010201DD030201DE
+         HEX 000101DF020101E5010101E6030101E7
+         HEX 000301E9020301EA010301EB030301EC
+         HEX 000003ED020003EE010003EF030003F2
+         HEX 000203F3020203F4010203F5030203F6
+         HEX 000103F7020103F9010103FA030103FB
+         HEX 000303FC020303FD010303FE030303FF
+;-----------
+;
+; Read a track
+;
+; A=track (0-22 format)
+;
+; SECTLO.HI points to 16 byte
+; buffer that contains the
+; addresses where the sectors will
+; get loaded.
+;
+READTRAK JSR TRACKSTP
+         LDX #15
+^0       LDY SKEW,X
+         LDA (SECTLO),Y
+         STA READTBL,X
+         DEX 
+         BPL <0
+;
+         LDX SLOT
+         LDA #96
+         STA ERRORS
+;
+^0       DEC ERRORS
+         BEQ READERR
+         JSR ADDMARK
+         BCS <0
+         LDY $2D                       ; sector number
+         LDA READTBL,Y
+         BEQ <0                        ; already done
+         STA BUF+1                     ; hi-byte
+         LDA #0
+         STA BUF
+         JSR READBUF
+         BCS <0
+         LDY $2D
+         LDA #0
+         STA READTBL,Y
+         LDY #$0F
+^1       LDA READTBL,Y
+         BNE <0                        ; if any still pending
+         DEY                           ;then continue reading
+         BPL <1
+         CLC 
+         HEX 24
+READERR  SEC 
+         RTS 
+;
+SKEW     HEX 00070E060D050C04
+         HEX 0B030A020901080F
+;-----------
+;
+; Read track with all sectors
+; in sequence, 0-F
+;
+READSEQU STA >1+1
+         LDY #TEMPTABL
+         LDA /TEMPTABL
+         STY SECTLO
+         STA SECTHI
+         LDY #15
+;
+^0       TYA 
+         CLC 
+^1       ADC #00
+         STA (SECTLO),Y
+         DEY 
+         BPL <0
+;-----------
+;
+; Read current track and INC TRACK
+;
+READTRK  LDA TRACK
+         INC TRACK
+         JSR READTRAK
+         BCS >0
+         RTS 
+;
+; WHOOP the speaker and try again.
+;
+^0       DEC TRACK
+         LDY #0
+^1       TYA 
+         BIT $C030
+^2       SEC 
+         SBC #1
+         BNE <2
+         DEY 
+         BNE <1
+         BEQ READTRK
+;-----------
+;
+; BOOT2!
+;
+START    STX SLOT
+;
+; Move hires page one into RAMcard
+;
+         JSR MOVHIRES
+;
+; Set fastload parms
+;
+         LDY #0
+         STY LASTRK
+         INY 
+         STY TRACK
+;
+; Load Title page
+;
+         LDA #$90
+         JSR READSEQU
+;
+; Show the title page
+;
+         JSR $9000
+         BIT $C057
+         BIT $C052
+         BIT $C050
+;
+; Display version
+;
+         LDA #"B"
+         STA SCREEN
+;
+; Load DOS
+;
+         LDA #$A0
+         JSR READSEQU
+         LDA #$B0
+         JSR READSEQU
+;
+; Initialize DOS variables
+;
+         LDX SLOT
+         STX $B7E9
+         STX $B7F7
+;
+; Set LASTRACK screen holes
+;
+         JSR $BE8E
+         LDA LASTRK
+         STA $478,Y
+         LDA #$A0
+         STA $4F8,Y
+;
+; Set I/O hooks to reboot
+;
+         LDY #OUTVEC
+         LDA /OUTVEC
+         STY $36
+         STA $37
+         LDY #INPVEC
+         LDA /INPVEC
+         STY $38
+         STA $39
+;
+; Install reset routine
+;
+         LDY #RESETLEN-1
+^0       LDA RESET,Y
+         STA RESETVEC,Y
+         DEY 
+         BPL <0
+;
+; Set reset vector
+;
+         LDY #RESETVEC
+         LDA /RESETVEC
+         STY $3F2
+         STA $3F3
+         EOR #$A5
+         STA $3F4
+;
+         LDX #$FF
+         TXS 
+;
+; HELLO program type:
+;
+; $34:Binary, $06:Applesoft
+;
+         LDA #$34
+         STA $9E42
+;
+; <ESC> pressed? YES--backup!
+;
+         LDA $C000
+         BIT $C010
+         CMP #$9B
+         BNE >2
+         LDA $1000
+         BEQ >2
+         JMP $1000
+;
+; JMP to DOS
+;
+^2       JSR CHEK128K
+         JMP $9D84
+;-----------
+;
+; Move HIRES picture into RAMcard
+;
+MOVHIRES LDY #$00
+         LDA #$20
+         STY TMP0
+         STA TMP1
+         LDX #$03
+         JSR >0
+         LDX #$0B
+;
+^0       LDA $C080,X
+         LDA $C080,X
+         LDX #$10
+         LDY #$00
+         LDA #$D0
+         STY TMP2
+         STA TMP3
+^1       LDA (TMP0),Y
+         STA (TMP2),Y
+         LDA #0
+         STA (TMP0),Y
+         INY 
+         BNE <1
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <1
+         STA $C081
+         RTS 
+;-----------
+;
+; Check for 128k memory
+;
+CHEK128K STA $C081
+         LDA $FBB3
+         CMP #6
+         BNE NOT128K
+;
+         BIT $C017
+         BMI NOT128K
+;
+         LDX #CHECKERL-1
+^0       LDA CHECKER,X
+         STA $80,X
+         DEX 
+         BPL <0
+;
+         JSR $80
+         BCS NOT128K
+         SEC 
+         HEX 24
+;
+NOT128K  CLC 
+         ROR HAS128K
+         RTS 
+;
+; Zero page routine
+;
+CHECKER  LDA #$EE
+         STA $C005
+         STA $C003
+         STA $0800
+         LDA $0C00
+         CMP #$EE
+         BNE >0
+         ASL $0C00
+         LDA $0800
+         CMP $0C00
+         BEQ >1
+^0       CLC 
+^1       STA $C004
+         STA $C002
+         RTS 
+CHECKERL =   *-CHECKER
+;-----------
+;
+; RESET VECTOR
+;
+RESET:   
+         PHS $280
+;
+RESETVEC STA $C081
+         JSR $FB2F
+         JSR $FC58
+         LDY #0
+RESET0   TYA 
+RESET1   STA $0800,Y
+         INY 
+         BNE RESET1
+         INC RESET1+2
+         LDA RESET1+2
+         CMP #$C0
+         BLT RESET0
+         STA $3F3
+         STA $3F4
+         JMP ($FFFC)
+;
+RESETLEN =   *-RESETVEC
+         DPH 
+;-----------
+;
+;
+;
+         USR "O:BOOT2",ORG
+         END 

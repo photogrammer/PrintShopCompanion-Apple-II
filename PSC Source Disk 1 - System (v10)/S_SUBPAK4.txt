@@ -1,0 +1,519 @@
+;
+; S:SUBPAK4
+;
+; Miscellaneous routines
+;
+INY1     =   64
+;
+INIT?    LDA #00
+INITFLAG =   *-1
+         ASL 
+         BCC >0
+INIT1    JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#INY1
+         BYT PRCNTR
+         BYT 'BEFORE SAVING YOUR '
+         .DA #PRSTR,TYPETEXT
+         BYT ',',CR
+         BYT 'DO YOU NEED TO '
+         .DA #PRSTR,TXTINIT,#CR
+         BYT 'A NEW '
+         .DA #PRSTR,TXTDD
+         BYT '?',CR
+         BYT CR,CR
+         BYT 'NO',CR,'YES',CR
+         BRK 
+         LDY #0
+         STY INITFLAG
+         JSR SELECT
+         BYT 17,6,INY1+7+4*8,2
+         ADR RTS
+         BCS >0
+         CPY #1
+         BEQ INIT2
+^0       RTS 
+;---
+;
+; Go ahead with the initializing
+;
+INIT2    JSR CLS1
+         JSR PRINT
+         .DA #PRLOC,140,#40,#0
+;
+         LDA DATADRIV
+         CMP #2
+         BEQ >2
+;
+; For 1 drive systems
+;
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'REMOVE '
+         .DA #PRSTR,CTEXT
+         .DA #PRSTR,TXTSD
+         BYT ' AND',CR
+         BRK 
+         JMP >3
+;
+; For 2 drive systems
+;
+^2       JSR PRINT
+         BYT CR
+         BRK 
+;
+^3       JSR PRINT
+         BYT PRCNTR
+         BYT 'INSERT BLANK'
+         .DA #PRSTR,TXTSD
+         BYT ' '
+         .DA #PRSTR,TXTINDRV,#CR
+         BYT CR
+         .DA #PRSTR,TXTPRET
+         BYT ' TO '
+         .DA #PRSTR,TXTINIT
+         .DA #PRSTR,TXTSD
+         BYT '.',CR
+         BYT CR,CR,CR
+         BYT '**** W A R N I N G ****',CR
+         BYT CR
+         BYT 'ALL DATA ON THIS'
+         .DA #PRSTR,TXTSD,#CR
+         BYT 'WILL BE ERASED!',CR
+         BRK 
+^0       JSR GETKEY
+         CMP #CR
+         BEQ INIT3
+         CMP #ESC
+         BNE <0
+^1       JMP INIT1
+;---
+INIT3    JSR CLS1
+         JSR REMOMAST
+         BCS >3
+         JSR INITDI
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'IN PROGRESS',CR,0
+;
+         JSR NOPROT
+         LDY #0
+^0       LDA INITTEXT,Y
+         BEQ >1
+         JSR COUT
+         INY 
+         BNE <0
+;
+^1       JSR DOSCR
+         BNE >2
+         JSR SAVESUPP
+         BNE >2
+;
+; Successful initialization
+;
+         JSR CLS1
+         JSR INITDI
+         JSR PRINT
+         BYT PRCNTR
+         BYT 'COMPLETE',CR,0
+         JSR ANYKEY
+         CLC 
+         RTS 
+;
+^2       JSR ERROR
+^3       JMP INIT2
+;---
+INITTEXT BYT 13,4,'SEEE',0
+;---
+;
+; "DISK INITIALIZATION" message
+;
+INITDI   JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#64
+         .DA #PRSTR,TXTD
+         BYT ' INITIALIZATION',CR
+         BYT CR,0
+         RTS 
+;-----------
+;
+; Check for master disk in data drive
+; If it is there, print appropriate
+; message.
+;
+REMOMAST LDA DATADRIV
+         JSR READVTOC
+         BCC >1
+^0       CLC 
+         RTS 
+;
+; If data disk (0) or non-master (>4)
+; then just exit with CLC.
+;
+^1       TAX 
+         BEQ <0
+         CPX #5
+         BGE <0
+;
+; Display message
+;
+         LDY REMOMSTL-1,X
+         LDA REMOMSTH-1,X
+         STY >2+1
+         STA >2+2
+;
+         JSR CLS1
+         JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#64
+         BYT 'THE "'
+^2       .DA #PRSTR,$FFFF
+         BYT '"'
+         .DA #PRSTR,TXTSD
+         BYT ' CANNOT',CR
+         BYT 'BE USED AS A '
+         .DA #PRSTR,TXTDD
+         BYT CR,0
+         JSR ANYKEY
+         JSR CLS1
+         SEC 
+         RTS 
+;
+REMOMSTL BYT PSTEXT
+         BYT PSTEXT
+         BYT CTEXT
+         BYT CTEXT
+REMOMSTH HBY PSTEXT
+         HBY PSTEXT
+         HBY CTEXT
+         HBY CTEXT
+;-----------
+;
+; Make sure that routine to check
+; for copy protection is still there.
+;
+PROTBYTE =   $8DD6
+;
+PCHEKSUM LDA /PROTBYTE
+         STA TMP1
+         LDY #PROTBYTE
+         STY TMP0
+;
+         LDX #0
+         LDA #$55
+         STA (TMP0,X)
+;
+         LDA #$3C
+         LDX #$E0
+         LDY #$0F
+         JSR >0
+;
+         LDA #$36
+         LDX #$19
+         LDY #$3F
+         JSR >0
+;
+         LDA #$36
+         LDX #$B5
+         LDY #$35
+;
+^0       STX TMP2
+         ASL 
+         LDX #0
+         SEC 
+         ROR 
+         STA TMP3
+^1       TYA 
+         CLC 
+         EOR (TMP2),Y
+         ADC (TMP0,X)
+         DEY 
+         STA (TMP0,X)
+         BPL <1
+         ASL TMP3
+         ASL TMP2
+         RTS 
+;-----------
+;
+; Test paper position
+;
+TESTPAPR LDA #CR
+         JSR PTCOUT
+         LDX #$7F
+         LDY #$03
+         JSR PTSENDGC
+         LDX #$7F
+         LDY #$03
+^0       TXA 
+         AND #$1F
+         BEQ >1
+         LDA #0
+         HEX 2C
+^1       LDA #1
+         JSR PTGCOUT
+         DEX 
+         BNE <0
+         DEY 
+         BPL <0
+         LDX #1
+         LDY #1
+         JMP PTCRLF
+;-----------
+;
+; Get a graphic by number
+; from the original Print Shop
+;
+; Enter with A=number 00-60
+; X,Y= pointer to dest buffer
+;
+; return with A=new number and
+; dest buffer containing graphic
+; if SEC then ESC pressed.
+;
+IBUFFER  =   $6000
+;
+GETPDISK STX GPBUFLO
+         STY GPBUFHI
+         PHA 
+         JSR PRINT
+         .DA #PRLOC,50,#132
+         BYT 'ENTER NO. OF GRAPHIC>',NOCR,0
+;
+         LDX #60
+         STX TMP0
+         LDX #220
+         LDY #132
+         PLA 
+         JSR GETANUMB
+         BCS GETPDONE
+         STA GPNUMB
+         TXA 
+;
+; Figure out the filename, and load
+; the graphic
+;
+         JSR MAKENUMB
+         STA GPONES
+         STY GPTENS
+         INY 
+         TYA 
+         ORA #'0'
+         STA >0+1
+;
+         SEC 
+         JSR WAITPSD
+         BCS GETPDONE
+         JSR BLOAD
+^0       BYT 'IX',0
+         BNE >9
+;
+; Move the graphic to the buffer
+;
+         LDX #00
+GPTENS   =   *-1
+         JSR UNPACK
+         LDX #00
+GPONES   =   *-1
+         LDY #00
+GPBUFLO  =   *-1
+         LDA #00
+GPBUFHI  =   *-1
+         STX IBUFFER+3
+         STY IBUFFER+28
+         STA IBUFFER+32
+         JSR IBUFFER
+         CLC 
+         BCC GETPDONE
+;
+; Display error message and quit
+;
+^9       JSR ERROR
+         SEC 
+;---
+;
+; Return to calling program
+;
+GETPDONE PHP 
+         JSR PRINT
+         BYT RTOSBLAK,1,132,38,7,0
+         LDA #00
+GPNUMB   =   *-1
+         PLP 
+         RTS 
+;-----------
+;
+; Graphics from Print Shop disk
+; Unpack routine.
+;
+UPTBL    EPZ TMP0
+UPGBAS   EPZ TMP2
+UPRCODE  EPZ TMP4
+UPREPT   EPZ TMP5
+;
+; Lengths of the 6 "I" files
+;
+UPFLENL  HEX 77563E1F0279
+UPFLENH  HEX 0F0F10111114
+;
+; Icon unpack routine
+;
+UNPACK   LDY UPFLENL,X
+         LDA UPFLENH,X
+         STY UPTBL
+         CLC 
+         ADC /IBUFFER
+         STA UPTBL+1
+         LDY #IBUFFER+$17FF
+         LDA /IBUFFER+$17FF
+         STY UPGBAS
+         STA UPGBAS+1
+         JSR UPTBLGET
+         STA UPRCODE
+;
+^0       JSR UPTBLGET
+         CMP UPRCODE
+         BNE >1
+;
+         JSR UPTBLGET
+         TAX 
+         JSR UPTBLGET
+         HEX 2C
+;
+^1       LDX #1
+         STX UPREPT
+         LDY #0
+^2       STA (UPGBAS),Y
+         LDX UPGBAS
+         BNE *+4
+         DEC UPGBAS+1
+         DEC UPGBAS
+         LDX UPGBAS+1
+         CPX /IBUFFER
+         BLT >3
+         DEC UPREPT
+         BNE <2
+         BEQ <0
+;
+; Get a byte from the packed data.
+;
+UPTBLGET LDY UPTBL
+         BNE *+4
+         DEC UPTBL+1
+         DEC UPTBL
+         LDY #0
+         LDA (UPTBL),Y
+^3       RTS 
+;-----------
+;
+; Input a number given:
+;
+; X,Y : position of cursor
+;  A  : default number 0=no default
+; TMP0: maximum value for A
+;
+; Returns A:new number CLC
+;         X:A-1
+;
+; SEC:<ESC> was pressed
+;
+GETBUFF  =   PRINBUFF+10
+;
+GETANUMB STX GANX
+         STY GANY
+         LDX TMP0
+         STX GANMAX
+;
+; Fill GETBUFF with the text of the
+; default number given in A
+;
+         TAX 
+         BEQ >1
+;
+         LDX #0
+         CMP #10
+         BLT >0
+         JSR MAKENUMB
+         PHA 
+         TYA 
+         ORA #'0'
+         STA GETBUFF,X
+         INX 
+         PLA 
+^0       ORA #'0'
+         STA GETBUFF,X
+         INX 
+^1       LDA #0
+         STA GETBUFF,X
+;---
+;
+; Get the number from keyboard
+;
+GANAGAIN JSR INPUT
+         ADR GETBUFF
+         BYT 2
+GANX     .DA 220
+GANY     BYT 132
+;
+         BCS GANDONE
+;---
+;
+; Now compute number typed in A
+;
+         LDY #0
+         TYA 
+^0       LDX GETBUFF,Y
+         BEQ >1
+;
+         CPX #'0'
+         BLT GANERROR
+         CPX #'9'+1
+         BGE GANERROR
+         STA TMP0
+         ASL 
+         ASL 
+         ADC TMP0
+         ASL 
+         STX TMP0
+         ADC TMP0
+         SEC 
+         SBC #'0'
+         INY 
+         BNE <0
+;
+; Is the number within limits?
+; ie: 1-GANMAX
+;
+^1       TAX 
+         DEX 
+         CPX #00
+GANMAX   =   *-1
+         BCC GANDONE
+;
+; Error
+;
+GANERROR JSR BOOP
+         JMP GANAGAIN
+;
+GANDONE  RTS 
+;-----------
+;
+; Change input device
+;
+DEVICECH JSR PRINT
+         BYT RTOSBLAK,0,181,40,11
+         BYT PRCNTR
+         .DA #PRLOC,140,#185
+         BYT PRCSPACE,1
+         BYT 'PLUG IN INPUT DEVICE, '
+         .DA #PRSTR,TXTPAK,#CR
+         BRK 
+^0       JSR POLEKEY
+         BPL <0
+         JSR DEVICEOF
+         JMP DEVICENW
+;-----------
+;
+;
+;
+         ICL "S:SUBPAK5"

@@ -1,0 +1,584 @@
+2000-   A9 00       LDA   #$00
+2002-   8D EC B7    STA   $B7EC
+2005-   20 09 12    JSR   $1209
+2008-   A9 22       LDA   #$22
+200A-   20 E0 20    JSR   $20E0
+200D-   EA          NOP
+200E-   EA          NOP
+200F-   EA          NOP
+2010-   A9 D0       LDA   #$D0
+2012-   A2 0D       LDX   #$0D
+2014-   20 03 21    JSR   $2103
+2017-   A9 D4       LDA   #$D4
+2019-   85 00       STA   $00
+201B-   A9 D7       LDA   #$D7
+201D-   85 01       STA   $01
+201F-   A9 DF       LDA   #$DF
+2021-   85 02       STA   $02
+2023-   A9 D0       LDA   #$D0
+2025-   A2 01       LDX   #$01
+2027-   20 03 21    JSR   $2103
+202A-   20 00 21    JSR   $2100
+202D-   20 00 22    JSR   $2200
+2030-   60          RTS
+2031-   00          BRK
+2032-   00          BRK
+2033-   00          BRK
+2034-   00          BRK
+2035-   00          BRK
+2036-   00          BRK
+2037-   00          BRK
+2038-   00          BRK
+2039-   00          BRK
+203A-   00          BRK
+203B-   00          BRK
+203C-   00          BRK
+203D-   00          BRK
+203E-   00          BRK
+203F-   00          BRK
+2040-   00          BRK
+2041-   00          BRK
+2042-   00          BRK
+2043-   00          BRK
+2044-   00          BRK
+2045-   00          BRK
+2046-   00          BRK
+2047-   00          BRK
+2048-   00          BRK
+2049-   00          BRK
+204A-   00          BRK
+204B-   00          BRK
+204C-   00          BRK
+204D-   00          BRK
+204E-   00          BRK
+204F-   00          BRK
+2050-   00          BRK
+2051-   00          BRK
+2052-   00          BRK
+2053-   00          BRK
+2054-   00          BRK
+2055-   00          BRK
+2056-   00          BRK
+2057-   00          BRK
+2058-   00          BRK
+2059-   00          BRK
+205A-   00          BRK
+205B-   00          BRK
+205C-   00          BRK
+205D-   00          BRK
+205E-   00          BRK
+205F-   00          BRK
+2060-   00          BRK
+2061-   00          BRK
+2062-   00          BRK
+2063-   00          BRK
+2064-   00          BRK
+2065-   00          BRK
+2066-   00          BRK
+2067-   00          BRK
+2068-   00          BRK
+2069-   00          BRK
+206A-   00          BRK
+206B-   00          BRK
+206C-   00          BRK
+206D-   00          BRK
+206E-   00          BRK
+206F-   00          BRK
+2070-   00          BRK
+2071-   00          BRK
+2072-   00          BRK
+2073-   00          BRK
+2074-   00          BRK
+2075-   00          BRK
+2076-   00          BRK
+2077-   00          BRK
+2078-   00          BRK
+2079-   00          BRK
+207A-   00          BRK
+207B-   00          BRK
+207C-   00          BRK
+207D-   00          BRK
+207E-   00          BRK
+207F-   00          BRK
+2080-   00          BRK
+2081-   00          BRK
+2082-   00          BRK
+2083-   00          BRK
+2084-   00          BRK
+2085-   00          BRK
+2086-   00          BRK
+2087-   00          BRK
+2088-   00          BRK
+2089-   00          BRK
+208A-   00          BRK
+208B-   00          BRK
+208C-   00          BRK
+208D-   00          BRK
+208E-   00          BRK
+208F-   00          BRK
+2090-   00          BRK
+2091-   00          BRK
+2092-   00          BRK
+2093-   00          BRK
+2094-   00          BRK
+2095-   00          BRK
+2096-   00          BRK
+2097-   00          BRK
+2098-   00          BRK
+2099-   00          BRK
+209A-   00          BRK
+209B-   00          BRK
+209C-   00          BRK
+209D-   00          BRK
+209E-   00          BRK
+209F-   00          BRK
+20A0-   00          BRK
+20A1-   00          BRK
+20A2-   00          BRK
+20A3-   00          BRK
+20A4-   00          BRK
+20A5-   00          BRK
+20A6-   00          BRK
+20A7-   00          BRK
+20A8-   00          BRK
+20A9-   00          BRK
+20AA-   00          BRK
+20AB-   00          BRK
+20AC-   00          BRK
+20AD-   00          BRK
+20AE-   00          BRK
+20AF-   00          BRK
+20B0-   00          BRK
+20B1-   00          BRK
+20B2-   00          BRK
+20B3-   00          BRK
+20B4-   00          BRK
+20B5-   00          BRK
+20B6-   00          BRK
+20B7-   00          BRK
+20B8-   00          BRK
+20B9-   00          BRK
+20BA-   00          BRK
+20BB-   00          BRK
+20BC-   00          BRK
+20BD-   00          BRK
+20BE-   00          BRK
+20BF-   00          BRK
+20C0-   00          BRK
+20C1-   00          BRK
+20C2-   00          BRK
+20C3-   00          BRK
+20C4-   00          BRK
+20C5-   00          BRK
+20C6-   00          BRK
+20C7-   00          BRK
+20C8-   00          BRK
+20C9-   00          BRK
+20CA-   00          BRK
+20CB-   00          BRK
+20CC-   00          BRK
+20CD-   00          BRK
+20CE-   00          BRK
+20CF-   00          BRK
+20D0-   00          BRK
+20D1-   00          BRK
+20D2-   00          BRK
+20D3-   00          BRK
+20D4-   00          BRK
+20D5-   00          BRK
+20D6-   00          BRK
+20D7-   00          BRK
+20D8-   00          BRK
+20D9-   00          BRK
+20DA-   00          BRK
+20DB-   00          BRK
+20DC-   00          BRK
+20DD-   00          BRK
+20DE-   00          BRK
+20DF-   00          BRK
+20E0-   48          PHA
+20E1-   A2 06       LDX   #$06
+20E3-   86 24       STX   $24
+20E5-   20 DA FD    JSR   $FDDA    F8ROM:PRBYTE
+20E8-   68          PLA
+20E9-   A6 08       LDX   $08
+20EB-   0A          ASL
+20EC-   4C A0 B9    JMP   $B9A0
+20EF-   00          BRK
+20F0-   A2 03       LDX   #$03
+20F2-   BD 70 37    LDA   $3770,X
+20F5-   95 04       STA   $04,X
+20F7-   CA          DEX
+20F8-   10 F8       BPL   $20F2
+20FA-   4C AD 22    JMP   $22AD
+20FD-   00          BRK
+20FE-   00          BRK
+20FF-   00          BRK
+2100-   4C 96 21    JMP   $2196
+2103-   86 3C       STX   $3C
+2105-   85 3B       STA   $3B
+2107-   A0 00       LDY   #$00
+2109-   84 3A       STY   $3A
+210B-   A6 08       LDX   $08
+210D-   BD 8D C0    LDA   $C08D,X
+2110-   BD 8E C0    LDA   $C08E,X
+2113-   10 02       BPL   $2117
+2115-   38          SEC
+2116-   60          RTS
+2117-   A0 06       LDY   #$06
+2119-   A9 FF       LDA   #$FF
+211B-   9D 8F C0    STA   $C08F,X
+211E-   1D 8C C0    ORA   $C08C,X
+2121-   26 4E       ROL   $4E
+2123-   EA          NOP
+2124-   20 95 21    JSR   $2195
+2127-   20 95 21    JSR   $2195
+212A-   9D 8D C0    STA   $C08D,X
+212D-   1D 8C C0    ORA   $C08C,X
+2130-   88          DEY
+2131-   D0 F0       BNE   $2123
+2133-   EA          NOP
+2134-   A5 00       LDA   $00
+2136-   20 8B 21    JSR   $218B
+2139-   A5 01       LDA   $01
+213B-   20 8B 21    JSR   $218B
+213E-   A5 02       LDA   $02
+2140-   20 8B 21    JSR   $218B
+2143-   EA          NOP
+2144-   90 0C       BCC   $2152
+2146-   98          TYA
+2147-   D0 09       BNE   $2152
+2149-   A5 03       LDA   $03
+214B-   EA          NOP
+214C-   EA          NOP
+214D-   20 8F 21    JSR   $218F
+2150-   26 4E       ROL   $4E
+2152-   B1 3A       LDA   ($3A),Y
+2154-   48          PHA
+2155-   4A          LSR
+2156-   09 AA       ORA   #$AA
+2158-   9D 8D C0    STA   $C08D,X
+215B-   DD 8C C0    CMP   $C08C,X
+215E-   C8          INY
+215F-   D0 07       BNE   $2168
+2161-   E6 3B       INC   $3B
+2163-   C6 3C       DEC   $3C
+2165-   4C 6B 21    JMP   $216B
+2168-   20 95 21    JSR   $2195
+216B-   68          PLA
+216C-   09 AA       ORA   #$AA
+216E-   9D 8D C0    STA   $C08D,X
+2171-   DD 8C C0    CMP   $C08C,X
+2174-   A5 3C       LDA   $3C
+2176-   D0 CE       BNE   $2146
+2178-   A5 03       LDA   $03
+217A-   A5 03       LDA   $03
+217C-   20 8C 21    JSR   $218C
+217F-   A5 03       LDA   $03
+2181-   20 8B 21    JSR   $218B
+2184-   BD 8E C0    LDA   $C08E,X
+2187-   BD 8C C0    LDA   $C08C,X
+218A-   60          RTS
+218B-   18          CLC
+218C-   EA          NOP
+218D-   EA          NOP
+218E-   EA          NOP
+218F-   9D 8D C0    STA   $C08D,X
+2192-   1D 8C C0    ORA   $C08C,X
+2195-   60          RTS
+2196-   A9 A5       LDA   #$A5
+2198-   85 00       STA   $00
+219A-   A9 DF       LDA   #$DF
+219C-   85 01       STA   $01
+219E-   A9 D4       LDA   #$D4
+21A0-   85 02       STA   $02
+21A2-   A9 CF       LDA   #$CF
+21A4-   85 03       STA   $03
+21A6-   A2 04       LDX   #$04
+21A8-   A9 24       LDA   #$24
+21AA-   4C 03 21    JMP   $2103
+21AD-   00          BRK
+21AE-   00          BRK
+21AF-   00          BRK
+21B0-   00          BRK
+21B1-   00          BRK
+21B2-   00          BRK
+21B3-   00          BRK
+21B4-   00          BRK
+21B5-   00          BRK
+21B6-   00          BRK
+21B7-   00          BRK
+21B8-   00          BRK
+21B9-   00          BRK
+21BA-   00          BRK
+21BB-   00          BRK
+21BC-   00          BRK
+21BD-   00          BRK
+21BE-   00          BRK
+21BF-   00          BRK
+21C0-   00          BRK
+21C1-   00          BRK
+21C2-   00          BRK
+21C3-   00          BRK
+21C4-   00          BRK
+21C5-   00          BRK
+21C6-   00          BRK
+21C7-   00          BRK
+21C8-   00          BRK
+21C9-   00          BRK
+21CA-   00          BRK
+21CB-   00          BRK
+21CC-   00          BRK
+21CD-   00          BRK
+21CE-   00          BRK
+21CF-   00          BRK
+21D0-   00          BRK
+21D1-   00          BRK
+21D2-   00          BRK
+21D3-   00          BRK
+21D4-   00          BRK
+21D5-   00          BRK
+21D6-   00          BRK
+21D7-   00          BRK
+21D8-   00          BRK
+21D9-   00          BRK
+21DA-   00          BRK
+21DB-   00          BRK
+21DC-   00          BRK
+21DD-   00          BRK
+21DE-   00          BRK
+21DF-   00          BRK
+21E0-   00          BRK
+21E1-   00          BRK
+21E2-   00          BRK
+21E3-   00          BRK
+21E4-   00          BRK
+21E5-   00          BRK
+21E6-   00          BRK
+21E7-   00          BRK
+21E8-   00          BRK
+21E9-   00          BRK
+21EA-   00          BRK
+21EB-   00          BRK
+21EC-   00          BRK
+21ED-   00          BRK
+21EE-   00          BRK
+21EF-   00          BRK
+21F0-   00          BRK
+21F1-   00          BRK
+21F2-   00          BRK
+21F3-   00          BRK
+21F4-   00          BRK
+21F5-   00          BRK
+21F6-   00          BRK
+21F7-   00          BRK
+21F8-   00          BRK
+21F9-   00          BRK
+21FA-   00          BRK
+21FB-   00          BRK
+21FC-   00          BRK
+21FD-   00          BRK
+21FE-   00          BRK
+21FF-   00          BRK
+2200-   A6 08       LDX   $08
+2202-   BD 8D C0    LDA   $C08D,X
+2205-   BD 8E C0    LDA   $C08E,X
+2208-   A0 00       LDY   #$00
+220A-   A9 00       LDA   #$00
+220C-   9D 8F C0    STA   $C08F,X
+220F-   1D 8C C0    ORA   $C08C,X
+2212-   EA          NOP
+2213-   EA          NOP
+2214-   EA          NOP
+2215-   A9 00       LDA   #$00
+2217-   20 5F 22    JSR   $225F
+221A-   A9 D4       LDA   #$D4
+221C-   20 5F 22    JSR   $225F
+221F-   A9 D5       LDA   #$D5
+2221-   20 5F 22    JSR   $225F
+2224-   A9 DE       LDA   #$DE
+2226-   20 5F 22    JSR   $225F
+2229-   A9 D4       LDA   #$D4
+222B-   20 5F 22    JSR   $225F
+222E-   98          TYA
+222F-   20 4D 22    JSR   $224D
+2232-   A9 F5       LDA   #$F5
+2234-   20 5F 22    JSR   $225F
+2237-   A9 AA       LDA   #$AA
+2239-   20 5F 22    JSR   $225F
+223C-   A9 00       LDA   #$00
+223E-   20 5F 22    JSR   $225F
+2241-   24 00       BIT   $00
+2243-   C8          INY
+2244-   D0 CF       BNE   $2215
+2246-   BD 8E C0    LDA   $C08E,X
+2249-   BD 8C C0    LDA   $C08C,X
+224C-   60          RTS
+224D-   48          PHA
+224E-   EA          NOP
+224F-   4A          LSR
+2250-   09 AA       ORA   #$AA
+2252-   9D 8D C0    STA   $C08D,X
+2255-   DD 8C C0    CMP   $C08C,X
+2258-   68          PLA
+2259-   09 AA       ORA   #$AA
+225B-   EA          NOP
+225C-   EA          NOP
+225D-   EA          NOP
+225E-   EA          NOP
+225F-   A6 08       LDX   $08
+2261-   EA          NOP
+2262-   EA          NOP
+2263-   EA          NOP
+2264-   9D 8D C0    STA   $C08D,X
+2267-   DD 8C C0    CMP   $C08C,X
+226A-   60          RTS
+226B-   00          BRK
+226C-   00          BRK
+226D-   00          BRK
+226E-   00          BRK
+226F-   00          BRK
+2270-   00          BRK
+2271-   00          BRK
+2272-   00          BRK
+2273-   00          BRK
+2274-   00          BRK
+2275-   00          BRK
+2276-   00          BRK
+2277-   00          BRK
+2278-   00          BRK
+2279-   00          BRK
+227A-   00          BRK
+227B-   00          BRK
+227C-   00          BRK
+227D-   00          BRK
+227E-   00          BRK
+227F-   00          BRK
+2280-   00          BRK
+2281-   00          BRK
+2282-   00          BRK
+2283-   00          BRK
+2284-   00          BRK
+2285-   00          BRK
+2286-   00          BRK
+2287-   00          BRK
+2288-   00          BRK
+2289-   00          BRK
+228A-   00          BRK
+228B-   00          BRK
+228C-   00          BRK
+228D-   00          BRK
+228E-   00          BRK
+228F-   00          BRK
+2290-   00          BRK
+2291-   00          BRK
+2292-   00          BRK
+2293-   00          BRK
+2294-   00          BRK
+2295-   00          BRK
+2296-   00          BRK
+2297-   00          BRK
+2298-   00          BRK
+2299-   00          BRK
+229A-   00          BRK
+229B-   00          BRK
+229C-   00          BRK
+229D-   00          BRK
+229E-   00          BRK
+229F-   00          BRK
+22A0-   00          BRK
+22A1-   00          BRK
+22A2-   00          BRK
+22A3-   00          BRK
+22A4-   00          BRK
+22A5-   00          BRK
+22A6-   00          BRK
+22A7-   00          BRK
+22A8-   00          BRK
+22A9-   00          BRK
+22AA-   00          BRK
+22AB-   00          BRK
+22AC-   00          BRK
+22AD-   00          BRK
+22AE-   00          BRK
+22AF-   00          BRK
+22B0-   00          BRK
+22B1-   00          BRK
+22B2-   00          BRK
+22B3-   00          BRK
+22B4-   00          BRK
+22B5-   00          BRK
+22B6-   00          BRK
+22B7-   00          BRK
+22B8-   00          BRK
+22B9-   00          BRK
+22BA-   00          BRK
+22BB-   00          BRK
+22BC-   00          BRK
+22BD-   00          BRK
+22BE-   00          BRK
+22BF-   00          BRK
+22C0-   00          BRK
+22C1-   00          BRK
+22C2-   00          BRK
+22C3-   00          BRK
+22C4-   00          BRK
+22C5-   00          BRK
+22C6-   00          BRK
+22C7-   00          BRK
+22C8-   00          BRK
+22C9-   00          BRK
+22CA-   00          BRK
+22CB-   00          BRK
+22CC-   00          BRK
+22CD-   00          BRK
+22CE-   00          BRK
+22CF-   00          BRK
+22D0-   00          BRK
+22D1-   00          BRK
+22D2-   00          BRK
+22D3-   00          BRK
+22D4-   00          BRK
+22D5-   00          BRK
+22D6-   00          BRK
+22D7-   00          BRK
+22D8-   00          BRK
+22D9-   00          BRK
+22DA-   00          BRK
+22DB-   00          BRK
+22DC-   00          BRK
+22DD-   00          BRK
+22DE-   00          BRK
+22DF-   00          BRK
+22E0-   00          BRK
+22E1-   00          BRK
+22E2-   00          BRK
+22E3-   00          BRK
+22E4-   00          BRK
+22E5-   00          BRK
+22E6-   00          BRK
+22E7-   00          BRK
+22E8-   00          BRK
+22E9-   00          BRK
+22EA-   00          BRK
+22EB-   00          BRK
+22EC-   00          BRK
+22ED-   00          BRK
+22EE-   00          BRK
+22EF-   00          BRK
+22F0-   00          BRK
+22F1-   00          BRK
+22F2-   00          BRK
+22F3-   00          BRK
+22F4-   00          BRK
+22F5-   00          BRK
+22F6-   00          BRK
+22F7-   00          BRK
+22F8-   00          BRK
+22F9-   00          BRK
+22FA-   00          BRK
+22FB-   00          BRK
+22FC-   00          BRK
+22FD-   00          BRK
+22FE-   00          BRK
+22FF-   00          BRK

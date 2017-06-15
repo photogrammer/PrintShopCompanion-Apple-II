@@ -1,0 +1,181 @@
+         NLS 
+         TTL "S:NOMOREBACKUP"
+         NOG 
+ORG      =   $1000
+;
+; The Print Shop Companion
+;
+; Message instead of backup
+;
+SLOT     EPZ $2B
+;
+DAT      EPZ $E0
+;
+TMPLO    EPZ DAT
+TMPHI    EPZ DAT+1
+PRNTFLAG EPZ DAT+2
+CENTER   EPZ DAT+3
+;
+;-----------
+VTAB     =   $FB5B
+HOME     =   $FC58
+TEXT     =   $FB2F
+WAIT     =   $FCA8
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP START
+;-----------
+;
+; Print routine:
+;
+PRINTLFT LSR CENTER
+;
+PRINT    LDA #$FF
+         HEX 2C
+PRINTINV LDA #$3F
+         STA $32
+         LDA #0
+         STA PRNTFLAG
+         PLA 
+         STA TMPLO
+         PLA 
+         STA TMPHI
+^0       INC TMPLO
+         BNE >1
+         INC TMPHI
+^1       LDY #0
+         LDA (TMPLO),Y
+         BEQ >3
+         BIT CENTER
+         BPL >2
+         BIT PRNTFLAG
+         BPL >4
+^2       PHA 
+         JSR $FDF0
+         PLA 
+         CMP #$A0
+         BGE <0
+         LSR PRNTFLAG
+         BPL <0
+;
+^3       LDA TMPHI
+         PHA 
+         LDA TMPLO
+         PHA 
+         SEC 
+         ROR CENTER
+         JMP $FE84
+;
+^4       LDA (TMPLO),Y
+         CMP #$A0
+         BLT >5
+         INY 
+         BNE <4
+;
+^5       TYA 
+         LSR 
+         EOR #$FF
+         CLC 
+         ADC #18
+         STA $24
+         SEC 
+         ROR PRNTFLAG
+         JMP <1
+;-----------
+;
+; BEEP Speaker
+;
+BEEP     LDY #$30
+^0       LDA $C030
+         LDA #$11
+         JSR WAIT
+         LDA $C030
+         LDA #$13
+         JSR WAIT
+         DEY 
+         BNE <0
+         RTS 
+;-----------
+;
+; Draw inverse line
+;
+BOTLINE  LDA #23
+INVLINE  JSR $FBC1
+         LDY #39
+         LDA #$20
+^0       STA ($28),Y
+         DEY 
+         BPL <0
+         RTS 
+;-----------
+;
+; Startup screen
+;
+SCREEN1  JSR TEXT
+         JSR HOME
+         LDA #2
+         STA $20
+         LDA #36
+         STA $21
+         LDA #10
+         STA $22
+         LDA #22
+         STA $23
+;
+         LDA #0
+         JSR INVLINE
+         LDA #1
+         JSR INVLINE
+         LDA #2
+         JSR INVLINE
+         JSR BOTLINE
+         LDA #23
+^0       PHA 
+         JSR $FBC1
+         LDY #0
+         LDA #$20
+         STA ($28),Y
+         LDY #39
+         STA ($28),Y
+         PLA 
+         SEC 
+         SBC #1
+         BPL <0
+;
+         JSR PRINTINV
+         HEX 8D
+         ASC "THE PRINT SHOP COMPANION"
+         BRK 
+         RTS 
+;-----------
+;
+; The program starts here:
+;
+START    LDX SLOT
+         LDA $C088,X
+;
+         SEC 
+         ROR CENTER
+         JSR SCREEN1
+         JSR HOME
+         JSR PRINT
+         BYT "CONTACT BRODERBUND SOFTWARE"
+         HEX 8D
+         BYT "FOR BACKUP DISK"
+         HEX 8D8D
+         ASC "PRESS <RETURN> TO CONTINUE..."
+         BRK 
+         JSR BEEP
+^0       LDA $C000
+         CMP #$8D
+         BNE <0
+         BIT $C010
+         JMP ($FFFC)
+;---
+;
+;
+;
+         USR "O:NOMOREBACKUP",ORG
+         END 

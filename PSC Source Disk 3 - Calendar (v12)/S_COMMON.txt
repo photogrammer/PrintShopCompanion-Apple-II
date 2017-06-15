@@ -1,0 +1,327 @@
+         NLS 
+; S:COMMON
+;
+; Common equates for Calendar
+; source files.
+;
+GOOFBALL =   *
+;-----------
+;
+; Monthly data margins
+;
+DTCXMAX  =   126
+DTCYMAX  =   90
+DTCXMARG =   6
+DTCYMARG =   24
+;-----------
+;
+; Common zero page
+;
+CLZ      EPZ $D0
+;
+XOFFLO   EPZ CLZ
+XOFFHI   EPZ CLZ+1
+YOFF     EPZ CLZ+2
+TMP0     EPZ CLZ+3
+TMP1     EPZ CLZ+4
+TMP2     EPZ CLZ+5
+TMP3     EPZ CLZ+6
+TMP4     EPZ CLZ+7
+TMP5     EPZ CLZ+8
+;
+DATE     EPZ CLZ+9
+;
+CRLINE   EPZ CLZ+10
+;
+;-----------
+UFONT    =   $8500
+UFONTW   =   UFONT
+CLFONT   =   $6000
+CFONTH   =   CLFONT+$3B
+;-----------
+;
+; Constants:
+;
+GRBUFF   =   $7800
+FONTBUFF =   $5FF4
+ESC      =   27
+;------
+;
+; Temporary buffer for text
+;
+TEMPTEXT =   $7A40
+;
+MONTHTXT =   TEMPTEXT
+; worst:SEPTEMBER (9+1)
+WEEKTEXT =   MONTHTXT+10
+; worst:WEDNESDAY (9+1)
+DATETEXT =   WEEKTEXT+10
+; worst:31 (2+1)
+;-----------
+;
+; Common buffer
+;
+COBUFF   =   $D000
+;
+         ORG COBUFF
+;--
+CLTYPE   DFS 1                         ; Calendar type
+;--
+GRSEL    DFS 1                         ; Graphic selection
+NOGR     =   3
+GRNUM    DFS 1                         ; # from PSD
+GROPTION DFS 1                         ; Position option
+;--
+YEARTEXT DFS 5
+;--
+MONTH    DFS 1                         ; 0-11
+MNDATE   DFS 1                         ; mini-calen default
+MNWDATE  DFS 1                         ; mini-week default
+MNFDAY   DFS 1                         ; day of week 0-6
+MNLAST   DFS 1                         ; # days in month
+;--
+FONTSEL  DFS 1                         ; Font selection
+NOFONT   =   3
+FONTPSD  DFS 1                         ; # from PSD
+FONTCD   DFS 1                         ; # from CD
+;--
+PRSEL    DFS 1                         ; printer item
+PRCOPIES DFS 1                         ; # copies to print
+;--
+;
+; 0-30:monthly data (DATE-1)
+; 0-27:weekly date in groups of 4
+;  31 :top line
+;  32 :second line
+;  33 :credit line
+;
+DBUFCONT =   34                        ; # strings
+;
+DBUFENDL DFS 1                         ; EOF pointer
+DBUFENDH DFS 1
+;
+DBUFPNTL DFS DBUFCONT                  ; pointers
+DBUFPNTH DFS DBUFCONT                  ; to the text
+;
+; If COLORFLG=$FF then next 4
+; are colors for:
+; 0:Font
+; 1:Graphics
+; 2:Lines
+; 3:Highlites
+;
+COLORFLG DFS 1                         ; $FF=color follows
+DCOLOR0  DFS 1
+DCOLOR1  DFS 1
+DCOLOR2  DFS 1
+DCOLOR3  DFS 1
+;
+DBUFFER  DFS 1                         ; first byte of buffer
+;-----------
+;
+; Z-page
+;
+FLASHLO  EPZ $4E
+FLASHHI  EPZ $4F
+;-----------
+;
+; MAIN MENU routines
+;
+MM       =   $0800
+;
+MAINMENU =   MM
+FGETMAIN =   MM+3
+FGETPSD  =   MM+6
+FGETCD   =   MM+9
+;
+HAS128K  =   $27F
+CONFIG   =   $95F0
+COLORPR  =   CONFIG+8
+;-----------
+;
+; Subroutine package
+;
+SP       =   $E000
+;
+PRINT    =   SP
+CLSCREEN =   SP+3
+WITEBORD =   SP+6
+ESCBACK  =   SP+9
+PICDRAW  =   SP+12
+;
+DEVICENW =   SP+15
+DEVICEON =   SP+18
+DEVICEOF =   SP+21
+DEVICERD =   SP+24
+DEVICEST =   SP+27
+SCALING  =   SP+30
+;
+POLEBTN  =   SP+31
+POLEKEY  =   SP+34
+GETKEY   =   SP+37
+SELECT   =   SP+40
+;
+SETTYPE  =   SP+43
+GETFILE  =   SP+46
+SAVEFILE =   SP+49
+TYPELEN  =   SP+52
+FLSTART  =   SP+53
+FLLENGTH =   SP+55
+BLOAD    =   SP+57
+BSAVE    =   SP+60
+DOSCR    =   SP+63
+ERROR    =   SP+66
+;
+MUSIC    =   SP+69
+FLSHINIT =   SP+72
+JMPVECTS =   SP+75
+LINES    =   SP+78
+PARSE    =   SP+81
+SHOWAROW =   SP+84
+NUMBER   =   SP+87
+WAITPSD  =   SP+90
+WAITCD   =   SP+93
+ANYKEY   =   SP+96
+CHKPRINT =   SP+99
+BOOP     =   SP+102
+GETINIT  =   SP+105
+GETBYTE  =   SP+108
+INPUT    =   SP+111
+CLS1     =   SP+114
+PRINTGRP =   SP+117
+RTOS     =   SP+120
+SPACEBAR =   SP+123
+GETPDISK =   SP+126
+ESCMAIN  =   SP+129
+TESTPAPR =   SP+132
+GETANUMB =   SP+135
+ANYKEY2  =   SP+138
+;
+WITE     =   $FF
+GRAY     =   $AA
+GRAY2    =   $55
+BLAK     =   $00
+;
+PRNORM   =   1
+PRINVR   =   2
+PRLEFT   =   3
+PRRITE   =   4
+PRCNTR   =   5
+PRLOC    =   6
+PRSMAL   =   7
+PRBIG    =   8
+PRSTR    =   9
+PRSPC    =   10
+PRHTAB   =   11
+PRVTAB   =   12
+CR       =   13
+NOCR     =   14
+RTOSBLAK =   15
+RTOSWITE =   16
+RTOSANY  =   17
+PRCSPACE =   18
+PRPIC    =   19
+PRRTAB   =   20
+PRRTAB2  =   21
+PRKERN   =   22
+RTOSINV  =   23
+;-----------
+;
+; Monitor routines
+;
+WAIT     =   $FCA8
+RTS      =   $FF58
+;-----------
+;
+; PRCOMS locations
+;
+COUT1    =   $1800
+CRLF     =   $1803
+SENDGC   =   $1806
+GCOUT    =   $1809
+MTHINK   =   $180C
+MPRINT   =   $180F
+MPAUSE   =   $1812
+COPYCONT =   $1815
+UPLRK    =   $1816
+COLORCHG =   $181D
+;-----------
+;
+; Buffer handler routines
+;
+TEXTBUFF =   $9600
+EDITBUFF =   $9700
+;
+BF       =   $7B00
+;
+; Credit line info
+;
+CRXB     =   4
+CRXMAXB  =   32
+CRX      =   CRXB*7
+CRXMAX   =   CRXMAXB*7
+;
+CRY1     =   78
+;
+         .IF BF-ORG
+CLRCOBUF =   BF
+GETTEXT  =   BF+3
+PUTTEXT  =   BF+6
+GETEDIT  =   BF+9
+PUTEDIT  =   BF+12
+MAKEDTXT =   BF+15
+MAKEWTXT =   BF+18
+;
+TOPTEXT  =   BF+21
+GTMTEXT  =   BF+24
+GTWTEXT  =   BF+27
+CREDIT   =   BF+30
+;
+DRAWBOX  =   BF+33
+         .FI 
+;-----------
+;
+; Print routines
+;
+PR       =   $F00
+;
+         .IF PR-ORG
+DOCALEN  =   PR
+EDITDRAW =   PR+3
+EDITYOFF =   PR+6
+STRCROP  =   PR+9
+         .FI 
+;-----------
+;
+; MAIN code vectors
+;
+MN       =   $4000
+;
+         .IF MN-ORG
+CRBLAK   =   MN+6
+CRDRAW   =   MN+9
+         .FI 
+;-----------
+;
+; Print buffer constants
+;
+BUFWIDTH =   1024
+LMARGIN  =   10
+CLBUFFER =   $2000
+;-----------
+;
+; STROUT variables
+;
+STROUT   =   $8A00
+SPARM    =   STROUT+3
+CSIZE    =   STROUT+$0B
+;
+; STROUT mod routines
+;
+STINSTAL =   STROUT+$0F
+STSCREEN =   STROUT+$12
+FINSTALL =   STROUT+$15
+;
+;-----------
+         PHS GOOFBALL
+         END 

@@ -1,0 +1,817 @@
+         TTL "S:GREDIT"
+; S:GREDIT1
+         NOG 
+;
+ORG      =   $4000
+OBJ      =   $800
+;
+; 04/11/85
+; 09/11/85 last mod
+; (removed ESC)
+;
+; Graphic Editor main control
+;
+; The Print Shop Companion Disk
+;
+; by Roland Gustafsson
+;
+XSCRNMAX =   192
+YSCRNMAX =   140
+;
+PICTBUFF =   $6000
+;-----------
+         ORG ORG
+         OBJ OBJ
+;-----------
+START    JMP GREDIT
+         JMP TILEMAGC
+         JMP CRMAKER
+;
+         ASC "COPYRIGHT 1985 "
+         ASC "ROLAND GUSTAFSSON"
+;
+; Graphic Editor main entry point
+;
+GREDIT   JSR SETMAX
+         JSR BUFFSAVE
+;
+; Graphic Editor entry point from
+; Tile Magic and Creature Maker
+;
+GREDIT2: 
+;
+; Draw Graphic Editor main screen
+;
+MAINSCRN JSR CLSCREEN
+         JSR PRINT
+         BYT RTOSWITE,0,0,25,16
+         BYT PRCNTR,PRINVR
+         .DA #PRLOC,88,#4
+         .DA #PRSTR,TXTGEDIT,#CR
+         BRK 
+;
+         JSR SHOWGR
+         JSR SHOWRITE
+;
+; Main loop
+;
+^0       JSR EDITLOOP
+         JSR >1
+         BCC <0
+         JMP MAINSCRN
+;
+^1       JSR PARSE
+         .DA #'L',CMDLINES
+         .DA #'R',CMDRAYS
+         .DA #'B',CMDBOX
+         .DA #'O',CMDOVAL
+         .DA #'T',CMDTEXT
+;
+         .DA #'S'-$40,CMDSAVE
+         .DA #'G'-$40,CMDGET
+         .DA #'P'-$40,CMDPRINT
+         .DA #'D'-$40,CMDDEVIC
+         .DA #'C'-$40,CMDCLEAR
+         .DA #'Q'-$40,CMDQUIT
+         .DA #'T'-$40,CMDTILES
+         .DA #' ',CMDSPACE
+TILEMOD  .DA #$FF,ESC4TILE
+CRMOD    .DA #$FF,ESC4CR
+         BRK 
+         CLC 
+         RTS 
+;-----------
+;
+; Show graphic tiled
+;
+CMDTILES JSR CLSCREEN
+         JSR PRINT
+         BYT RTOSWITE,0,0,40,172
+         BYT PRINVR
+         BYT PRSPC,52
+         BYT PRCSPACE,0
+         .DA #PRLOC,8,#8
+         BYT '@@@',CR
+         BYT '@@@',CR
+         BYT '@@@',CR,0
+         JMP ANYKEY2
+;-----------
+;
+; Save the graphic
+;
+CMDSAVE  LDY #EDITBUFF
+         LDA /EDITBUFF
+         JSR SETADR
+         JSR SAVEFILE
+         SEC 
+^9       RTS 
+;-----------
+;
+; Get a graphic
+;
+CMDGET   JSR LOADUNDO
+         BCS >1
+         JSR CHKBUFF
+         BEQ >0
+         JSR SUPERIMP
+         BCS CMDGET
+         DEY 
+         BEQ >0
+         JSR CLRBUFF
+^0       JSR ORBUFF
+         JSR BUFFSAVE
+^1       LSR SCALING
+         SEC 
+         RTS 
+;
+; Ask question about superimposing:
+;
+SUPERIMP JSR GETTEXT
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#60
+         BYT 'WOULD YOU LIKE TO SUPERIMPOSE',CR
+         BYT 'THE '
+         .DA #PRSTR,TXTGR,' THAT YOU JUST',#CR
+         BYT 'SELECTED OVER THE '
+         .DA #PRSTR,TXTGR,#CR
+         BYT 'ALREADY IN THE EDIT WINDOW ?',CR
+         BYT CR,'NO',CR,'YES',CR,0
+         LDY #0
+         JSR SELECT
+         BYT 17,6,99,2
+         ADR >0
+^0       RTS 
+;
+; Load the UNDO buffer with graphic
+; that user selects from any of many
+; different places! SEC=ESC pressed
+;
+TXTFRM   BYT 'FROM ',0
+LOADUNDO JSR GETTEXT
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#52
+         BYT 'CHOOSE A '
+         .DA #PRSTR,TXTGR,':',#CR
+         BYT CR,CR
+         .DA #PRSTR,TXTFRM,'PRINT SHOP DISK',#CR
+         .DA #PRSTR,TXTFRM,'COMPANION DISK',#CR
+         .DA #PRSTR,TXTFRM,'OTHER DISK',#CR
+         .DA #PRSTR,TXTFRM,#PRSTR,TXTSCRN,' MEMORY',#CR
+         .DA #PRSTR,TXTFRM,#PRSTR,TXTSCRN,' FILE',#CR
+         BRK 
+^0       LDY #00
+LOADFROM =   *-1
+         JSR SELECT
+         BYT 6,28,75,5
+         ADR RTS
+         BCS >2
+;
+         STY LOADFROM
+         JSR >1
+         BCC >2
+         JMP LOADUNDO
+;
+^1       JSR JMPVECTS
+         ADR >3
+         ADR GETCDISK
+         ADR GETODISK
+         ADR FRAMGRAB
+         ADR PICTLOAD
+;
+^2       RTS 
+;---
+;
+; Get graphic from PS disk
+;
+^3       LDA #00
+         LDX #UNDOBUFF
+         LDY /UNDOBUFF
+         JSR GETPDISK
+         BCS >4
+         STA <3+1
+         LDA #$FF
+         STA CRMOD
+^4       RTS 
+;---
+;
+; Get graphic from Companion Disk
+; SIDE 2 !!!
+;
+GETCDISK LDA #2
+         CLC 
+         HEX 24
+;
+; Get graphic from other disk
+;
+GETODISK SEC 
+         PHP 
+         LDY #UNDOBUFF
+         LDA /UNDOBUFF
+         JSR SETADR
+         PLP 
+         JMP GETFILE
+;
+; Load a new hires picture file
+;
+PICTLOAD JSR SWAPD000
+;
+         JSR SETTYPE
+TXTSCRN  BYT 'SCREEN',0
+         BYT 'SCREEN',0
+         BYT 0
+         BYT 34
+^0       ADR PICTBUFF
+         ADR $1FF8
+;
+         SEC 
+         JSR GETFILE
+         PHP 
+         JSR SWAPD000
+         PLP 
+         BCS >2
+         JMP FRAMGRAB
+;
+; Swap $6000.7FFF with $D000 banks
+;
+SWAPD000 LDY #0
+         LDA /PICTBUFF
+         STY TMP0
+         STA TMP1
+         LDX #$03
+         JSR >0
+         LDX #$0B
+;
+^0       LDA $C080,X
+         LDA $C080,X
+         STY TMP2
+         LDA #$D0
+         STA TMP3
+         LDX #16
+;
+^1       LDA (TMP0),Y
+         PHA 
+         LDA (TMP2),Y
+         STA (TMP0),Y
+         PLA 
+         STA (TMP2),Y
+         INY 
+         BNE <1
+         INC TMP1
+         INC TMP3
+         DEX 
+         BNE <1
+^2       RTS 
+;-----------
+;
+; GET text window
+;
+GETTEXT  JSR WITEBORD
+         JSR PRINT
+         BYT PRINVR,PRRITE
+         .DA #PRLOC,149,#4
+         .DA #PRSTR,TXTGEDIT
+         BYT ':',CR
+         BYT PRBIG,PRLEFT
+         .DA #PRLOC,160,#1
+         BYT 'GET',CR,0
+         JMP ESCBACK
+;
+; Set type info with correct
+; address for load/save
+;
+SETADR   STY >0+0
+         STA >0+1
+         JSR SETTYPE
+TXTGR    BYT 'GRAPHIC',0
+TXTGEDIT BYT 'GRAPHIC EDITOR+',0
+         BYT 0
+         BYT 4
+^0       ADR UNDOBUFF
+         ADR $240
+         RTS 
+;-----------
+;
+; Print current EDITBUFF to printer
+;
+CMDPRINT JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BRK 
+         LDA #'-'
+         JSR CHKPRINT
+         BCS >0
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET
+         BYT ' TO PRINT '
+         .DA #PRSTR,TXTGR,#CR,#0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR PRINTGR
+^0       JMP SHOWBOTM
+;-----------
+;
+; Change input device
+;
+CMDDEVIC JSR DEVICECH
+         JMP SHOWBOTM
+;-----------
+;
+; Clear buffer
+;
+CMDCLEAR JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BYT PRCNTR
+         .DA #PRSTR,TXTRET
+         BYT ' TO CLEAR '
+         .DA #PRSTR,TXTGR
+         BYT ' AREA',CR,0
+         JSR GETKEY
+         CMP #CR
+         BNE >0
+         JSR BUFFSAVE
+         JSR SETMAX
+         JSR SHOWGR
+^0       JMP SHOWBOTM
+;-----------
+;
+; Quit the editor
+;
+CMDQUIT  JSR CMDQUIT2
+         JSR SHOWBOTM
+QUITRTS  RTS 
+;
+CMDQUIT2 JSR BLAKBOTM
+         JSR PRINT
+         .DA #PRLOC,140,#185
+         BYT PRCNTR
+         .DA #PRSTR,TXTPRET,' TO '
+         .DA #PRSTR,TXTGTMM,#NOCR,#0
+         JSR GETKEY
+         CMP #CR
+         BNE QUITRTS
+         JMP MAINMENU
+TXTGTMM  BYT 'GO TO MAIN MENU',0
+TXTPRET  BYT 'PRESS '
+TXTRET   BYT '<RETURN>',0
+;-----------
+;
+; Text in graphic
+;
+CMDTEXT  LDA #4
+         JSR SHAPHELP
+         JSR DRAWTEXT
+         JMP SHOWRITE
+;-----------
+;
+; Shape handlers
+;
+CMDLINES LDA #0
+         HEX 2C
+CMDRAYS  LDA #1
+         HEX 2C
+CMDBOX   LDA #2
+         HEX 2C
+CMDOVAL  LDA #3
+         JSR SHAPHELP
+         JSR SHOWCOOR
+;
+         LDA SHAPETYP
+         AND #7
+         STA >0+1
+         CLC 
+;
+^0       LDX #00
+         JSR DOSHAPE
+         BCS >1
+         LDA #00
+SHAPETYP =   *-1
+         ASL 
+         BMI <0
+;
+; Fix up screen when done
+;
+^1       JMP SHOWRITE
+;-----------
+;
+; Print help screen
+;
+HY1      =   2
+HY2      =   36
+HY3      =   105
+HY4      =   164
+;
+HELPTEMP BRK 
+;
+SHAPHELP STA TMP0
+         ASL 
+         ADC TMP0
+         ASL 
+         TAX 
+         LDY SHAPHLP9+0,X
+         LDA SHAPHLP9+1,X
+         STY >0+1
+         STA >0+2
+         LDA SHAPHLP9+2,X
+         STA SHAPETYP
+;
+         LDY SHAPHLP9+3,X
+         LDA SHAPHLP9+4,X
+         STY >4+1
+         STA >4+2
+;
+         LDA SHAPHLP9+5,X
+         STA HELPTEMP
+;
+         JSR SETPLOTX
+         JSR BUFFSAVE
+;
+         JSR BLAKBOTM
+         JSR PRINT
+         BYT RTOSBLAK,26,0,14,192
+         BYT PRBIG,PRCNTR
+         .DA #PRLOC,XCENT,#HY1
+^0       .DA #PRSTR,$FFFF,#NOCR,#0
+;
+         LSR HELPTEMP
+         BCC >1
+;
+         LDX #26
+         LDY #HY2
+         LDA #0
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,227,#HY2+3
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         BYT 'TO',CR
+         BYT 'DRAW',CR
+         .DA #PRLOC,XCENT,#HY2+48
+         BYT PRCNTR
+         BYT PRCSPACE,1
+         .DA 'N ',#PRSTR,TXTNEGA,#CR
+         BRK 
+;
+^1       LSR HELPTEMP
+         BCC >2
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#HY2+26
+         BYT 'USE',CR
+         BYT 'KEYBOARD',CR
+         BYT 'TO ENTER',CR,0
+         JMP >3
+;
+^2       JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,XCENT,#HY3
+         BYT 'PRESS',CR
+         .DA #PRSTR,TXTRET,#CR
+         BYT 'TO PLACE',CR,0
+;
+^3       JSR PRINT
+         BYT PRCNTR
+^4       .DA #PRSTR,$FFFF,#CR
+         BYT RTOSWITE,26,HY4-6,14,2
+         BYT PRVTAB,HY4
+         BYT 'PRESS <ESC>',CR,0
+;
+         LSR HELPTEMP
+         BCC >5
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRSTR,TXTWD,#CR,#0
+         JMP >6
+;
+^5       JSR PRINT
+         BYT PRCNTR
+         BYT 'TO GO BACK',CR,0
+;
+^6       RTS 
+;
+TXTWD    BYT 'WHEN DONE',0
+;
+; 64 means stay in shape routine
+; until ESC is pressed. 128 means
+; don't re-initialize X1,Y1 each time
+; the remaining number is the shape
+; number used by DOSHAPE
+;
+SHAPHLP9 .DA TXTLINES,#0+64
+         .DA TXTLINE,#%101
+;
+         .DA TXTRAYS,#0+64+128
+         .DA TXTLINE,#%101
+;
+         .DA TXTBOX,#2
+         .DA TXTBOX,#%001
+;
+         .DA TXTOVAL,#4
+         .DA TXTOVAL,#%001
+;
+         .DA TXTTEXT,#0
+         .DA TXTTEXT,#%110
+;
+TXTLINE  BYT 'LINE',0
+TXTLINES BYT 'LINES',0
+TXTRAYS  BYT 'RAYS',0
+TXTBOX   BYT 'BOX',0
+TXTOVAL  BYT 'OVAL',0
+TXTTEXT  BYT 'TEXT',0
+;-----------
+;
+; Show next page
+;
+CMDSPACE INC PAGENUM
+         LDA PAGENUM
+         EOR #4
+         BNE SHOWPAGE
+         STA PAGENUM
+;
+; Show help screen
+;
+SHOWPAGE JSR BLAKPAGE
+         JSR >0
+         CLC 
+         RTS 
+;
+^0       LDY #0
+PAGENUM  =   *-1
+         JSR JMPVECTS
+         ADR PAGE1
+         ADR PAGE2
+         ADR PAGE3
+         ADR PAGE4
+;
+XCENT    =   231
+XEDGE    =   182
+XR1      =   13
+XR2      =   24
+;
+PG1Y     =   68
+PAGE1    JSR PRINT
+         BYT PRCSPACE,1
+         BYT PRSPC,14
+         .DA #PRLOC,XEDGE,#PG1Y
+         .DA #PRSTR,TXTCTRL,'S',#CR
+         .DA #PRSTR,TXTCTRL,'G',#CR
+         .DA #PRSTR,TXTCTRL,'P',#CR
+         .DA #PRSTR,TXTCTRL,'C',#CR
+         .DA #PRSTR,TXTCTRL,'D',#CR
+         .DA #PRSTR,TXTCTRL,'Q',#CR
+         .DA #PRSTR,TXTCTRL,'L',#CR
+         .DA #PRSTR,TXTCTRL,'T',#CR
+         .DA #PRLOC,279,#PG1Y
+         BYT PRRITE
+         BYT 'SAVE',CR
+         BYT 'GET',CR
+         BYT 'PRINT',CR
+         BYT 'CLEAR',CR
+         BYT 'DEVICE',CR
+         BYT 'QUIT',CR
+         BYT 'LOCK',CR
+         .DA #PRSTR,TXTTILE,#CR
+         BRK 
+         RTS 
+;
+TXTCTRL  BYT 'CTRL-',0
+;-----------
+PAGE2    JSR PRINT
+         BYT PRSPC,14
+         BYT PRCSPACE,1
+         .DA #PRLOC,XEDGE,#66
+;
+         BYT 'D - DRAW',CR
+         BYT 'E',PRRTAB,XR1,'- ERASE',CR
+         BYT '1',PRRTAB,XR1,'- INSERT ROW',CR
+         BYT '2',PRRTAB,XR1,'- DELETE ROW',CR
+;
+         BYT PRSPC,8
+         BYT '3',PRRTAB,XR1,'- INSERT',CR
+         BYT PRSPC,14,PRRTAB,XR2
+         .DA #PRSTR,PAGE2COL,#CR
+;
+         BYT PRSPC,8
+         BYT '4',PRRTAB,XR1,'- DELETE',CR
+         BYT PRSPC,14,PRRTAB,XR2
+         .DA #PRSTR,PAGE2COL,#CR
+;
+         BYT 'F',PRRTAB,XR1,'- FLOOD FILL',CR
+         BRK 
+         RTS 
+;
+PAGE2COL BYT 'COLUMN',0
+;-----------
+P3SPC    =   15
+;
+PAGE3    JSR PRINT
+         BYT PRCSPACE,1
+         .DA #PRLOC,XEDGE,#66
+;
+         BYT 'H - FLIP',CR
+         BYT PRSPC,P3SPC,PRRTAB,XR2
+         BYT 'HORIZONTAL',CR
+;
+         BYT PRSPC,8
+         BYT 'V',PRRTAB,XR1,'- FLIP',CR
+         BYT PRSPC,P3SPC,PRRTAB,XR2
+         BYT 'VERTICAL',CR
+;
+         BYT 'N',PRRTAB,XR1
+         .DA #PRSTR,TXTNEGA,#CR
+;;;;;;;; BYT 'ESC - GO BACK',CR
+         BRK 
+         LDX #26
+         LDY #133
+         LDA #1
+         JSR SHOWAROW
+         JSR PRINT
+         BYT PRRITE
+         .DA #PRLOC,279,#148
+         BYT 'SCROLL',CR,0
+         RTS 
+TXTNEGA  BYT '- NEGATIVE',0
+;-----------
+PAGE4Y   =   101
+Z1       =   15
+Z2       =   PAGE4Y-1
+;
+PAGE4    JSR PRINT
+         .DA #PRLOC,XCENT,#66
+         BYT PRCNTR
+         BYT 'POSITION',CR
+         BYT 'CURSOR',CR
+         BYT '& PRESS:',CR
+;        BYT RTOSWITE,26,92,14,2
+         BYT PRLEFT,PRSPC,Z1
+         BYT PRVTAB,PAGE4Y
+         .DA #PRHTAB,XEDGE
+;
+         BYT 'L',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTLINES,#CR
+         BYT PRPIC,37,Z2,2,9
+         HEX 813E70230F2081208123602018200620
+         HEX C13F
+;
+         BYT 'R',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTRAYS,#CR
+         BYT PRPIC,37,Z2+Z1,2,9
+         HEX 218131811181191809064D0135810F81
+         HEX C13F
+;
+         BYT 'B',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTBOX,#CR
+         BYT PRPIC,37,Z2+Z1*2,2,9
+         HEX C13F0120012001200120012001200120
+         HEX C13F
+;
+         BYT 'O',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTOVAL,#CR
+         BYT PRPIC,37,Z2+Z1*3,2,9
+         HEX 70030C0C021001200120012002100C0C
+         HEX 7003
+;
+LISABUG0 =   Z2+Z1*4
+         BYT 'T',PRRTAB,XR1,'- '
+         .DA #PRSTR,TXTTEXT,#CR
+         BYT PRPIC,37,LISABUG0-1,2,11
+         HEX 1E1F33333F1F3333331F821E1F033303
+         HEX 3303331E1F
+         BRK 
+         RTS 
+;-----------
+;
+; Erase right side of screen
+;
+BLAKRITE JSR PRINT
+         BYT RTOSBLAK,26,0,14,192
+         BYT RTOSWITE,26,61,14,2
+         BYT RTOSWITE,26,177,14,2,0
+;
+; Erase bottom of screen
+;
+BLAKBOTM JSR PRINT
+         BYT RTOSBLAK,0,181,40,11,0
+         RTS 
+;
+; Erase help page area
+;
+BLAKPAGE JSR PRINT
+         BYT RTOSBLAK,26,63,14,114,0
+         RTS 
+;-----------
+;
+; Show right part of screen
+;
+SHOWRITE JSR BLAKRITE
+         LDX #26
+         LDY #0
+         TYA 
+         JSR SHOWAROW
+         JSR PRINT
+         .DA #PRLOC,227,#11
+         BYT 'MOVE',CR
+         BYT 'CURSOR',CR
+         .DA #PRLOC,182,#39
+         BYT PRSPC,11
+         BYT PRCSPACE,1
+         BYT 'P - PATTERN',CR
+         BYT 'X',PRRTAB,XR1,'- MIRRORS',CR
+         BRK 
+         JSR SHOWBOXS
+         JSR SHOWPAGE
+;
+; Display bottom help stuff
+;
+SHOWBOTM JSR BLAKBOTM
+         JSR SHOWCOOR
+         JSR PRINT
+         .DA #PRHTAB,169
+         BYT PRRITE,PRCSPACE,1
+         BYT 'U - UNDO',NOCR,0
+;
+         LDA #XEDGE/7
+         JSR SPACEBAR
+;
+         CLC 
+         RTS 
+;-----------
+;
+; Show coordinates X=  Y=
+;
+SHOWCOOR JSR PRINT
+         .DA #PRLOC,7,#185
+         BYT 'X=',NOCR
+         .DA #PRHTAB,49
+         BYT 'Y=',NOCR,0
+         RTS 
+;-----------
+;
+; Set parameters for EDIT routines
+; and clear EDITBUFF
+;
+SETMAX   LDX #88
+         LDY #52
+         JSR EDITINIT
+         JMP CLRBUFF
+;-----------
+;
+; Save special graphic
+; enter with A: 0=Tile Magic
+;               1=Creature Maker
+;
+SAVESP0  ADR TXTTM
+         ADR TXTCMAKE
+SAVESP1  ADR TXTTILE
+         ADR TXTCREAT
+;
+TXTTILE  BYT 'TILE',0
+TXTCREAT BYT 'CREATURE',0
+;
+SAVESPY0 =   32
+SAVESPY1 =   108
+;
+SAVESPEC ASL 
+         TAX 
+         LDA SAVESP0,X
+         STA >0+1
+         LDA SAVESP0+1,X
+         STA >0+2
+         LDA SAVESP1,X
+         STA >1+1
+         LDA SAVESP1+1,X
+         STA >1+2
+;
+         JSR WITEBORD
+         JSR ESCBACK
+         JSR PRINT
+         BYT PRCNTR,PRBIG,PRINVR
+         .DA #PRLOC,140,#1
+^0       .DA #PRSTR,0000,#CR
+         BYT RTOSWITE,13,SAVESPY0,14,60
+         BYT PRVTAB,SAVESPY0+4
+         BYT PRSMAL,'@',CR
+         BYT PRVTAB,SAVESPY1
+         BYT PRNORM
+         BYT 'MAKE A CHOICE:',CR
+         BYT CR,CR
+         BYT 'SAVE '
+^1       .DA #PRSTR,0000,#CR
+         .DA 'GO TO ',#PRSTR,TXTGEDIT,#CR
+         .DA #PRSTR,TXTGTMM,#CR
+         BRK 
+^2       LDY #00
+         JSR SELECT
+         BYT 6,28,SAVESPY1+23,3
+         ADR RTS
+         BCS >3
+         STY <2+1
+^3       RTS 
+;
+;
+;
+         ICL "S:GREDIT2"

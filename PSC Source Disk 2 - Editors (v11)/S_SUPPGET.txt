@@ -1,0 +1,663 @@
+         NLS 
+         TTL "S:SUPPGET"
+         NOG 
+ORG      =   $4000
+;
+SWAPRAM  =   $2C0
+;
+; 02/10/85
+; 09/09/85 last mod
+;
+; Routine that sits in RAMcard and
+; moves itself down to $4000 when
+; it is used.
+;
+; Constants:
+;
+MAXFLEN  =   15
+;
+ESC      =   27
+;
+; Zero page
+;
+PRLO     EPZ $3A
+PRHI     EPZ $3B
+LOADLO   EPZ $FA
+LOADHI   EPZ $FB
+TMP0     EPZ $FC
+TMP1     EPZ $FD
+TMP2     EPZ $FE
+TMP3     EPZ $FF
+;
+TMPLO    EPZ TMP0
+TMPHI    EPZ TMP1
+;
+; Existing routines:
+;
+DATADRIV =   $95F4
+MENUSEL  =   $95F5
+;
+SOUND    =   $6FCC
+;
+BLOAD    =   $0809
+PSDQ     =   $7019
+ANYKEY   =   $8005
+CATERR   =   $8008
+STRPUT   =   $8E06
+RTOS     =   $8E09
+STRGET   =   $8E12
+STRGETPM =   $8E15
+;
+STROUT   =   $8A00
+SPARM    =   STROUT+3
+PRINBUFF =   $BB00
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JSR SETTYPE
+;
+; Access normal catalog
+;
+         LDA #0
+         STA $B00D
+         LDA DATADRIV
+         STA $AA68
+         STA $B7EA
+         ORA #'0'
+         CMP #'1'
+         BNE *+4
+         LDA #' '
+         STA DRIVENUM
+;
+MAINLOOP JSR CLS
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#52
+         BYT 'CHOOSE A '
+         .DA #PRSTR,TXTTYPE
+         BYT ':',CR
+;
+         BYT PRLEFT
+         .DA #PRLOC,15,#92
+         BYT 'PLACE DATA DISK IN DRIVE '
+DRIVENUM BYT '2',CR,CR,CR
+         BYT 'TYPE IN NAME OF '
+         .DA #PRSTR,TXTTYPE
+         BYT ' OR',CR
+         BYT 'PRESS <RETURN> FOR '
+         .DA #PRSTR,TXTTYPE
+         BYT ' LIST',CR,CR
+         BYT '>',NOCR,0
+;
+         JSR INPUTNAM
+;
+; <ESC> pressed?
+;
+         LDA $C000
+         STA $83FF
+         BCS QUIT
+;
+; Make sure that data disk is
+; in the drive.
+;
+         JSR PSDQ
+         BNE >0
+;
+         JSR CLS
+;
+         LDA NAMEBUFF
+         BEQ CATALOG
+;
+         JSR LOADFILE
+         BCC QUIT
+^0       JMP MAINLOOP
+;
+QUIT     LDA #1
+         STA $AA68
+         JSR CLS
+         JMP SWAPRAM
+;-----------
+;
+; CATALOG disk
+;
+CATALOG  JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#20
+         BYT 'LIST OF '
+         .DA #PRSTR,TXTTYPE
+         BYT 'S ON THIS DISK:',CR,0
+;
+         LDA #$FF
+         STA CATPAGE
+         STA CATCOUNT
+         JSR CATINIT
+;
+^0       INC CATCOUNT
+         JSR CATFILE
+         BCS CATDONE
+         STA CATFLMOD
+         STY CATFLMOD+1
+         INC CATPAGE
+         LDA CATPAGE
+         EOR #15
+         BNE >1
+         STA CATPAGE
+         JSR ANYKEY
+         AND #$7F
+         CMP #ESC
+         BEQ CATDONE2
+         JSR CLS2
+;
+^1       LDA #00
+CATPAGE  =   *-1
+         ASL 
+         ASL 
+         ASL 
+         ADC #36
+         STA CATYMOD
+         JSR PRINT
+         BYT PRLEFT
+         .DA #PRLOC,64
+CATYMOD  HEX FF
+         .DA #PRSTR
+CATFLMOD ADR $FFFF
+         BYT CR,0
+         JMP <0
+;
+CATDONE  LDA #00
+         BNE >0
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#64
+         BYT 'NONE',CR,0
+;
+^0       JSR ANYKEY
+CATDONE2 JMP MAINLOOP
+;
+CATCOUNT =   CATDONE+1
+;-----------
+;
+; Input file name
+;
+INPUTNAM LDX #INPUTNM2
+         LDY /INPUTNM2
+         LDA #MAXFLEN
+         STX STRGETPM
+         STY STRGETPM+1
+         STA STRGETPM+2
+         LDA #0
+         STA NAMEBUFF
+         JMP STRGET
+;
+INPUTNM2 HEX 0200
+         ADR 27
+         ADR 140
+         HEX 000200
+         ADR NAMEBUFF
+         HEX 02
+;-----------
+;
+; Load in file
+;
+LOADFILE LDY #MAXFLEN
+         LDA #' '
+^0       DEY 
+         STA FILENAME+5,Y
+         BNE <0
+;
+^1       LDA NAMEBUFF,Y
+         BEQ >2
+         STA FILENAME+5,Y
+         INY 
+         BNE <1
+;
+^2       LDX #FILENAME
+         LDY /FILENAME
+         JSR BLOAD
+         BNE ERROR
+;
+; If FONT, then transfer info
+; to $816-$821
+;
+         LDA #00
+TYPE     =   *-1
+         BNE >5
+;
+; Turn off hi bits (done flags)
+;
+         BIT $C083
+         BIT $C083
+         LDY #$00+$0C
+^3       LDA (LOADLO),Y
+         AND #$7F
+         STA (LOADLO),Y
+         INY 
+         CPY #$3B+$0C
+         BLT <3
+;
+; Fix "@" pointers in font
+;
+         LDY #$00+$2C
+         LDA #88
+         STA (LOADLO),Y
+         LDY #$3B+$2C
+         LDA #52
+         STA (LOADLO),Y
+         LDY #$76+$2C
+         LDA #$00
+         STA (LOADLO),Y
+         LDY #$B1+$2C
+         LDA #$58
+         STA (LOADLO),Y
+;
+         LDY #$0B
+^4       LDA (LOADLO),Y
+         STA $816,Y
+         DEY 
+         BPL <4
+         LDA $C082
+;
+^5       CLC 
+         RTS 
+;-----------
+;
+; Handle DOS errors. Only handles
+;
+; FILE NOT FOUND and I/O ERROR!
+;
+ERROR    CMP #6
+         BEQ >0
+;
+; I/O error message
+;
+         JSR $A316
+         JSR CATERR
+         SEC 
+         RTS 
+;
+; File not found message
+;
+^0       JSR CLS
+         JSR SOUND
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#48
+         BYT 'CANNOT FIND',CR,CR
+         .DA #PRSTR,NAMEBUFF,#CR,#CR
+         BYT 'ON THIS DISK',CR,0
+;
+^1       JSR ANYKEY
+         SEC 
+         RTS 
+;-----------
+;
+; PRINT routine
+;
+PRLOC    =   1
+PRSTR    =   2
+PRLEFT   =   3
+PRCNTR   =   4
+CR       =   5
+NOCR     =   6
+;
+; WARNING!!! the "CR" defined here is
+; for PRINT purposes only, as you can
+; see, it is 5, not the normal 13!
+;
+PRINT    PLA 
+         STA PRLO
+         PLA 
+         STA PRHI
+;
+         LDA #2
+         STA SPARM
+         STA SPARM+7
+;
+PRINT1   LDX #0
+PRINT2   JSR PRINTGET
+         CMP #' '
+         BLT PRINT3
+         STA PRINBUFF,X
+         INX 
+         BNE PRINT2
+;
+PRINT3   ASL 
+         TAY 
+         LDA PRINT5,Y
+         STA PRINT4+1
+         LDA PRINT5+1,Y
+         STA PRINT4+2
+         CLC 
+PRINT4   JSR $FFFF
+         BCC PRINT2
+         BCS PRINT1
+;
+PRINT5   ADR PRZZDONE
+         ADR PRZZLOC
+         ADR PRZZSTR
+         ADR PRZZLEFT
+         ADR PRZZCNTR
+         ADR PRZZCR
+         ADR PRZZNOCR
+;-0-
+PRZZDONE PLA 
+         PLA 
+         JSR PRINTGET
+         JMP (PRLO)
+;-1-
+PRZZLOC  JSR PRINTGET
+         STA SPARM+2
+         STA PRNTXLO
+         JSR PRINTGET
+         STA SPARM+3
+         STA PRNTXHI
+         JSR PRINTGET
+         STA SPARM+4
+         RTS 
+;-2-
+PRZZSTR  JSR PRINTGET
+         STA >0+1
+         JSR PRINTGET
+         STA >0+2
+         LDY #0
+^0       LDA $FFFF,Y
+         BEQ >2
+         CMP #' '
+         BLT >1
+         STA PRINBUFF,X
+         INX 
+^1       INY 
+         BNE <0
+^2       CLC 
+         RTS 
+;-3-
+PRZZLEFT LDA #0
+         HEX 2C
+;-4-
+PRZZCNTR LDA #2
+         STA SPARM+1
+         RTS 
+;-5-
+PRZZCR   JSR PRZZNOCR
+         LDY #00
+PRNTXLO  =   *-1
+         LDA #00
+PRNTXHI  =   *-1
+         STY SPARM+2
+         STA SPARM+3
+         LDA SPARM+4
+         CLC 
+         ADC #8
+         STA SPARM+4
+         SEC 
+         RTS 
+;-6-
+PRZZNOCR LDA #0
+         STA PRINBUFF,X
+         LDY #PRINBUFF
+         LDA /PRINBUFF
+         STY SPARM+9
+         STA SPARM+10
+         JSR STROUT
+         SEC 
+         RTS 
+;---
+PRINTGET INC PRLO
+         BNE >0
+         INC PRHI
+^0       LDY #0
+         LDA (PRLO),Y
+         RTS 
+;-----------
+;
+; Clear screen routines
+;
+CLSDATA  BYT 1,17,38,165
+         BYT 1,28,38,154
+;
+CLS      LDX #3
+         HEX 2C
+CLS2     LDX #7
+         LDY #3
+^0       LDA CLSDATA,X
+         STA RTOS+3,Y
+         DEX 
+         DEY 
+         BPL <0
+         LDA #1
+         JMP RTOS
+;-----------
+;
+; Given A=TYPE (0:font, 1:border)
+; initialize all the type variables
+; text, load address, etc...
+;
+SETTRAM  BYT $81,$89
+SETTTYP  BYT TXTYPE0-TXTYPES
+         BYT TXTYPE1-TXTYPES
+;
+; Text type and load addresses
+;
+TXTYPES: 
+TXTYPE0  BYT 'FONT',0
+         HEX D0E8
+;
+TXTYPE1  BYT 'BORDER',0
+         HEX DEDF
+;---
+;
+; First set 16k RAMcard
+;
+SETTYPE  STA TYPE
+         TAY 
+         LDX SETTRAM,Y
+         LDA $C000,X
+         LDA $C000,X
+         LDX SETTTYP,Y
+;
+         LDY #0
+;
+; Set type text
+;
+^0       LDA TXTYPES,X
+         STA TXTTYPE,Y
+         BEQ >2
+;
+; Set file prefix
+;
+         CPY #4
+         BGE >1
+         STA FILENAME,Y
+;
+^1       INX 
+         INY 
+         BNE <0
+;---
+;
+; Check page byte
+;
+; If 2 (SIGN) or 4 (BANNER) then
+; skip page check.
+; If 1 (GC) then don't invert
+; If 3 (LH) then invert
+;
+^2       LDA MENUSEL
+         LSR 
+         BCC >1
+         EOR $8300
+         CMP #1
+         BNE >1
+         INX 
+;
+^1       LDA TXTYPES+1,X
+         LDY #0
+         STY LOADLO
+         STA LOADHI
+;
+; Store text equivalent in FILEADR
+;
+         PHA 
+         LSR 
+         LSR 
+         LSR 
+         LSR 
+         JSR >2
+         STA FILEADR
+         PLA 
+;
+^2       AND #$0F
+         ORA #'0'
+         CMP #'9'+1
+         BLT >3
+         ADC #6
+^3       STA FILEADR+1
+         RTS 
+;-----------
+;
+; Filename used during loading
+;
+FILENAME ASC 'XXXX.'
+         DFS MAXFLEN,0
+         ASC ',A$'
+FILEADR  ASC 'XX'
+         ASC '00'
+         HEX 00
+;-----------
+;
+; Read CATALOG routine
+;
+; JSR CATINIT to initialize
+;
+; JSR CATFILE to get a filename
+;
+; SEC=no more files
+;
+; CLC=found a file
+;     A=lo byte\
+;     Y=hi byte-address of text
+;
+CATINIT  LDA #0
+         STA TMP2
+         LDY #17
+         JSR READSECT
+CATEND   SEC 
+         RTS 
+;
+CATFILE  LDA TMPLO
+         CLC 
+         ADC #$23
+         STA TMPLO
+         BCC >0
+         INC TMPHI
+^0       DEC TMP2
+         BPL >1
+;
+         LDY SECTBUFF+1
+         LDA SECTBUFF+2
+         BEQ CATEND
+         JSR READSECT
+         LDY #SECTBUFF-24
+         LDA /SECTBUFF-24
+         STY TMPLO
+         STA TMPHI
+         LDA #7
+         STA TMP2
+         BNE CATFILE
+;
+; Check filename
+;
+; Deleted? end of cat?
+;
+^1       LDY #0
+         LDA (TMPLO),Y
+         BMI CATFILE
+         BEQ CATEND
+;
+; Binary file?
+;
+         INY 
+         INY 
+         LDA (TMPLO),Y
+         AND #$7F
+         CMP #4
+         BNE CATFILE
+;
+         LDX #0
+^0       INY 
+         LDA (TMPLO),Y
+         AND #$7F
+         CMP FILENAME,X
+         BNE CATFILE
+         INX 
+         CPX #5
+         BLT <0
+;
+         LDY #$20
+^1       LDA (TMPLO),Y
+         EOR #$A0
+         BNE >2
+         STA (TMPLO),Y
+         DEY 
+         BPL <1
+;
+^2       LDA (TMPLO),Y
+         AND #$7F
+         STA (TMPLO),Y
+         DEY 
+         BNE <2
+;
+         LDA TMPLO
+         LDY TMPHI
+         CLC 
+         ADC #8
+         BCC >3
+         INY 
+^3       CLC 
+         RTS 
+;---
+IOB      =   $B7E8
+;
+; Read a sector
+; A=sector, Y=track
+;
+READSECT STA IOB+5
+         STY IOB+4
+         LDA #0
+         STA IOB+3
+         LDY #SECTBUFF
+         LDA /SECTBUFF
+         STY IOB+8
+         STA IOB+9
+         LDA #1
+         STA IOB+12
+         JSR $3E3
+         JSR $3D9
+         BCS >0
+         RTS 
+;
+^0       PLA 
+         PLA 
+         PLA 
+         PLA 
+         LDA #8
+         JSR ERROR
+         JMP MAINLOOP
+;-----------
+;
+; Don't need to save all the storage
+; areas
+;
+         USR "O:SUPPGET",ORG
+;-----------
+TXTTYPE  BYT 'BORDER',0
+;
+; Filename that user enters
+;
+NAMEBUFF: 
+SECTBUFF: 
+END:     
+;
+;
+;
+         END 

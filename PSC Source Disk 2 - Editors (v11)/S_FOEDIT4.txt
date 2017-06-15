@@ -1,0 +1,500 @@
+;
+; S:FOEDIT4
+;
+; MAINCODE is the length of the
+; code that must fit in the
+; $4000.4FFF area
+;
+MCODE    =   *-ORG
+;
+;-----------
+;
+; Move program to it's home
+;
+MOVEPROG LDY #0
+         STY SAVED?
+         LDX #16
+^0       LDA ORGLOAD,Y
+^1       STA ORG,Y
+         INY 
+         BNE <0
+         INC <0+2+ORGDIFF
+         INC <1+2+ORGDIFF
+         DEX 
+         BNE <0
+;
+         LDX #4
+^2       LDA TAILEND+ORGDIFF,Y
+^3       STA TAILORG,Y
+         TXA 
+         BNE >4
+         CPY #$A5
+         BEQ >5
+^4       INY 
+         BNE <2
+         INC <2+2+ORGDIFF
+         INC <3+2+ORGDIFF
+         DEX 
+         BPL <2
+;
+; Set EDIT routines
+;
+^5       LDX #FONTW
+         LDY #FONTH
+         JSR EDITINIT
+         JSR FONTMODS
+         JMP START2
+;-----------
+TAILEND: 
+         PHS TAILORG
+;-----------
+;
+; Math routines
+;
+;
+; CALCMEM : returns A=% memory used
+;
+; CALCHEAD: calculates and stores the
+;           12 header bytes and also
+;           calculates the values for
+;           the space character ($20)
+;
+CPLMAX   =   26
+LPPMAX   =   14
+;-----------
+;
+; Calculate percentage of memory used
+;
+MAXLD100 =   MAXLEN/100
+;
+CALCMEM  LDY #MAXLD100+1
+         LDA /MAXLD100+1
+         STY ACC2LO
+         STA ACC2HI
+         LDY LENLO
+         LDA LENHI
+         JSR DIVIDE
+         TYA 
+         RTS 
+;-----------
+;
+; Calculate the 12 header bytes
+;
+;------
+CHZ      EPZ $80
+;
+CHMWL    EPZ $50+13
+CHMWH    EPZ $50+14
+CHMH     EPZ CHZ
+;
+HEADER   =   FONTBUFF
+;
+CALCHEAD JSR STINSTAL
+         ADR RTS
+         ADR RTS
+         HBY FONT2BUF
+;
+; Transfer font pointers over to
+; FONT2BUF
+;
+         JSR TRF1F2
+;
+; Print sample text to generate width
+; variable
+;
+         JSR PRINT
+         BYT PRRITE
+         BYT PRCSPACE,0
+         BYT PRKERN,1
+^2       BYT 'ABCDEFGHIJKLM'
+         BYT 'NOPQRSTUVWXYZ'
+CHLCOUNT =   *-<2
+         BYT CR
+         BYT PRKERN,0
+         BRK 
+         JSR STSCREEN
+;---
+;
+; Calculate the maximum height
+;
+         LDA #0
+         LDX #'Z'-$20
+^3       CPX #'@'-$20
+         BEQ >4
+         CMP FONT1H,X
+         BGE >4
+         LDA FONT1H,X
+^4       DEX 
+         BNE <3
+         STA CHMH
+;---
+;
+; Calculate average width and
+; store space ($20) values
+;
+         LDY #CHLCOUNT
+         LDA /CHLCOUNT
+         STY ACC2LO
+         STA ACC2HI
+         LDY CHMWL
+         LDA CHMWH
+         JSR DIVIDE
+;
+; Use 1/2 of average width
+;
+         TYA 
+         LSR 
+         STA FONT1W
+         LDA #0
+         STA FONT1H
+         LDY #FONT1H
+         LDA /FONT1H
+         STY FONT1AL
+         STA FONT1AH
+;---
+;
+; Store the reference line values
+;
+         LDA REFX1
+         STA FONT1W+$20
+         LDA REFY1
+         STA FONT1H+$20
+         LDA REFY2
+         STA FONT1AL+$20
+         LDA #0
+         STA FONT1AH+$20
+;---
+;
+; Greeting card data
+;
+         LDY #0
+         LDX #CHGCTABL-CHTABLES
+         JSR CHCALC
+;---
+;
+; Letterhead data
+;
+; If the font will fit after it
+; has been doubled, then use
+; that value instead...
+;
+         LDA CHMH
+         PHA 
+         CMP #1+FONTH/2
+         BGE >0
+         ASL CHMH
+;
+^0       LDY #4
+         LDX #CHLHTABL-CHTABLES
+         JSR CHCALC
+;
+         LDA #52
+         SEC 
+         SBC CHMH
+         LSR 
+         CLC 
+         ADC #3
+         STA HEADER+5
+         LDA HEADER+7
+         STA HEADER+6
+         PLA 
+         STA CHMH
+;---
+;
+; Banner calc
+;
+         LDA #40
+         SEC 
+         SBC CHMH
+         LSR 
+         STA HEADER+7
+;---
+;
+; Screen Magic data
+;
+         LDY #8
+         LDX #CHSMTABL-CHTABLES
+;
+; fall into CHCALC
+;
+;------
+;
+; Calculate group of values
+;
+; 1) Characters Per Line (CPL)
+;
+;    (WIDTH/MW)
+;
+CHCALC   STY TMP0
+         STX TMP1
+         LDY CHMWL
+         LDA CHMWH
+         STY ACC2LO
+         STA ACC2HI
+         LDY CHTABLES,X
+         LDA CHTABLES+1,X
+         JSR DIVIDE
+         TYA 
+;
+; Make even
+;
+         LSR 
+         ASL 
+;
+         CMP #CPLMAX
+         BLT *+4
+         LDA #CPLMAX
+         LDY TMP0
+         STA HEADER,Y
+;
+; 2) Y-Increment (YINC)
+;
+;    (MH+ADD VALUE)
+;
+         LDX TMP1
+         LDA CHMH
+         CLC 
+         ADC CHTABLES+5,X
+         STA HEADER+3,Y
+;
+; 3) Letters Per Page (LPP)
+;
+;    (HEIGHT/YINC)
+;
+         STA ACC2LO
+         LDA #0
+         STA ACC2HI
+         LDY CHTABLES+2,X
+         LDA CHTABLES+3,X
+         JSR DIVIDE
+         TYA 
+;
+         CMP #LPPMAX
+         BLT *+4
+         LDA #LPPMAX
+         LDY TMP0
+         STA HEADER+1,Y
+;
+; 4) Y starting Top (YTOP)
+;
+;    (HEIGHT-(LPP*YINC))/2
+;
+         STA ACC1LO
+         LDA #0
+         STA ACC1HI
+         LDA HEADER+3,Y
+         TAY 
+         LDA #0
+         JSR MULTIPLY
+;
+         LDX TMP1
+         LDA CHTABLES+2,X
+         SEC 
+         SBC ACC1LO
+         STA ACC1LO
+         LDA CHTABLES+3,X
+         SBC ACC1HI
+         LSR 
+         LDA ACC1LO
+         ROR 
+         LDY TMP0
+         CLC 
+         ADC CHTABLES+4,X
+         STA HEADER+2,Y
+         RTS 
+;---
+;
+; Header calc tables
+;
+CHTABLES: 
+CHGCTABL .DA CHLCOUNT*391,336
+         BYT 30
+         BYT 4
+CHLHTABL .DA CHLCOUNT*960,0
+         BYT 0
+         BYT 4
+CHSMTABL .DA CHLCOUNT*280,192
+         BYT 0
+         BYT 4
+;-----------
+;
+; 16 bit multiply routine
+;
+; ACC1=ACC1*ACC2
+;
+; Enter with ACC2 in A,Y
+;
+; Return with result in A,Y
+;
+MULTIPLY STY ACC2LO
+         STA ACC2HI
+         LDA #0
+         STA REMLO
+         STA REMHI
+         LDY #16
+^0       ASL REMLO
+         ROL REMHI
+         ASL ACC2LO
+         ROL ACC2HI
+         BCC >1
+         CLC 
+         LDA REMLO
+         ADC ACC1LO
+         STA REMLO
+         LDA REMHI
+         ADC ACC1HI
+         STA REMHI
+^1       DEY 
+         BNE <0
+         LDY REMLO
+         LDA REMHI
+         STY ACC1LO
+         STA ACC1HI
+         RTS 
+;-----------
+;
+; 16 bit divide routine
+;
+; ACC1=ACC1/ACC2, remainder in REM
+;
+; Enter with A=hi, Y=lo
+; ACC2LO,HI set
+;
+; Return with result in A=hi, Y=lo
+;
+DIVIDE   STY ACC1LO
+         STA ACC1HI
+         LDA #0
+         STA REMLO
+         STA REMHI
+         LDY #16
+^0       ASL ACC1LO
+         ROL ACC1HI
+         ROL REMLO
+         ROL REMHI
+         SEC 
+         LDA REMLO
+         SBC ACC2LO
+         TAX 
+         LDA REMHI
+         SBC ACC2HI
+         BCC >1
+         STX REMLO
+         STA REMHI
+         INC ACC1LO
+^1       DEY 
+         BNE <0
+         LDY ACC1LO
+         LDA ACC1HI
+         RTS 
+;-----------
+;
+; We can't use the FONT1BUF
+; because the width table has all
+; the hi bits messed up, so
+; transfer the width, height and
+; pointer tables to the FONT2BUF
+; and clear the hi bits.
+;
+TRF1F2   LDY #0
+^0       LDA FONT1BUF,Y
+         STA FONT2BUF,Y
+         INY 
+         CPY #$EC
+         BLT <0
+         LDY #$3A
+^1       LDA FONT2W,Y
+         AND #$7F
+         STA FONT2W,Y
+         DEY 
+         BPL <1
+         RTS 
+;-----------
+;
+; If the FONT hasn't been saved,
+; then put warning on the screen.
+;
+NEEDSAVE LDA SAVED?
+         BMI >0
+         CLC 
+         RTS 
+;
+^0       STX >1+1
+         STY >1+2
+         JSR >9
+         JSR MUSIC
+         JSR PRINT
+         BYT PRCNTR
+         .DA #PRLOC,140,#50
+         BYT 'WARNING !',CR,CR,CR
+         BYT 'YOU HAVE NOT SAVED',CR
+         BYT 'YOUR CURRENT FONT',CR
+         BYT CR
+         .DA #PRSTR,TXTPRET,' TO '
+^1       .DA #PRSTR,$FFFF,#CR
+         BYT PRSPC,4,CR
+         BYT 'OR',CR,CR
+         BYT CR,PRSPC,8
+         BYT '<ESC> TO GO BACK',CR,0
+;
+         JSR GETKEY
+         CMP #CR
+         BEQ >9
+         PLA 
+         PLA 
+^9       JSR PRINT
+         BYT RTOSBLAK,0,16,40,176,0
+         SEC 
+         RTS 
+;-----------
+;
+; Left justify character
+;
+LEFTJUST JSR CHKBUFF
+         BEQ >9
+;
+         LDA XCOOR
+         PHA 
+         LDA YCOOR
+         PHA 
+;
+^0       LDX #0
+         LDY #FONTH-1
+         STX XCOOR
+         STY YCOOR
+^1       JSR BASECALC
+         AND (BUFLO),Y
+         BNE >8
+         DEC YCOOR
+         BPL <1
+;
+; Scroll to the left one bit
+;
+         LDX #FONTH
+^2       LDY #5
+         CLC 
+^3       LDA (BUFLO),Y
+         ROL 
+         STA (BUFLO),Y
+         DEY 
+         BPL <3
+         LDA BUFLO
+         ADC #11
+         STA BUFLO
+         BCC *+4
+         INC BUFHI
+         DEX 
+         BNE <2
+         BEQ <0
+;
+^8       JSR SHOWGR
+         PLA 
+         STA YCOOR
+         PLA 
+         STA XCOOR
+^9       RTS 
+;-----------
+;
+;
+;
+         ICL "S:FOEDIT5"

@@ -1,0 +1,405 @@
+;
+; S:GREDIT2
+;
+FZ       EPZ $80
+;
+FGXCOOR  EPZ FZ
+FGYCOOR  EPZ FZ+1
+FGHIRES  EPZ FZ+2                      ; 3
+FGBYTE   EPZ FZ+4
+FGBCOUNT EPZ FZ+5
+FGRAMCRD EPZ FZ+6
+FGHIRES2 EPZ FZ+8
+FGWIDTH  EPZ FZ+10
+;
+; Frame grabber CAPTURE
+;
+FRAMGRAB JSR FRAMPICT
+         SEC 
+         ROR SCALING
+         LDX #96
+         LDY #70
+         STX FGXCOOR
+         STY FGYCOOR
+;
+; Invert current position and
+; set countdown timer
+;
+FRAMLOOP ASL KEEPTRAK
+         LDX FGXCOOR
+         LDY FGYCOOR
+         JSR DEVICEST
+FRAMLOP2 JSR FLSHINIT
+         JSR DRAWBOX
+         INC KEEPTRAK
+;
+^0       LDY #2
+         JSR DEVICERD
+         BCS >1
+         ASL 
+         BMI >1
+         BCS FRAMDON2
+         JSR FRAMDEV
+;
+^1       JSR POLEKEY
+         BMI >3
+;
+^2       DEC FLASHLO
+         BNE <0
+         DEC FLASHHI
+         BPL <0
+         BMI FRAMLOP2
+;
+FRAMDONE PLA 
+         PLA 
+FRAMDON2 JSR RESTSCRN
+         JSR CAPBOX
+         CLC 
+         RTS 
+;
+^3       PHA 
+         JSR RESTSCRN
+         PLA 
+         LDX FGXCOOR
+         LDY FGYCOOR
+         JSR >1
+         STX FGXCOOR
+         STY FGYCOOR
+         JMP FRAMLOOP
+;
+^1       JSR PARSE
+         .DA #'I',FRAMUP
+         .DA #$0B,FRAMUP
+         .DA #'M',FRAMDOWN
+         .DA #$0A,FRAMDOWN
+         .DA #'J',FRAMLEFT
+         .DA #$08,FRAMLEFT
+         .DA #'K',FRAMRITE
+         .DA #$15,FRAMRITE
+;
+         .DA #'N',FRAMNEG
+;
+         .DA #'D',FRAMDUBL
+         .DA #'A',FRAM2LFT
+         .DA #'S',FRAM2RIT
+;
+         .DA #$1B,FRAMESC
+         .DA #$0D,FRAMDONE
+;
+         BRK 
+         RTS 
+;
+FRAMESC  PLA 
+         PLA 
+         SEC 
+         RTS 
+;
+; Invert screen
+;
+FRAMNEG  LDA FRAMIMD0
+         EOR #$7F
+         STA FRAMIMD0
+         STA FRAMIMD1
+         STA FRAMIMD2
+;
+; Pop stack, draw screen and return
+; to main loop
+;
+FRAMWERD JSR FRAMPICT
+FRAMWRD2 PLA 
+         PLA 
+         JMP FRAMLOOP
+;-----------
+;
+; Toggle double-hires option
+;
+; If not 128k, then ignore
+;
+FRAMDUBL LDA HAS128K
+         BPL FRAMWERD
+;
+         LDA FRAM2FLG
+         EOR #$80
+         STA FRAM2FLG
+         BNE FRAMWERD
+;
+; Move double hires picture right
+;
+FRAM2RIT LDX FRAM2POS
+         DEX 
+         BPL FRAM2ST
+;
+FRAM2ERR JSR BOOP
+         JMP FRAMWRD2
+;
+; Move double hires left
+;
+FRAM2LFT LDX FRAM2POS
+         INX 
+         CPX #21
+         BGE FRAM2ERR
+;
+FRAM2ST  STX FRAM2POS
+         JMP FRAMWERD
+;
+FRAM2FLG HEX 01
+FRAM2POS HEX 00
+;-----------
+;
+; Up
+;
+FRAMUP   DEY 
+         CPY #$FF
+         BNE >0
+         LDY #YSCRNMAX-1
+;
+; Down
+;
+FRAMDOWN INY 
+         CPY #YSCRNMAX+1
+         BLT >0
+         LDY #0
+^0       RTS 
+;
+; Left
+;
+FRAMLEFT DEX 
+         CPX #$FF
+         BNE >0
+         LDX #XSCRNMAX-1
+;
+; Right
+;
+FRAMRITE INX 
+         CPX #XSCRNMAX+1
+         BLT >0
+         LDX #0
+^0       RTS 
+;------------
+;
+; Check to see if device moved
+;
+FRAMDEV  CPX FGXCOOR
+         BNE >0
+         CPY FGYCOOR
+         BNE >0
+FRAMRTS  RTS 
+;
+; Device moved
+;
+^0       STX >1+1
+         STY >2+1
+         JSR RESTSCRN
+^1       LDX #00
+^2       LDY #00
+;
+; Device input clamping
+;
+         BIT FRAMRTS
+         CPX #XSCRNMAX+1
+         BLT >3
+         CLV 
+         LDX #XSCRNMAX
+^3       CPY #YSCRNMAX+1
+         BLT >4
+         CLV 
+         LDY #YSCRNMAX
+^4       STX FGXCOOR
+         STY FGYCOOR
+         BVS FRAMRTS
+         JMP DEVICEST
+;
+KEEPTRAK BRK 
+;
+; Remove box if necessary
+;
+RESTSCRN LSR KEEPTRAK
+         ROR 
+         ASL KEEPTRAK
+         ROL 
+         BCC FRAMRTS
+;-----------
+;
+; Draw box
+;
+DRAWBOX  LDY FGYCOOR
+         STY TMP1
+         LDY #0
+;
+DRAWBOXL JSR YBASCALC
+         LDX #0
+^0       JSR BITCALC
+         EOR (FGHIRES),Y
+         STA (FGHIRES),Y
+         CPX #87
+         BEQ >2
+         LDA TMP0
+         BEQ >1
+         CMP #51
+         BEQ >1
+         LDX #86
+^1       INX 
+         BNE <0
+;
+^2       LDY TMP0
+         INY 
+         CPY #52
+         BLT DRAWBOXL
+         RTS 
+;
+; Capture box into UNDOBUFF
+;
+CAPBOX   LDY #UNDOBUFF
+         LDA /UNDOBUFF
+         STY TMP2
+         STA TMP3
+;
+         LDY FGYCOOR
+         STY TMP1
+         LDY #0
+         STY FGBCOUNT
+;
+CAPBOXL  JSR YBASCALC
+         LDX #0
+^0       JSR BITCALC
+         AND (FGHIRES),Y
+         CMP #1
+         LDA #0
+         ROL 
+         EOR #1
+         LSR 
+         ROL FGBYTE
+         INC FGBCOUNT
+         LDA FGBCOUNT
+         EOR #8
+         BNE >1
+;
+         STA FGBCOUNT
+         LDA FGBYTE
+         LDY #0
+         STA (TMP2),Y
+         INC TMP2
+         BNE >1
+         INC TMP3
+;
+^1       INX 
+         CPX #88
+         BLT <0
+;
+^2       LDY TMP0
+         INY 
+         CPY #52
+         BLT CAPBOXL
+         RTS 
+;
+; Calc Ybase
+;
+YBASCALC STY TMP0
+         LDY TMP1
+         INC TMP1
+         LDA YBASELO,Y
+         STA FGHIRES
+         LDA YBASEHI,Y
+         STA FGHIRES+1
+         RTS 
+;
+; Calculate hires X coor
+;
+BITCALC  TXA 
+         CLC 
+         ADC FGXCOOR
+         TAY 
+         BCC >1
+;
+         LDA XBIT+256,Y
+         PHA 
+         LDA XBYTE+256,Y
+         TAY 
+         PLA 
+         BNE >2
+;
+^1       LDA XBIT,Y
+         PHA 
+         LDA XBYTE,Y
+         TAY 
+         PLA 
+^2       RTS 
+;-----------
+;
+; Get picture from RAMcard
+;
+FRAMPICT LDA #0
+FRAMPCT2 PHA 
+;
+; Transfer line
+;
+         TAY 
+         LDA YBASELO,Y
+         STA FGHIRES
+         STA FGHIRES2
+         STA FGRAMCRD
+         LDA YBASEHI,Y
+         STA FGHIRES+1
+         STA FGHIRES2+1
+         LDY #0
+         AND #$10
+         BEQ >0
+         LDY #8
+^0       LDA $C083,Y
+         LDA $C083,Y
+         LDA FGHIRES+1
+         AND #$0F
+         ORA #$D0
+         STA FGRAMCRD+1
+;
+         LDA #39
+         BIT FRAM2FLG
+         BMI >2
+;
+; Regular hires
+;
+         TAY 
+^1       LDA (FGRAMCRD),Y
+         EOR #00
+FRAMIMD0 =   *-1
+         STA (FGHIRES),Y
+         DEY 
+         BPL <1
+         BMI >4
+;
+; Double hires
+;
+^2       LSR 
+         STA FGWIDTH
+         LDY FRAM2POS
+         LDX #0
+         STA $C001
+^3       BIT $C055
+         LDA (FGHIRES2),Y
+         BIT $C054
+         EOR #00
+FRAMIMD1 =   *-1
+         STA (FGHIRES,X)
+         INC FGHIRES
+         LDA (FGRAMCRD),Y
+         EOR #00
+FRAMIMD2 =   *-1
+         STA (FGHIRES,X)
+         INC FGHIRES
+         INY 
+         DEC FGWIDTH
+         BPL <3
+         STA $C000
+;
+; Next line
+;
+^4       PLA 
+         CLC 
+         ADC #1
+         CMP #$C0
+         BLT FRAMPCT2
+         RTS 
+;
+;
+;
+         ICL "S:GREDIT3"

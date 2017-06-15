@@ -1,0 +1,695 @@
+         NLS 
+         TTL "S:BACKUP"
+         NOG 
+ORG      =   $1000
+;--------------------------;
+;                          ;
+; The Print Shop Companion ;
+;      Backup program      ;
+;                          ;
+;                          ;
+;      Copyright 1985      ;
+;   by Roland Gustafsson   ;
+;                          ;
+;--------------------------;
+;
+DAT      EPZ $E0
+;
+TMPLO    EPZ DAT
+TMPHI    EPZ DAT+1
+ESCFLAG  EPZ DAT+2
+PRNTFLAG EPZ DAT+3
+PASS     EPZ DAT+4
+;
+; Used by special read routine:
+;
+TEMP     EPZ DAT+5
+NUMT     EPZ DAT+6
+BUFLO    EPZ DAT+7
+BUFHI    EPZ DAT+8
+BACKUP   EPZ DAT+9
+CENTER   EPZ DAT+10
+;
+SN1      =   $A5
+SN2      =   $DF
+SN3      =   $D4
+CHK      =   $CF
+;-----------
+RESET    =   $0280
+;
+SLOT     =   $05F8
+VTAB     =   $FB5B
+HOME     =   $FC58
+TEXT     =   $FB2F
+WAIT     =   $FCA8
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP START
+;-----------
+;
+; Check for master
+;
+; CLC = master is in drive
+; SEC = not master
+;
+CHEKMAST JSR SEEK34
+         LDX SLOT
+         STX $08
+         LDA $C089,X
+         LDA #$2C
+         STA TMPLO
+         LDY #0
+^0       DEY 
+         BNE >1
+         DEC TMPLO
+         BEQ CHKMSTSC
+;
+^1       LDA $C08C,X
+         BPL *-3
+^2       CMP #SN1
+         BNE <0
+         LDA $C08C,X
+         BPL *-3
+^3       CMP #SN2
+         BNE <2
+         LDA $C08C,X
+         BPL *-3
+         CMP #SN3
+         BNE <3
+         CLC 
+         HEX 24
+CHKMSTSC SEC 
+         LDA $C088,X
+         RTS 
+;-----------
+;
+; Check for data disk
+;
+; CLC = data disk in drive
+; SEC = no data disk
+;
+CHEKDATA LDX SLOT
+         LDA $C089,X
+         LDA #$40
+         STA TMPLO
+^0       JSR $B944
+         BCC >1
+         DEC TMPLO
+         BNE <0
+^1       LDA $C088,X
+         RTS 
+;-----------
+;
+; Turn on drive and seek track 34
+;
+SEEK34   LDA #0
+         STA $B7F4
+         LDA #34
+         STA $B7EC
+;
+; RWTS access routine
+;
+RWTS     LDA #0
+         STA $B7EB
+         LDY #$E8
+         LDA #$B7
+         JMP $B7B5
+;-----------
+;
+; Read or Write 9 tracks
+;
+; given PASS=pass (reads forward)
+;       A=command
+;
+BLKBUFR  =   $2000
+;
+PASSTBL  BYT 0,9,18,27
+;
+RWBLOCK  STA $B7F4
+RWBLOCK2 LDY PASS
+         LDA PASSTBL-1,Y
+         STA $B7EC
+         LDA #$0F
+         STA $B7ED
+         LDA #9*16
+         STA TMPLO
+;
+         LDA /BLKBUFR
+         STA $B7F1
+         LDA #0
+         STA $B7F0
+;
+RWLOOP   JSR RWTS
+         BCS RWBLKERR
+         LDY $B7ED
+         DEY 
+         BPL >1
+         INC $B7EC
+         LDA $B7EC
+         CMP #34
+         BGE >2
+         LDY #$0F
+^1       STY $B7ED
+         INC $B7F1
+         DEC TMPLO
+         BNE RWLOOP
+^2       RTS 
+;
+; Handle error
+;
+RWBLKERR JSR HOME
+         LDA $B7F4
+         CMP #2
+         BEQ >9
+         JSR PRINT
+         ASC "ERROR READING COMPANION DISK"
+         HEX 8D
+         ASC "UNABLE TO MAKE BACKUP."
+         BRK 
+         JMP ABORT
+;
+^9       JSR PRINT
+         ASC "UNABLE TO WRITE, BAD DISK."
+         HEX 8D
+         ASC "PLEASE TRY ANOTHER..."
+         BRK 
+         JMP ABORT
+;-----------
+;
+; Print routine:
+;
+PRINTLFT LSR CENTER
+;
+PRINT    LDA #$FF
+         HEX 2C
+PRINTINV LDA #$3F
+         STA $32
+         LDA #0
+         STA PRNTFLAG
+         PLA 
+         STA TMPLO
+         PLA 
+         STA TMPHI
+^0       INC TMPLO
+         BNE >1
+         INC TMPHI
+^1       LDY #0
+         LDA (TMPLO),Y
+         BEQ >3
+         BIT CENTER
+         BPL >2
+         BIT PRNTFLAG
+         BPL >4
+^2       PHA 
+         JSR $FDF0
+         PLA 
+         CMP #$A0
+         BGE <0
+         LSR PRNTFLAG
+         BPL <0
+;
+^3       LDA TMPHI
+         PHA 
+         LDA TMPLO
+         PHA 
+         SEC 
+         ROR CENTER
+         JMP $FE84
+;
+^4       LDA (TMPLO),Y
+         CMP #$A0
+         BLT >5
+         INY 
+         BNE <4
+;
+^5       TYA 
+         LSR 
+         EOR #$FF
+         CLC 
+         ADC #18
+         STA $24
+         SEC 
+         ROR PRNTFLAG
+         JMP <1
+;-----------
+;
+; BEEP Speaker
+;
+BEEP     LDY #$30
+^0       LDA $C030
+         LDA #$11
+         JSR WAIT
+         LDA $C030
+         LDA #$13
+         JSR WAIT
+         DEY 
+         BNE <0
+         RTS 
+;-----------
+;
+; Draw inverse line
+;
+BOTLINE  LDA #23
+INVLINE  JSR $FBC1
+         LDY #39
+         LDA #$20
+^0       STA ($28),Y
+         DEY 
+         BPL <0
+         RTS 
+;-----------
+;
+; Startup screen
+;
+SCREEN1  JSR TEXT
+         JSR HOME
+         LDA #2
+         STA $20
+         LDA #36
+         STA $21
+         LDA #8
+         STA $22
+         LDA #22
+         STA $23
+;
+         LDA #0
+         JSR INVLINE
+         LDA #1
+         JSR INVLINE
+         LDA #2
+         JSR INVLINE
+         JSR BOTLINE
+         LDA #23
+^0       PHA 
+         JSR $FBC1
+         LDY #0
+         LDA #$20
+         STA ($28),Y
+         LDY #39
+         STA ($28),Y
+         PLA 
+         SEC 
+         SBC #1
+         BPL <0
+;
+         JSR PRINTINV
+         HEX 8D
+         ASC "PRINT SHOP COMPANION BACKUP UTILITY"
+         BRK 
+         RTS 
+;-----------
+;
+; Print bottom line
+;
+PRQUIT   LDA #23
+         JSR VTAB
+         JSR PRINTINV
+         ASC "PRESS <ESC> TO CANCEL"
+         BRK 
+         RTS 
+;-----------
+;
+; Get key
+;
+GETKEY   JSR BOTLINE
+         BIT ESCFLAG
+         BMI >0
+         JSR PRQUIT
+^0       LDA $C000
+         BPL <0
+         BIT $C010
+         CMP #$9B
+         BEQ >2
+^1       PHA 
+         JSR BOTLINE
+         PLA 
+         RTS 
+;
+^2       BIT ESCFLAG
+         BPL >3
+         JSR BEEP
+         JMP GETKEY
+;
+^3       JSR HOME
+         JMP ABORT2
+;-----------
+;
+; Abort & reboot routine
+;
+ABORT    LDA #20
+         JSR VTAB
+ABORT2   JSR PRINT
+         ASC "MAKE SURE THAT THE COMPANION DISK"
+         HEX 8D
+         ASC "IS IN DRIVE AND PRESS <RETURN>"
+         BRK 
+         SEC 
+         ROR ESCFLAG
+^0       JSR BEEP
+         JSR GETKEY
+         CMP #$8D
+         BNE <0
+         JSR TEXT
+         JSR HOME
+         JMP RESET
+;-----------
+;
+; Wait for RETURN key
+;
+WAITCR   JSR PRINT
+         HEX 8D8D8D
+         ASC "PRESS <RETURN> TO CONTINUE"
+         BRK 
+^0       JSR GETKEY
+         CMP #$8D
+         BNE <0
+         JMP HOME
+;-----------
+;
+; Simple read routine
+;
+READPROT STA >0+1
+         JSR SEEK34
+         LDX SLOT
+         LDA $C089,X
+ENTRY    LDA #$04
+         STA NUMT
+         LDY #0
+^0       LDA #00
+         STY BUFLO
+         STA BUFHI
+^0       LDA $C08C,X
+         BPL *-3
+RD2      CMP #SN1
+         BNE <0
+         LDA $C08C,X
+         BPL *-3
+RD4      CMP #SN2
+         BNE RD2
+         LDA $C08C,X
+         BPL *-3
+RD6      CMP #SN3
+         BNE RD4
+RD7      LDA $C08C,X
+         BPL RD7
+         ROL 
+         STA TEMP
+RD8      LDA $C08C,X
+         BPL RD8
+         AND TEMP
+         STA (BUFLO),Y
+         INY 
+         BNE RD7
+         ASL $FFFF
+RDCK     LDA $C08C,X
+         BPL RDCK
+         CMP #CHK
+         BNE ENTRY
+         INC BUFHI
+         DEC NUMT
+         BNE RD7
+         LDA $C088,X
+         RTS 
+;-----------
+;
+; Wait for user to remove Master
+;
+REMOMAST JSR CHEKMAST
+         BCC REMOMST2
+         RTS 
+;
+REMOMST2 JSR HOME
+         JSR BEEP
+         JSR PRINT
+         ASC "REMOVE COMPANION DISK."
+         HEX 8D8D
+         BRK 
+         BIT BACKUP
+         BMI >1
+         JSR PRINT
+         ASC "INSERT BLANK DISK IN DISK DRIVE."
+         BRK 
+         JMP >2
+^1       JSR PRINT
+         ASC "INSERT BACKUP DISK IN DISK DRIVE."
+         BRK 
+^2       JSR WAITCR
+         JMP REMOMAST
+;-----------
+;
+; Wait for user to remove BACKUP
+;
+REMOBACK JSR CHEKMAST
+         BCS >0
+         RTS 
+;
+^0       JSR HOME
+         JSR BEEP
+         JSR PRINT
+         ASC "PLEASE REMOVE THE BACKUP DISK "
+         HEX 8D
+         ASC "AND INSERT THE COMPANION DISK."
+         BRK 
+         JSR WAITCR
+         JMP REMOBACK
+;-----------
+;
+; Format blank disk
+;
+FORMAT   JSR MAKEBACK
+         JSR CHEKDATA
+         BCS >0
+         JSR HOME
+         JSR BEEP
+         JSR PRINT
+         ASC "CAUTION: THIS DISK HAS DATA ON IT"
+         BRK 
+         JSR WAITCR
+;
+^0       JSR REMOMAST
+         JSR MAKEBACK
+         LDA #4
+         STA $B7F4
+         JSR RWTS
+         BCS >0
+         RTS 
+;
+^0       LDX SLOT
+         JSR $B82A
+         BCC >0
+;
+         JSR REMOWPRT
+         JMP >2
+;
+^0       JSR HOME
+         JSR BEEP
+         JSR PRINT
+         ASC "DEFECTIVE BLANK DISK, TRY ANOTHER"
+         BRK 
+;
+^1       JSR WAITCR
+^2       JSR REMOMAST
+         JMP FORMAT
+;-----------
+;
+; PLEASE REMOVE W/P TAB MESSAGE:
+;
+REMOWPRT JSR HOME
+         JSR BEEP
+         JSR PRINT
+         ASC "PLEASE REMOVE THE WRITE PROTECT TAB"
+         BRK 
+         JMP WAITCR
+;-----------
+;
+; MAKING BACKUP MESSAGE:
+;
+MAKEBACK JSR HOME
+         JSR PRINT
+         ASC "MAKING BACKUP DISK..."
+         BRK 
+         RTS 
+;-----------
+;-----------
+;
+; The program starts here:
+;
+START    LSR ESCFLAG
+         LSR BACKUP
+         SEC 
+         ROR CENTER
+         JSR SCREEN1
+         JSR HOME
+;
+         JSR CHEKMAST
+         LDA #8
+         JSR READPROT
+         BIT $C010
+         LDA $BFF
+         BEQ COPYOK
+         CMP #1
+         BEQ MESSAGE1
+         CMP #2
+         BEQ MESSAGE2
+;
+MESSAGE1 JSR PRINT
+         ASC "THIS DISK HAS ALREADY BEEN"
+         HEX 8D
+         ASC "USED TO MAKE A BACKUP."
+         BRK 
+         JMP ABORT
+;
+MESSAGE2 JSR PRINT
+         ASC "THIS DISK CANNOT BE COPIED."
+         BRK 
+         JMP ABORT
+;---
+;
+; Go ahead and make copy
+;
+COPYOK   DEC $22
+         DEC $22
+         JSR HOME
+         JSR PRINTINV
+         ASC "THIS UTILITY LETS YOU MAKE ONE"
+         HEX 8D
+         ASC "BACKUP COPY OF THE FRONT SIDE"
+         HEX 8D
+         ASC "OF YOUR COMPANION DISK"
+         BRK 
+         JSR PRINTLFT
+         HEX 8D8D8D8D
+         ASC "IMPORTANT: YOU MAY USE THIS OPTION"
+         HEX 8D
+         ASC "ONLY ONCE."
+         HEX 8D8D
+         ASC "TO MAKE A BACKUP, YOU WILL NEED ONE"
+         HEX 8D
+         ASC "BLANK DISK."
+         BRK 
+         JSR WAITCR
+         JSR HOME
+         INC $22
+         INC $22
+         JSR HOME
+         JSR PRINTLFT
+         ASC "YOU WILL NEED TO SWAP DISKS A NUMBER"
+         ASC "OF TIMES. THE PROGRAM WILL TELL YOU"
+         HEX 8D
+         ASC "WHEN TO DO THIS."
+         HEX 8D8D
+         ASC "TO START, MAKE SURE YOUR COMPANION"
+         HEX 8D
+         ASC "DISK (LABEL SIDE UP) IS IN YOUR"
+         HEX 8D
+         ASC "DISK DRIVE."
+         BRK 
+         JSR WAITCR
+;---
+         LDY #1
+MAINLOOP STY PASS
+^0       JSR HOME
+         JSR REMOBACK
+;
+; Check to make sure no funny
+; business has taken place
+;
+         LDA #$0C
+         JSR READPROT
+         LDA $FFF
+         BEQ GEEWHIZ
+         JMP START
+;
+GEEWHIZ  JSR PRINT
+         ASC "READING COMPANION DISK..."
+         BRK 
+         LDA #1
+         JSR RWBLOCK
+;
+; if pass 4, then do special stuff
+;
+         LDA PASS
+         CMP #4
+         BNE NOTPASS4
+;
+         JSR $BCE0
+         JSR SEEK34
+         LDA $C089,X
+         LDX #$0D
+         LDA #$D0
+         JSR $803
+         BCC >0
+         LDA $C088,X
+         JSR REMOWPRT
+         JMP <0
+;
+^0       LDA #1
+         STA $7FF
+         JSR $800
+         JSR $900
+         SEC 
+         ROR ESCFLAG
+         LDX SLOT
+         LDA $C088,X
+         JSR REMOMST2
+         JMP >0
+;
+NOTPASS4 JSR REMOMAST
+;
+^0       LDA PASS
+         CMP #1
+         BNE NOTPASS1
+;
+         JSR FORMAT
+         SEC 
+         ROR BACKUP
+;
+NOTPASS1 JSR MAKEBACK
+         LDA #2
+         JSR RWBLOCK
+;
+         LDY PASS
+         INY 
+         CPY #5
+         BGE >0
+         JMP MAINLOOP
+;
+^0       JSR SEEK34
+         LDX SLOT
+         LDA $C089,X
+         LDA #2
+         STA $7FF
+         JSR $800
+         JSR $900
+         LDX SLOT
+         LDA $C088,X
+;
+         DEC $22
+         DEC $22
+         JSR HOME
+         JSR PRINT
+         ASC "BACKUP COMPLETE."
+         HEX 8D8D
+         ASC "PLEASE LABEL YOUR DISK."
+         BRK 
+         JSR PRINTLFT
+         HEX 8D8D
+         HEX 8D8D
+         ASC "NOTE: TO COPY THE BACK SIDE OF"
+         HEX 8D
+         ASC "THE DISK, USE THE STANDARD COPY"
+         HEX 8D
+         BYT "PROGRAM THAT CAME WITH YOUR"
+         HEX 8D
+         BYT "COMPUTER."
+         HEX 8D
+         BRK 
+         JMP ABORT
+;-----------
+;
+;
+;
+         USR "O:BACKUP",ORG
+         END 

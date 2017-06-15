@@ -1,0 +1,12 @@
+INS
+PAGE3DAT HEX   877F7E3F7E1F7E3F
+         HEX   7E3F7E3F7E1F7C8E
+         HEX   7F0F7E677C7F7C3F
+         HEX   7E1F7F4F7F077C8E
+         HEX   7F1F7C4F797F793F
+         HEX   7C7F794F791F7C88
+         HEX   7F
+                          ;-------
+                          ;
+                          ;
+                          ;

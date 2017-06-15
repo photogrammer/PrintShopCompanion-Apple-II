@@ -1,0 +1,653 @@
+;
+; S:FOEDIT3
+;
+; Low level stuff
+; ---------------
+;
+; MOVEFONT: given Y=size 0,1 or 2,
+;           move font loaded at BUF2
+;           into BUF1 with sizing.
+;
+; MOVUFONT: move user font to BUF2
+;
+; LOADCHAR: given OLDCHAR=character
+;           move data into EDITBUFF
+;
+; SAVECHAR: given NEWCHAR=char to be
+;           replaced, remove that
+;           character from buffer.
+;           If not enough room then
+;           SEC is returned.
+;
+; SHOWDONE: show which characters have
+;           been altered.
+;
+;--------------
+MFZ      EPZ $80
+;
+MFSIZE   EPZ MFZ
+MFSIZEX2 EPZ MFZ+1
+MFSIZET  EPZ MFZ+2
+MFCHAR   EPZ MFZ+3
+MFDESTL  EPZ MFZ+4
+MFDESTH  EPZ MFZ+5
+MFSOURL  EPZ MFZ+6
+MFSOURH  EPZ MFZ+7
+MFHEIGHT EPZ MFZ+8
+MFWIDTH  EPZ MFZ+9
+MFTMPW   EPZ MFZ+10
+MFFDATA  EPZ MFZ+11
+MFBUILD  EPZ MFZ+12
+;
+; Given Y=0,1 or 2 for small, medium
+; or large sizing, move font in
+; FONT2BUF down to official font
+; buffer. This routine also removes
+; and extraneous lint bits.
+;
+^0       BYT 1,2,4
+;
+MOVEFONT STY MFSIZE
+         LDA <0+0,Y
+         STA MFSIZEX2
+;
+; Initialize destination pointer
+;
+         LDY #FONT1BEG
+         LDA /FONT1BEG
+         STY MFDESTL
+         STA MFDESTH
+;
+; Scan through the entire font,
+; skipping: " " and "@"
+;
+         LDX #1
+MFNXCHAR STX MFCHAR
+         CPX #'@'-$20
+         BEQ MFSKIP
+;
+; Point to font data
+;
+         LDA FONT2AL,X
+         STA MFSOURL
+         LDA FONT2AH,X
+         CLC 
+         ADC /FONT2BUF-FONT1BUF
+         STA MFSOURH
+;
+         LDA FONT2W,X
+         AND #$7F
+         STA MFWIDTH
+         STA FONT1W,X
+;
+         LDA FONT2H,X
+         STA MFHEIGHT
+         STA FONT1H,X
+;
+; Compute new size
+;
+         LDY MFSIZE
+^0       DEY 
+         BMI >1
+         ASL FONT1W,X
+         ASL FONT1H,X
+         JMP <0
+;
+; Add "done bit" back in
+;
+^1       LDA FONT2W,X
+         AND #$80
+         ORA FONT1W,X
+         STA FONT1W,X
+;
+; Update data pointer
+;
+         LDA MFDESTL
+         STA FONT1AL,X
+         LDA MFDESTH
+         STA FONT1AH,X
+;
+         JSR MFDOCHAR
+;
+MFSKIP   LDX MFCHAR
+         INX 
+         CPX #'Z'-$1F
+         BCC MFNXCHAR
+         LDA MFDESTL
+         SBC #FONTBUFF
+         STA LENLO
+         LDA MFDESTH
+         SBC /FONTBUFF
+         STA LENHI
+         RTS 
+;---
+;
+; Move character to FONT1BUF
+;
+MFDOCHAR LDY MFSOURL
+         LDA MFSOURH
+         STY >1+1
+         STA >2+1
+         LDA MFSIZEX2
+^0       PHA 
+^1       LDY #00
+^2       LDA #00
+         STY MFSOURL
+         STA MFSOURH
+         JSR MFDOLINE
+         PLA 
+         SEC 
+         SBC #1
+         BNE <0
+         DEC MFHEIGHT
+         BNE MFDOCHAR
+         RTS 
+;---
+;
+; Move one line of font data
+;
+MFDOLINE LDA MFWIDTH
+         STA MFTMPW
+         LDX #8
+^0       LDY #0
+         LDA (MFSOURL),Y
+         STA MFFDATA
+         INC MFSOURL
+         BNE *+4
+         INC MFSOURH
+         LDY #8
+;
+^1       LDA MFSIZEX2
+         STA MFSIZET
+         ASL MFFDATA
+^2       PHP 
+         ROL MFBUILD
+         DEX 
+         BNE >3
+         JSR MFSTORE
+         LDX #8
+^3       PLP 
+         DEC MFSIZET
+         BNE <2
+;
+         DEC MFTMPW
+         BEQ >4
+         DEY 
+         BNE <1
+         BEQ <0
+;
+^4       CPX #8
+         BEQ MFSRTS
+;
+; Compensate for straggling bits
+;
+^5       ASL MFBUILD
+         DEX 
+         BNE <5
+;
+; Fall into STORE
+;
+; Store a byte into FONT1BUF
+;
+MFSTORE  LDA MFBUILD
+         STY >0+1
+         LDY #0
+         STA (MFDESTL),Y
+         INC MFDESTL
+         BNE >0
+         INC MFDESTH
+^0       LDY #00
+MFSRTS   RTS 
+;-----------
+;
+; Move user font into BUF2
+; and make it look like a normal
+; font that is loaded at $6000
+;
+MOVUFONT LDY #0
+^0       LDA UFONTBUF,Y
+         STA FONT2BUF,Y
+         LDA UFONTBUF+$100,Y
+         STA FONT2BUF+$100,Y
+         LDA UFONTBUF+$200,Y
+         STA FONT2BUF+$200,Y
+         LDA UFONTBUF+$300,Y
+         STA FONT2BUF+$300,Y
+         INY 
+         BNE <0
+;
+; Adjust data pointers
+;
+         LDY #'Z'-$20
+^1       LDA FONT2AH,Y
+         SEC 
+         SBC /UFONTBUF-FONT1BUF
+         STA FONT2AH,Y
+         DEY 
+         BPL <1
+         RTS 
+;-----------
+;
+; Load char into edit buffer
+;
+LOADCHAR JSR CLRBUFF
+;
+; Compare character with edit
+; buffer BEQ if the same, BNE
+; if different.
+;
+CMPCHAR  LDY OLDCHAR
+         LDA FONT1AL,Y
+         STA >1+1
+         LDA FONT1AH,Y
+         STA >1+2
+         JSR GETXYLEN
+         STX NEWWITH
+         STY NEWHITE
+         JSR PNTEDIT
+^0       LDY #0
+^1       LDA $FFFF,X
+         INX 
+         EOR (TMP0),Y
+         STA (TMP0),Y
+         INY 
+         CPY NEWWITH
+         BLT <1
+         JSR INCEDIT
+         DEC NEWHITE
+         BNE <0
+         JMP CHKBUFF
+;-----------
+;
+; Save the character
+;
+; First check to see if there is
+; enough room for the edited char.
+;
+; This is done by subracting out the
+; length of the character that is to
+; be replaced and adding in the new
+; length of the edited character. If
+; this value is greater than or equal
+; to $17F4, then MEMORY FULL!!!
+;
+SAVECHAR JSR FINDDIM
+         LDY NEWCHAR
+         LDA FONT1AL,Y
+         STA TMP0
+         LDA FONT1AH,Y
+         STA TMP1
+         JSR GETXYLEN
+         STA OLDLEN
+;
+; Subtract out old char length
+;
+         LDA LENLO
+         LDY LENHI
+         SEC 
+         SBC OLDLEN
+         BCS >0
+         DEY 
+;
+; Add in new char length
+;
+^0       CLC 
+         ADC NEWLEN
+         BCC >1
+         INY 
+;
+; Is it too big?
+;
+^1       CPY /MAXLEN+1
+         BNE >2
+         CMP #MAXLEN+1
+^2       BCC >3
+         RTS 
+;
+; Enough room, so:
+;
+; Remove character given in NEWCHAR
+;
+; TMP0.1 points to data for char
+; to be removed
+;
+; TMP2.3 points to data just above
+; char to be removed
+;
+^3       LDA OLDLEN
+         CLC 
+         ADC TMP0
+         STA TMP2
+         LDA TMP1
+         ADC #0
+         STA TMP3
+;
+; Scan through FONT DATA and fix
+; all pointers that point to data
+; above this character
+;
+         LDX #$3A
+^0       CPX #'@'-$20
+         BEQ >2
+;
+         LDA FONT1AH,X
+         CMP TMP1
+         BNE >1
+         LDA FONT1AL,X
+         CMP TMP0
+^1       BLT >2
+;
+         LDA FONT1AL,X
+         SEC 
+         SBC OLDLEN
+         STA FONT1AL,X
+         BCS >2
+         DEC FONT1AH,X
+;
+^2       DEX 
+         BPL <0
+;
+; Calculate new length by
+; subtracting length of removed char
+;
+         LDA LENLO
+         LDY LENHI
+         SEC 
+         SBC OLDLEN
+         BCS >3
+         DEY 
+^3       STA LENLO
+         STY LENHI
+;
+; Set TMP4.5 to first available byte
+;
+         CLC 
+         ADC #FONTBUFF
+         STA TMP4
+         TYA 
+         ADC /FONTBUFF
+         STA TMP5
+;
+; Move data down
+;
+         LDY #0
+^0       LDA TMP1
+         CMP TMP5
+         BNE >1
+         LDA TMP0
+         CMP TMP4
+         BEQ >2
+^1       LDA (TMP2),Y
+         STA (TMP0),Y
+         INC TMP0
+         BNE *+4
+         INC TMP1
+         INC TMP2
+         BNE *+4
+         INC TMP3
+         JMP <0
+;
+; Move edited character to its home
+;
+; Given TMP4.5 points to end of file
+; NEWWITH, NEWHITE and NEWCHAR.
+;
+^2       LDY NEWCHAR
+         LDA NEWWITH
+;
+; Set "done bit"
+;
+         ORA #$80
+         STA FONT1W,Y
+;
+         LDA NEWHITE
+         STA FONT1H,Y
+         LDA TMP4
+         STA >2+1
+         STA FONT1AL,Y
+         LDA TMP5
+         STA >2+2
+         STA FONT1AH,Y
+;
+; Calc width in bytes
+;
+         LDX NEWWITH
+         JSR GETLENTH
+         STX NEWWITH
+;
+         JSR PNTEDIT
+;
+; Move EDITBUFF data to end of
+; FONT data file
+;
+^0       LDY #0
+^1       LDA (TMP0),Y
+^2       STA $FFFF,X
+         INX 
+         INY 
+         CPY NEWWITH
+         BLT <1
+         JSR INCEDIT
+         DEC NEWHITE
+         BNE <0
+;
+         TXA 
+         CLC 
+         ADC LENLO
+         STA LENLO
+         BCC >3
+         INC LENHI
+^3       CLC 
+         RTS 
+;-----------
+;
+; Given Y=character
+;  return: X=width in bytes
+;          Y=height in bytes
+;          A=length in bytes
+;
+GETXYLEN LDA FONT1W,Y
+         AND #$7F
+         TAX 
+         LDA FONT1H,Y
+         TAY 
+;
+; Calculate length given
+; X=width, Y=height
+;  See above for returned values
+;
+GETLENTH STY >1+1
+         DEX 
+         TXA 
+         LSR 
+         LSR 
+         LSR 
+         TAX 
+         INX 
+         LDA #0
+         CLC 
+         STX >0+1
+^0       ADC #00
+         DEY 
+         BNE <0
+^1       LDY #00
+         RTS 
+;---
+;
+; Point to EDITBUFF
+;
+PNTEDIT  LDY #EDITBUFF
+         LDA /EDITBUFF
+         STY TMP0
+         STA TMP1
+         LDX #0
+         RTS 
+;---
+;
+; INC EDITBUFF pointer by 11
+;
+INCEDIT  LDA TMP0
+         CLC 
+         ADC #11
+         STA TMP0
+         BCC >0
+         INC TMP1
+^0       RTS 
+;-----------
+;
+; Find dimensions of character
+; in the edit buffer.
+;
+FINDDIM  LDA XCOOR
+         PHA 
+         LDA YCOOR
+         PHA 
+;
+         LDA #0
+         STA NEWWITH
+         STA NEWHITE
+         STA XCOOR
+         STA YCOOR
+;
+^0       JSR BASECALC
+         AND (BUFLO),Y
+         BEQ >2
+;
+         LDA XCOOR
+         CMP NEWWITH
+         BLT >1
+         STA NEWWITH
+;
+^1       LDA YCOOR
+         CMP NEWHITE
+         BLT >2
+         STA NEWHITE
+;
+^2       INC XCOOR
+         LDA XCOOR
+         EOR #FONTW
+         BNE <0
+         STA XCOOR
+         INC YCOOR
+         LDA YCOOR
+         EOR #FONTH
+         BNE <0
+;
+         INC NEWWITH
+         INC NEWHITE
+;
+         LDX NEWWITH
+         LDY NEWHITE
+         JSR GETLENTH
+         STA NEWLEN
+         PLA 
+         STA YCOOR
+         PLA 
+         STA XCOOR
+         RTS 
+;-----------
+;
+; Display all the letters in font
+; and inverse those that have been
+; altered.
+;
+SDCENTER BYT 2,0,4,3,4,5
+         BYT 1,4,4,6,6,4
+SDCRCHR  BYT '!&,16;AFKOSW',0
+;
+SHOWDONE LDY #0
+         STY SDYLOC
+         LDY #SDY-SDH
+         STY SHOWDY
+         LDA #'!'
+SDLOOP   PHA 
+         STA SDBOXMD3
+         TAX 
+         CMP #'@'
+         BEQ SDSKIP
+;
+         LDY #$FF
+^0       INY 
+         LDA SDCRCHR,Y
+         BEQ >1
+         PLA 
+         PHA 
+         CMP SDCRCHR,Y
+         BEQ >0
+         BNE <0
+;
+; Start new line
+;
+^0       LDY #00
+SDYLOC   =   *-1
+         INC SDYLOC
+         LDA SDCENTER,Y
+         CLC 
+         ADC #SDX
+         STA SHOWDX
+         LDA SHOWDY
+         ADC #SDH
+         STA SHOWDY
+         STA SDBOXMD1+3
+;
+; Update X
+;
+^1       LDA #00
+SHOWDX   =   *-1
+         STA SDBOXMD0+2
+         CLC 
+         ADC #SDW/2
+         STA SDBOXMD1+1
+;
+; Get char width
+;
+         LDA UFONTW-$20,X
+         CLC 
+         ADC #SDW
+         STA SDBOXMD0+4
+         ADC SHOWDX
+         STA SHOWDX
+;
+; Has char been altered?
+;
+         LDA FONT1W-$20,X
+         BPL >3
+;
+; Draw white box where letter is to
+; be drawn.
+;
+         LDY #00
+SHOWDY   =   *-1
+         DEY 
+         STY SDBOXMD0+3
+         LDA #9
+^2       PHA 
+         JSR LINES
+SDBOXMD0 BYT 'H',WITE,0,0,0,1
+         INC SDBOXMD0+3
+         PLA 
+         SEC 
+         SBC #1
+         BNE <2
+         LDA #PRINVR
+         HEX 2C
+;
+^3       LDA #PRNORM
+         STA SDBOXMD2
+         JSR PRINT
+SDBOXMD1 .DA #PRLOC,0,#0
+SDBOXMD2 BYT PRINVR
+SDBOXMD3 BYT ' ',NOCR,0
+;
+SDSKIP   PLA 
+         CLC 
+         ADC #1
+         CMP #'Z'+1
+         BEQ >4
+         JMP SDLOOP
+^4       RTS 
+;-----------
+;
+;
+;
+         ICL "S:FOEDIT4"

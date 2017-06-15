@@ -1,0 +1,138 @@
+         NLS 
+         TTL "S:TESTPROT"
+ORG      =   $1000
+;
+; Check Print Shop or Companion
+; disk for copy protection and
+; return the following error codes:
+; PEEK(0)=0 ok disk
+;        =1 pirate copy
+;
+;
+ERRCODE  EPZ $00
+TIMERLO  EPZ $01
+TIMERMD  EPZ $02
+TIMERHI  EPZ $03
+TEMP     EPZ $04
+;
+FLAGS    =   $BB00
+SLOT     =   $B7F7
+;
+WAIT     =   $FCA8
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         JMP RECAL
+         JMP CHECK
+;-----------
+;
+; Turn on drive and recal to track 34.
+;
+RECAL    JSR DRIVEON
+         LDA #$80
+         STA $478
+         LDA #0
+         JSR $B9A0
+         LDA #34*2
+         JSR $B9A0
+         JMP DRIVEOFF
+;-----------
+;
+; Check for copy protection
+;
+CHECK    JSR DRIVEON
+;
+; Set timer for $020000
+;
+         LDY #2
+         STY TIMERHI
+         DEY 
+         STY TIMERLO
+         STY TIMERMD
+;
+; Set flags to FF
+;
+         LDA #$FF
+^0       STA FLAGS,Y
+         INY 
+         BNE <0
+;
+; Main Loop:
+;
+TOP      DEC TIMERLO
+         BNE >0
+         DEC TIMERMD
+         BNE >0
+         DEC TIMERHI
+         BPL >0
+         LDA #1
+         JMP ERROR
+;
+^0       LDX SLOT
+         LDA $C08C,X
+         BPL *-3
+^1       CMP #$D4
+         BNE TOP
+         JSR GETNYBL
+^2       CMP #$D5
+         BNE <1
+         JSR GETNYBL
+^3       CMP #$DE
+         BNE <2
+         JSR GETNYBL
+         CMP #$D4
+         BNE <3
+         NOP 
+         LDA $C08C,X
+         BPL *-3
+         ROL 
+         STA TEMP
+         LDA $C08C,X
+         BPL *-3
+         AND TEMP
+         TAY 
+         JSR GETNYBL
+         CMP #$F5
+         BNE TOP
+         JSR GETNYBL
+         CMP #$AA
+         BNE TOP
+         LDA FLAGS,Y
+         BEQ TOP
+         LDA #$00
+         STA FLAGS,Y
+         TAX 
+         TAY 
+^0       LDA FLAGS,Y
+         BMI *+3
+         INX 
+         INY 
+         BNE <0
+         CPX #$A0
+         BCC TOP
+;
+         LDA #0
+ERROR    STA ERRCODE
+DRIVEOFF LDX SLOT
+         LDA $C088,X
+         RTS 
+;-----------
+DRIVEON  LDX SLOT
+         LDA $C089,X
+         LDA #$80
+         JSR WAIT
+         JMP WAIT
+;-----------
+;
+; Get a disk nybble
+;
+GETNYBL  LDA $C08C,X
+         BPL GETNYBL
+         RTS 
+;-----------
+;
+;
+;
+         USR "O:TESTPROT",ORG
+         END 

@@ -1,0 +1,83 @@
+1000-   4C 06 10    JMP   $1006
+1003-   4C 1B 10    JMP   $101B
+1006-   20 A4 10    JSR   $10A4
+1009-   A9 80       LDA   #$80
+100B-   8D 78 04    STA   $0478
+100E-   A9 00       LDA   #$00
+1010-   20 A0 B9    JSR   $B9A0
+1013-   A9 44       LDA   #$44
+1015-   20 A0 B9    JSR   $B9A0
+1018-   4C 9D 10    JMP   $109D
+101B-   20 A4 10    JSR   $10A4
+101E-   A0 02       LDY   #$02
+1020-   84 03       STY   $03
+1022-   88          DEY
+1023-   84 01       STY   $01
+1025-   84 02       STY   $02
+1027-   A9 FF       LDA   #$FF
+1029-   99 00 BB    STA   $BB00,Y
+102C-   C8          INY
+102D-   D0 FA       BNE   $1029
+102F-   C6 01       DEC   $01
+1031-   D0 0D       BNE   $1040
+1033-   C6 02       DEC   $02
+1035-   D0 09       BNE   $1040
+1037-   C6 03       DEC   $03
+1039-   10 05       BPL   $1040
+103B-   A9 01       LDA   #$01
+103D-   4C 9B 10    JMP   $109B
+1040-   AE F7 B7    LDX   $B7F7
+1043-   BD 8C C0    LDA   $C08C,X
+1046-   10 FB       BPL   $1043
+1048-   C9 D4       CMP   #$D4
+104A-   D0 E3       BNE   $102F
+104C-   20 B2 10    JSR   $10B2
+104F-   C9 D5       CMP   #$D5
+1051-   D0 F5       BNE   $1048
+1053-   20 B2 10    JSR   $10B2
+1056-   C9 DE       CMP   #$DE
+1058-   D0 F5       BNE   $104F
+105A-   20 B2 10    JSR   $10B2
+105D-   C9 D4       CMP   #$D4
+105F-   D0 F5       BNE   $1056
+1061-   EA          NOP
+1062-   BD 8C C0    LDA   $C08C,X
+1065-   10 FB       BPL   $1062
+1067-   2A          ROL
+1068-   85 04       STA   $04
+106A-   BD 8C C0    LDA   $C08C,X
+106D-   10 FB       BPL   $106A
+106F-   25 04       AND   $04
+1071-   A8          TAY
+1072-   20 B2 10    JSR   $10B2
+1075-   C9 F5       CMP   #$F5
+1077-   D0 B6       BNE   $102F
+1079-   20 B2 10    JSR   $10B2
+107C-   C9 AA       CMP   #$AA
+107E-   D0 AF       BNE   $102F
+1080-   B9 00 BB    LDA   $BB00,Y
+1083-   F0 AA       BEQ   $102F
+1085-   A9 00       LDA   #$00
+1087-   99 00 BB    STA   $BB00,Y
+108A-   AA          TAX
+108B-   A8          TAY
+108C-   B9 00 BB    LDA   $BB00,Y
+108F-   30 01       BMI   $1092
+1091-   E8          INX
+1092-   C8          INY
+1093-   D0 F7       BNE   $108C
+1095-   E0 A0       CPX   #$A0
+1097-   90 96       BCC   $102F
+1099-   A9 00       LDA   #$00
+109B-   85 00       STA   $00
+109D-   AE F7 B7    LDX   $B7F7
+10A0-   BD 88 C0    LDA   $C088,X
+10A3-   60          RTS
+10A4-   AE F7 B7    LDX   $B7F7
+10A7-   BD 89 C0    LDA   $C089,X
+10AA-   A9 80       LDA   #$80
+10AC-   20 A8 FC    JSR   $FCA8    F8ROM:WAIT
+10AF-   4C A8 FC    JMP   $FCA8    F8ROM:WAIT
+10B2-   BD 8C C0    LDA   $C08C,X
+10B5-   10 FB       BPL   $10B2
+10B7-   60          RTS

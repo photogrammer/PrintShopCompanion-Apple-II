@@ -1,0 +1,97 @@
+6300-   48          PHA
+6301-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+6304-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+6307-   A2 08       LDX   #$08
+6309-   A0 00       LDY   #$00
+630B-   B9 CA 63    LDA   $63CA,Y
+630E-   99 00 D0    STA   $D000,Y
+6311-   C8          INY
+6312-   D0 F7       BNE   $630B
+6314-   EE 0D 63    INC   $630D
+6317-   EE 10 63    INC   $6310
+631A-   CA          DEX
+631B-   D0 EE       BNE   $630B
+631D-   BD 51 63    LDA   $6351,X
+6320-   F0 1D       BEQ   $633F
+6322-   A0 00       LDY   #$00
+6324-   BD 51 63    LDA   $6351,X
+6327-   E8          INX
+6328-   99 3A 00    STA   $003A,Y
+632B-   C8          INY
+632C-   C0 03       CPY   #$03
+632E-   90 F4       BCC   $6324
+6330-   A0 00       LDY   #$00
+6332-   BD 51 63    LDA   $6351,X
+6335-   E8          INX
+6336-   91 3B       STA   ($3B),Y
+6338-   C8          INY
+6339-   C6 3A       DEC   $3A
+633B-   D0 F5       BNE   $6332
+633D-   F0 DE       BEQ   $631D
+633F-   68          PLA
+6340-   20 03 D0    JSR   $D003
+6343-   A0 3B       LDY   #$3B
+6345-   B9 8E 63    LDA   $638E,Y
+6348-   99 25 02    STA   $0225,Y
+634B-   88          DEY
+634C-   10 F7       BPL   $6345
+634E-   4C 25 02    JMP   $0225
+6351-   09 8B       ORA   #$8B
+6353-   0B          ???
+6354-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+6357-   2C 8B C0    BIT   $C08B    rw:LCBANK1
+635A-   4C 03 D0    JMP   $D003
+635D-   1C D0 88    TRB   $88D0
+6360-   38          SEC
+6361-   66 4E       ROR   $4E
+6363-   38          SEC
+6364-   E9 20       SBC   #$20
+6366-   AA          TAX
+6367-   BD 00 60    LDA   $6000,X
+636A-   C5 4E       CMP   $4E
+636C-   B0 02       BCS   $6370
+636E-   85 4E       STA   $4E
+6370-   4C 76 8C    JMP   $8C76
+6373-   A5 4E       LDA   $4E
+6375-   18          CLC
+6376-   6D 0A 8A    ADC   $8A0A
+6379-   85 D9       STA   $D9
+637B-   60          RTS
+637C-   02          ???
+637D-   10 8C       BPL   $630B
+637F-   D0 88       BNE   $6309
+6381-   02          ???
+6382-   28          PLP
+6383-   8C D3 88    STY   $88D3
+6386-   04 3F       TSB   $3F
+6388-   8C 20 E3    STY   $E320
+638B-   88          DEY
+638C-   EA          NOP
+638D-   00          BRK
+638E-   18          CLC
+638F-   20 4B 02    JSR   $024B
+6392-   20 3E 02    JSR   $023E
+6395-   A2 27       LDX   #$27
+6397-   A0 0B       LDY   #$0B
+6399-   20 D2 0C    JSR   $0CD2
+639C-   D0 F4       BNE   $6392
+639E-   38          SEC
+639F-   20 4B 02    JSR   $024B
+63A2-   68          PLA
+63A3-   68          PLA
+63A4-   4C 53 0B    JMP   $0B53
+63A7-   AD F4 95    LDA   $95F4
+63AA-   C9 02       CMP   #$02
+63AC-   F0 03       BEQ   $63B1
+63AE-   4C 15 78    JMP   $7815
+63B1-   4C F9 77    JMP   $77F9
+63B4-   A0 1E       LDY   #$1E
+63B6-   B0 08       BCS   $63C0
+63B8-   B9 00 70    LDA   $7000,Y
+63BB-   99 61 02    STA   $0261,Y
+63BE-   90 06       BCC   $63C6
+63C0-   B9 61 02    LDA   $0261,Y
+63C3-   99 00 70    STA   $7000,Y
+63C6-   88          DEY
+63C7-   10 ED       BPL   $63B6
+63C9-   60          RTS

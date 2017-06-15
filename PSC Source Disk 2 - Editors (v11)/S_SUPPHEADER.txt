@@ -1,0 +1,181 @@
+         NLS 
+         TTL "S:SUPPHEADER"
+;
+ORG      =   $6300
+;
+; FIXLOC needs $3C+$1F
+; Make sure it doesn't walk over
+; the RESET routine at $280
+;
+SPECLEN  =   $3C+$1F
+FIXLOC   =   $280-SPECLEN
+;
+; First time through SUPP file header
+;
+CLS1     =   $B53
+;
+DATADRIV =   $95F4
+CHECKPS1 =   $7815
+CHECKPS2 =   $77F9
+;
+TMP0     EPZ $3A
+TMP1     EPZ $3B
+TMP2     EPZ $3C
+;-----------
+         ORG ORG
+         OBJ $800
+;-----------
+         PHA 
+;
+; Move program to RAMcard
+;
+         BIT $C08B
+         BIT $C08B
+         LDX #8
+         LDY #0
+^0       LDA PROGRAM,Y
+^1       STA $D000,Y
+         INY 
+         BNE <0
+         INC <0+2
+         INC <1+2
+         DEX 
+         BNE <0
+;
+; Make patches to Print Shop
+;
+^2       LDA PATCHES,X
+         BEQ >5
+         LDY #0
+^3       LDA PATCHES,X
+         INX 
+         STA TMP0,Y
+         INY 
+         CPY #3
+         BLT <3
+         LDY #0
+^4       LDA PATCHES,X
+         INX 
+         STA (TMP1),Y
+         INY 
+         DEC TMP0
+         BNE <4
+         BEQ <2
+;
+^5       PLA 
+         JSR $D003
+;
+; Now reload MENULIB
+;
+         LDY #FIXLEN-1
+^6       LDA FIXIT,Y
+         STA FIXLOC,Y
+         DEY 
+         BPL <6
+         JMP FIXLOC
+;-----------
+PATCHES: 
+         BYT 9
+         ADR $B8B
+         BIT $C08B
+         BIT $C08B
+         JMP $D003
+;
+         BYT 28
+         ADR $88D0
+         SEC 
+         ROR $4E
+         SEC 
+         SBC #$20
+         TAX 
+         LDA $6000,X
+         CMP $4E
+         BGE *+4
+         STA $4E
+         JMP $8C76
+         LDA $4E
+         CLC 
+         ADC $8A0A
+         STA $D9
+         RTS 
+;
+         BYT 2
+         ADR $8C10
+         ADR $88D0
+;
+         BYT 2
+         ADR $8C28
+         ADR $88D3
+;
+         BYT 4
+         ADR $8C3F
+         JSR $88E3
+         NOP 
+;
+         BRK 
+;-----------
+;
+; Remember MENULIB variables, then
+; reload it and restore the vars.
+;
+FIXIT:   
+         PHS FIXLOC
+;
+; Save vars and check for PS disk
+;
+         CLC 
+         JSR SWAP7000
+FIXIT1   JSR FIXIT2
+;
+; Load MENULIB
+;
+         LDX #$27
+         LDY #$0B
+         JSR $CD2
+         BNE FIXIT1
+;
+; Restore vars and exit
+;
+         SEC 
+         JSR SWAP7000
+         PLA 
+         PLA 
+         JMP CLS1
+;---
+;
+; Make sure that PS disk in drive.
+;
+FIXIT2   LDA DATADRIV
+         CMP #2
+         BEQ FIXIT3
+         JMP CHECKPS1
+FIXIT3   JMP CHECKPS2
+;---
+;
+; SEC:copy save area to $7000
+; CLC:copy $7000 to save area
+;
+SWAP7000 LDY #$1E
+;
+SWAP7001 BCS SWAP7002
+         LDA $7000,Y
+         STA SWAPSAVE,Y
+         BCC SWAP7003
+;
+SWAP7002 LDA SWAPSAVE,Y
+         STA $7000,Y
+;
+SWAP7003 DEY 
+         BPL SWAP7001
+         RTS 
+SWAPSAVE: 
+         DPH 
+FIXLEN   =   *-FIXIT
+;-----------
+PROGRAM: 
+;-----------
+;
+;
+;
+         USR "O:SUPPHEADER",ORG
+         END 

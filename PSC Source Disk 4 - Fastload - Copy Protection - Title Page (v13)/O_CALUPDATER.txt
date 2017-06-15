@@ -1,0 +1,567 @@
+1000-   4C 4C 12    JMP   $124C
+1003-   4C E1 13    JMP   $13E1
+1006-   43          ???
+1007-   4F          ???
+1008-   50 59       BVC   $1063
+100A-   52 49       EOR   ($49)
+100C-   47          ???
+100D-   48          PHA
+100E-   54          ???
+100F-   20 31 39    JSR   $3931
+1012-   38          SEC
+1013-   36 20       ROL   $20,X
+1015-   42          ???
+1016-   59 20 52    EOR   $5220,Y
+1019-   4F          ???
+101A-   4C 41 4E    JMP   $4E41
+101D-   44          ???
+101E-   20 47 55    JSR   $5547
+1021-   53          ???
+1022-   54          ???
+1023-   41 46       EOR   ($46,X)
+1025-   53          ???
+1026-   53          ???
+1027-   4F          ???
+1028-   4E 20 81    LSR   $8120
+102B-   10 AE       BPL   $0FDB
+102D-   E9 B7       SBC   #$B7
+102F-   BD 89 C0    LDA   $C089,X
+1032-   A9 2C       LDA   #$2C
+1034-   85 E1       STA   $E1
+1036-   A0 00       LDY   #$00
+1038-   88          DEY
+1039-   D0 04       BNE   $103F
+103B-   C6 E1       DEC   $E1
+103D-   F0 3A       BEQ   $1079
+103F-   BD 8C C0    LDA   $C08C,X
+1042-   10 FB       BPL   $103F
+1044-   C9 A5       CMP   #$A5
+1046-   D0 F0       BNE   $1038
+1048-   BD 8C C0    LDA   $C08C,X
+104B-   10 FB       BPL   $1048
+104D-   C9 DF       CMP   #$DF
+104F-   D0 F3       BNE   $1044
+1051-   BD 8C C0    LDA   $C08C,X
+1054-   10 FB       BPL   $1051
+1056-   C9 D4       CMP   #$D4
+1058-   D0 F3       BNE   $104D
+105A-   A9 01       LDA   #$01
+105C-   8D F4 B7    STA   $B7F4
+105F-   A2 11       LDX   #$11
+1061-   A0 00       LDY   #$00
+1063-   A9 19       LDA   #$19
+1065-   20 89 10    JSR   $1089
+1068-   B0 0F       BCS   $1079
+106A-   AC FE 19    LDY   $19FE
+106D-   88          DEY
+106E-   D0 09       BNE   $1079
+1070-   AC FF 19    LDY   $19FF
+1073-   C0 03       CPY   #$03
+1075-   D0 02       BNE   $1079
+1077-   18          CLC
+1078-   B0 38       BCS   $10B2
+107A-   AE E9 B7    LDX   $B7E9
+107D-   BD 88 C0    LDA   $C088,X
+1080-   60          RTS
+1081-   A9 00       LDA   #$00
+1083-   8D F4 B7    STA   $B7F4
+1086-   A8          TAY
+1087-   A2 22       LDX   #$22
+1089-   8E EC B7    STX   $B7EC
+108C-   8C ED B7    STY   $B7ED
+108F-   8D F1 B7    STA   $B7F1
+1092-   A9 00       LDA   #$00
+1094-   8D F0 B7    STA   $B7F0
+1097-   8D EB B7    STA   $B7EB
+109A-   A0 E8       LDY   #$E8
+109C-   A9 B7       LDA   #$B7
+109E-   20 B5 B7    JSR   $B7B5
+10A1-   AE EC B7    LDX   $B7EC
+10A4-   AC ED B7    LDY   $B7ED
+10A7-   AD F1 B7    LDA   $B7F1
+10AA-   60          RTS
+10AB-   A9 0A       LDA   #$0A
+10AD-   2C A9 09    BIT   $09A9
+10B0-   48          PHA
+10B1-   20 58 FC    JSR   $FC58    F8ROM:HOME
+10B4-   68          PLA
+10B5-   4C 5B FB    JMP   $FB5B    F8ROM:TABV
+10B8-   46 E3       LSR   $E3
+10BA-   A9 FF       LDA   #$FF
+10BC-   2C A9 3F    BIT   $3FA9
+10BF-   85 32       STA   $32
+10C1-   A9 00       LDA   #$00
+10C3-   85 E2       STA   $E2
+10C5-   68          PLA
+10C6-   85 E0       STA   $E0
+10C8-   68          PLA
+10C9-   85 E1       STA   $E1
+10CB-   E6 E0       INC   $E0
+10CD-   D0 02       BNE   $10D1
+10CF-   E6 E1       INC   $E1
+10D1-   A0 00       LDY   #$00
+10D3-   B1 E0       LDA   ($E0),Y
+10D5-   F0 15       BEQ   $10EC
+10D7-   24 E3       BIT   $E3
+10D9-   10 04       BPL   $10DF
+10DB-   24 E2       BIT   $E2
+10DD-   10 19       BPL   $10F8
+10DF-   48          PHA
+10E0-   20 F0 FD    JSR   $FDF0    F8ROM:COUT1
+10E3-   68          PLA
+10E4-   C9 A0       CMP   #$A0
+10E6-   B0 E3       BCS   $10CB
+10E8-   46 E2       LSR   $E2
+10EA-   10 DF       BPL   $10CB
+10EC-   A5 E1       LDA   $E1
+10EE-   48          PHA
+10EF-   A5 E0       LDA   $E0
+10F1-   48          PHA
+10F2-   38          SEC
+10F3-   66 E3       ROR   $E3
+10F5-   4C 84 FE    JMP   $FE84    F8ROM:SETNORM
+10F8-   B1 E0       LDA   ($E0),Y
+10FA-   C9 A0       CMP   #$A0
+10FC-   90 03       BCC   $1101
+10FE-   C8          INY
+10FF-   D0 F7       BNE   $10F8
+1101-   98          TYA
+1102-   4A          LSR
+1103-   49 FF       EOR   #$FF
+1105-   18          CLC
+1106-   69 13       ADC   #$13
+1108-   85 24       STA   $24
+110A-   38          SEC
+110B-   66 E2       ROR   $E2
+110D-   4C D1 10    JMP   $10D1
+1110-   A0 30       LDY   #$30
+1112-   AD 30 C0    LDA   $C030    rw:SPKR
+1115-   A9 11       LDA   #$11
+1117-   20 A8 FC    JSR   $FCA8    F8ROM:WAIT
+111A-   AD 30 C0    LDA   $C030    rw:SPKR
+111D-   A9 13       LDA   #$13
+111F-   20 A8 FC    JSR   $FCA8    F8ROM:WAIT
+1122-   88          DEY
+1123-   D0 ED       BNE   $1112
+1125-   60          RTS
+1126-   A9 17       LDA   #$17
+1128-   20 C1 FB    JSR   $FBC1    F8ROM:BASCALC
+112B-   A0 27       LDY   #$27
+112D-   A9 20       LDA   #$20
+112F-   91 28       STA   ($28),Y
+1131-   88          DEY
+1132-   10 FB       BPL   $112F
+1134-   60          RTS
+1135-   20 2F FB    JSR   $FB2F    F8ROM:INIT
+1138-   20 58 FC    JSR   $FC58    F8ROM:HOME
+113B-   A9 02       LDA   #$02
+113D-   85 20       STA   $20
+113F-   A9 24       LDA   #$24
+1141-   85 21       STA   $21
+1143-   A9 08       LDA   #$08
+1145-   85 22       STA   $22
+1147-   A9 16       LDA   #$16
+1149-   85 23       STA   $23
+114B-   A9 00       LDA   #$00
+114D-   20 28 11    JSR   $1128
+1150-   A9 01       LDA   #$01
+1152-   20 28 11    JSR   $1128
+1155-   A9 02       LDA   #$02
+1157-   20 28 11    JSR   $1128
+115A-   20 26 11    JSR   $1126
+115D-   A9 17       LDA   #$17
+115F-   48          PHA
+1160-   20 C1 FB    JSR   $FBC1    F8ROM:BASCALC
+1163-   A0 00       LDY   #$00
+1165-   A9 20       LDA   #$20
+1167-   91 28       STA   ($28),Y
+1169-   A0 27       LDY   #$27
+116B-   91 28       STA   ($28),Y
+116D-   68          PLA
+116E-   38          SEC
+116F-   E9 01       SBC   #$01
+1171-   10 EC       BPL   $115F
+1173-   20 BD 10    JSR   $10BD
+1176-   8D D0 D2    STA   $D2D0
+1179-   C9 CE       CMP   #$CE
+117B-   D4          ???
+117C-   A0 D3       LDY   #$D3
+117E-   C8          INY
+117F-   CF          ???
+1180-   D0 A0       BNE   $1122
+1182-   C3          ???
+1183-   CF          ???
+1184-   CD D0 C1    CMP   $C1D0
+1187-   CE C9 CF    DEC   $CFC9
+118A-   CE A0 D5    DEC   $D5A0
+118D-   D0 C7       BNE   $1156
+118F-   D2 C1       CMP   ($C1)
+1191-   C4 C5       CPY   $C5
+1193-   A0 D5       LDY   #$D5
+1195-   D4          ???
+1196-   C9 CC       CMP   #$CC
+1198-   C9 D4       CMP   #$D4
+119A-   D9 00 A9    CMP   $A900,Y
+119D-   17          ???
+119E-   20 5B FB    JSR   $FB5B    F8ROM:TABV
+11A1-   20 BD 10    JSR   $10BD
+11A4-   BC C5 D3    LDY   $D3C5,X
+11A7-   C3          ???
+11A8-   BE A0 D4    LDX   $D4A0,Y
+11AB-   CF          ???
+11AC-   A0 C7       LDY   #$C7
+11AE-   CF          ???
+11AF-   A0 C2       LDY   #$C2
+11B1-   C1 C3       CMP   ($C3,X)
+11B3-   CB          ???
+11B4-   00          BRK
+11B5-   60          RTS
+11B6-   20 BA 10    JSR   $10BA
+11B9-   8D 8D D0    STA   $D08D
+11BC-   D2 C5       CMP   ($C5)
+11BE-   D3          ???
+11BF-   D3          ???
+11C0-   A0 BC       LDY   #$BC
+11C2-   D2 C5       CMP   ($C5)
+11C4-   D4          ???
+11C5-   D5 D2       CMP   $D2,X
+11C7-   CE BE A0    DEC   $A0BE
+11CA-   D4          ???
+11CB-   CF          ???
+11CC-   A0 C3       LDY   #$C3
+11CE-   CF          ???
+11CF-   CE D4 C9    DEC   $C9D4
+11D2-   CE D5 C5    DEC   $C5D5
+11D5-   00          BRK
+11D6-   4C DC 11    JMP   $11DC
+11D9-   20 10 11    JSR   $1110
+11DC-   AD 00 C0    LDA   $C000    r:KBD  w:CLR80COL
+11DF-   10 FB       BPL   $11DC
+11E1-   2C 10 C0    BIT   $C010    r:KBDSTRB
+11E4-   C9 8D       CMP   #$8D
+11E6-   F0 06       BEQ   $11EE
+11E8-   C9 9B       CMP   #$9B
+11EA-   D0 ED       BNE   $11D9
+11EC-   09 00       ORA   #$00
+11EE-   60          RTS
+11EF-   8D 02 12    STA   $1202
+11F2-   20 81 10    JSR   $1081
+11F5-   AE E9 B7    LDX   $B7E9
+11F8-   BD 89 C0    LDA   $C089,X
+11FB-   A9 04       LDA   #$04
+11FD-   85 E5       STA   $E5
+11FF-   A0 00       LDY   #$00
+1201-   A9 00       LDA   #$00
+1203-   84 E6       STY   $E6
+1205-   85 E7       STA   $E7
+1207-   BD 8C C0    LDA   $C08C,X
+120A-   10 FB       BPL   $1207
+120C-   C9 A5       CMP   #$A5
+120E-   D0 F7       BNE   $1207
+1210-   BD 8C C0    LDA   $C08C,X
+1213-   10 FB       BPL   $1210
+1215-   C9 DF       CMP   #$DF
+1217-   D0 F3       BNE   $120C
+1219-   BD 8C C0    LDA   $C08C,X
+121C-   10 FB       BPL   $1219
+121E-   C9 D4       CMP   #$D4
+1220-   D0 F3       BNE   $1215
+1222-   BD 8C C0    LDA   $C08C,X
+1225-   10 FB       BPL   $1222
+1227-   2A          ROL
+1228-   85 E4       STA   $E4
+122A-   BD 8C C0    LDA   $C08C,X
+122D-   10 FB       BPL   $122A
+122F-   25 E4       AND   $E4
+1231-   91 E6       STA   ($E6),Y
+1233-   C8          INY
+1234-   D0 EC       BNE   $1222
+1236-   0E FF FF    ASL   $FFFF
+1239-   BD 8C C0    LDA   $C08C,X
+123C-   10 FB       BPL   $1239
+123E-   C9 CF       CMP   #$CF
+1240-   D0 B9       BNE   $11FB
+1242-   E6 E7       INC   $E7
+1244-   C6 E5       DEC   $E5
+1246-   D0 DA       BNE   $1222
+1248-   BD 88 C0    LDA   $C088,X
+124B-   60          RTS
+124C-   38          SEC
+124D-   66 E3       ROR   $E3
+124F-   20 35 11    JSR   $1135
+1252-   20 58 FC    JSR   $FC58    F8ROM:HOME
+1255-   20 BA 10    JSR   $10BA
+1258-   D0 CC       BNE   $1226
+125A-   C5 C1       CMP   $C1
+125C-   D3          ???
+125D-   C5 A0       CMP   $A0
+125F-   C9 CE       CMP   #$CE
+1261-   D3          ???
+1262-   C5 D2       CMP   $D2
+1264-   D4          ???
+1265-   A0 D3       LDY   #$D3
+1267-   C9 C4       CMP   #$C4
+1269-   C5 A0       CMP   $A0
+126B-   C1 A0       CMP   ($A0,X)
+126D-   CF          ???
+126E-   C6 A0       DEC   $A0
+1270-   D4          ???
+1271-   C8          INY
+1272-   C5 8D       CMP   $8D
+1274-   8D D0 D2    STA   $D2D0
+1277-   C9 CE       CMP   #$CE
+1279-   D4          ???
+127A-   A0 D3       LDY   #$D3
+127C-   C8          INY
+127D-   CF          ???
+127E-   D0 A0       BNE   $1220
+1280-   C3          ???
+1281-   CF          ???
+1282-   CD D0 C1    CMP   $C1D0
+1285-   CE C9 CF    DEC   $CFC9
+1288-   CE A0 C1    DEC   $C1A0
+128B-   CE C4 8D    DEC   $8DC4
+128E-   8D D0 D2    STA   $D2D0
+1291-   C5 D3       CMP   $D3
+1293-   D3          ???
+1294-   A0 BC       LDY   #$BC
+1296-   D2 C5       CMP   ($C5)
+1298-   D4          ???
+1299-   D5 D2       CMP   $D2,X
+129B-   CE BE A0    DEC   $A0BE
+129E-   D4          ???
+129F-   CF          ???
+12A0-   A0 D5       LDY   #$D5
+12A2-   D0 C7       BNE   $126B
+12A4-   D2 C1       CMP   ($C1)
+12A6-   C4 C5       CPY   $C5
+12A8-   00          BRK
+12A9-   20 DC 11    JSR   $11DC
+12AC-   F0 06       BEQ   $12B4
+12AE-   20 2F FB    JSR   $FB2F    F8ROM:INIT
+12B1-   4C 58 FC    JMP   $FC58    F8ROM:HOME
+12B4-   20 58 FC    JSR   $FC58    F8ROM:HOME
+12B7-   20 29 10    JSR   $1029
+12BA-   90 06       BCC   $12C2
+12BC-   20 10 11    JSR   $1110
+12BF-   4C 52 12    JMP   $1252
+12C2-   A9 29       LDA   #$29
+12C4-   20 EF 11    JSR   $11EF
+12C7-   AD FF 2C    LDA   $2CFF
+12CA-   F0 03       BEQ   $12CF
+12CC-   4C 98 13    JMP   $1398
+12CF-   20 10 11    JSR   $1110
+12D2-   20 BA 10    JSR   $10BA
+12D5-   D9 CF D5    CMP   $D5CF,Y
+12D8-   A0 C8       LDY   #$C8
+12DA-   C1 D6       CMP   ($D6,X)
+12DC-   C5 A0       CMP   $A0
+12DE-   CE CF D4    DEC   $D4CF
+12E1-   A0 CD       LDY   #$CD
+12E3-   C1 C4       CMP   ($C4,X)
+12E5-   C5 A0       CMP   $A0
+12E7-   C1 A0       CMP   ($A0,X)
+12E9-   C2          ???
+12EA-   C1 C3       CMP   ($C3,X)
+12EC-   CB          ???
+12ED-   D5 D0       CMP   $D0,X
+12EF-   A0 CF       LDY   #$CF
+12F1-   C6 A0       DEC   $A0
+12F3-   D9 CF D5    CMP   $D5CF,Y
+12F6-   D2 8D       CMP   ($8D)
+12F8-   C3          ???
+12F9-   CF          ???
+12FA-   CD D0 C1    CMP   $C1D0
+12FD-   CE C9 CF    DEC   $CFC9
+1300-   CE A0 C4    DEC   $C4A0
+1303-   C9 D3       CMP   #$D3
+1305-   CB          ???
+1306-   AE A0 D9    LDX   $D9A0
+1309-   CF          ???
+130A-   D5 A0       CMP   $A0,X
+130C-   CD D5 D3    CMP   $D3D5
+130F-   D4          ???
+1310-   A0 CD       LDY   #$CD
+1312-   C1 CB       CMP   ($CB,X)
+1314-   C5 A0       CMP   $A0
+1316-   C1 8D       CMP   ($8D,X)
+1318-   C2          ???
+1319-   C1 C3       CMP   ($C3,X)
+131B-   CB          ???
+131C-   D5 D0       CMP   $D0,X
+131E-   A0 C2       LDY   #$C2
+1320-   C5 C6       CMP   $C6
+1322-   CF          ???
+1323-   D2 C5       CMP   ($C5)
+1325-   A0 D4       LDY   #$D4
+1327-   C8          INY
+1328-   C5 A0       CMP   $A0
+132A-   D5 D0       CMP   $D0,X
+132C-   C7          ???
+132D-   D2 C1       CMP   ($C1)
+132F-   C4 C5       CPY   $C5
+1331-   A0 D5       LDY   #$D5
+1333-   D4          ???
+1334-   C9 CC       CMP   #$CC
+1336-   C9 D4       CMP   #$D4
+1338-   D9 8D C3    CMP   $C38D,Y
+133B-   C1 CE       CMP   ($CE,X)
+133D-   A0 C2       LDY   #$C2
+133F-   C5 A0       CMP   $A0
+1341-   D2 D5       CMP   ($D5)
+1343-   CE AE A0    DEC   $A0AE
+1346-   D3          ???
+1347-   C5 C5       CMP   $C5
+1349-   A0 D3       LDY   #$D3
+134B-   C5 C3       CMP   $C3
+134D-   D4          ???
+134E-   C9 CF       CMP   #$CF
+1350-   CE A0 C9    DEC   $C9A0
+1353-   A0 CF       LDY   #$CF
+1355-   C6 8D       DEC   $8D
+1357-   C3          ???
+1358-   CF          ???
+1359-   CD D0 C1    CMP   $C1D0
+135C-   CE C9 CF    DEC   $CFC9
+135F-   CE A0 CD    DEC   $CDA0
+1362-   C1 CE       CMP   ($CE,X)
+1364-   D5 C1       CMP   $C1,X
+1366-   CC A0 C6    CPY   $C6A0
+1369-   CF          ???
+136A-   D2 A0       CMP   ($A0)
+136C-   C9 CE       CMP   #$CE
+136E-   D3          ???
+136F-   D4          ???
+1370-   D2 D5       CMP   ($D5)
+1372-   C3          ???
+1373-   D4          ???
+1374-   C9 CF       CMP   #$CF
+1376-   CE D3 8D    DEC   $8DD3
+1379-   CF          ???
+137A-   CE A0 CD    DEC   $CDA0
+137D-   C1 CB       CMP   ($CB,X)
+137F-   C9 CE       CMP   #$CE
+1381-   C7          ???
+1382-   A0 C1       LDY   #$C1
+1384-   A0 C2       LDY   #$C2
+1386-   C1 C3       CMP   ($C3,X)
+1388-   CB          ???
+1389-   D5 D0       CMP   $D0,X
+138B-   AE 00 20    LDX   $2000
+138E-   B6 11       LDX   $11,Y
+1390-   F0 03       BEQ   $1395
+1392-   4C 52 12    JMP   $1252
+1395-   4C AE 12    JMP   $12AE
+1398-   20 AB 10    JSR   $10AB
+139B-   20 BA 10    JSR   $10BA
+139E-   D5 D0       CMP   $D0,X
+13A0-   C7          ???
+13A1-   D2 C1       CMP   ($C1)
+13A3-   C4 C9       CPY   $C9
+13A5-   CE C7 A0    DEC   $A0C7
+13A8-   C3          ???
+13A9-   CF          ???
+13AA-   CD D0 C1    CMP   $C1D0
+13AD-   CE C9 CF    DEC   $CFC9
+13B0-   CE A0 C4    DEC   $C4A0
+13B3-   C9 D3       CMP   #$D3
+13B5-   CB          ???
+13B6-   AE AE AE    LDX   $AEAE
+13B9-   8D 00 20    STA   $2000
+13BC-   35 14       AND   $14,X
+13BE-   20 5F 14    JSR   $145F
+13C1-   20 AE 10    JSR   $10AE
+13C4-   20 BA 10    JSR   $10BA
+13C7-   D5 D0       CMP   $D0,X
+13C9-   C7          ???
+13CA-   D2 C1       CMP   ($C1)
+13CC-   C4 C5       CPY   $C5
+13CE-   A0 C3       LDY   #$C3
+13D0-   CF          ???
+13D1-   CD D0 CC    CMP   $CCD0
+13D4-   C5 D4       CMP   $D4
+13D6-   C5 AE       CMP   $AE
+13D8-   00          BRK
+13D9-   20 B6 11    JSR   $11B6
+13DC-   F0 B7       BEQ   $1395
+13DE-   4C 52 12    JMP   $1252
+13E1-   20 AE 10    JSR   $10AE
+13E4-   20 10 11    JSR   $1110
+13E7-   A5 DE       LDA   $DE
+13E9-   C9 04       CMP   #$04
+13EB-   F0 1E       BEQ   $140B
+13ED-   C9 10       CMP   #$10
+13EF-   F0 1A       BEQ   $140B
+13F1-   20 BA 10    JSR   $10BA
+13F4-   C4 C9       CPY   $C9
+13F6-   D3          ???
+13F7-   CB          ???
+13F8-   A0 C5       LDY   #$C5
+13FA-   D2 D2       CMP   ($D2)
+13FC-   CF          ???
+13FD-   D2 A0       CMP   ($A0)
+13FF-   CF          ???
+1400-   C3          ???
+1401-   C3          ???
+1402-   D5 D2       CMP   $D2,X
+1404-   D2 C5       CMP   ($C5)
+1406-   C4 00       CPY   $00
+1408-   4C B6 11    JMP   $11B6
+140B-   20 BA 10    JSR   $10BA
+140E-   D0 CC       BNE   $13DC
+1410-   C5 C1       CMP   $C1
+1412-   D3          ???
+1413-   C5 A0       CMP   $A0
+1415-   D2 C5       CMP   ($C5)
+1417-   CD CF D6    CMP   $D6CF
+141A-   C5 A0       CMP   $A0
+141C-   D4          ???
+141D-   C8          INY
+141E-   C5 A0       CMP   $A0
+1420-   D7          ???
+1421-   D2 C9       CMP   ($C9)
+1423-   D4          ???
+1424-   C5 A0       CMP   $A0
+1426-   D0 D2       BNE   $13FA
+1428-   CF          ???
+1429-   D4          ???
+142A-   C5 C3       CMP   $C3
+142C-   D4          ???
+142D-   A0 D4       LDY   #$D4
+142F-   C1 C2       CMP   ($C2,X)
+1431-   00          BRK
+1432-   4C B6 11    JMP   $11B6
+1435-   A0 00       LDY   #$00
+1437-   B9 43 14    LDA   $1443,Y
+143A-   F0 06       BEQ   $1442
+143C-   20 ED FD    JSR   $FDED    F8ROM:COUT
+143F-   C8          INY
+1440-   D0 F5       BNE   $1437
+1442-   60          RTS
+1443-   8D 84 C2    STA   $C284
+1446-   D3          ???
+1447-   C1 D6       CMP   ($D6,X)
+1449-   C5 C3       CMP   $C3
+144B-   C1 CC       CMP   ($CC,X)
+144D-   C5 CE       CMP   $CE
+144F-   AC C1 A4    LDY   $A4C1
+1452-   B4 B0       LDY   $B0,X
+1454-   B0 B0       BCS   $1406
+1456-   AC CC A4    LDY   $A4CC
+1459-   B1 C4       LDA   ($C4),Y
+145B-   C6 B8       DEC   $B8
+145D-   8D 00 A9    STA   $A900
+1460-   02          ???
+1461-   8D F4 B7    STA   $B7F4
+1464-   A2 00       LDX   #$00
+1466-   A0 0F       LDY   #$0F
+1468-   A9 28       LDA   #$28
+146A-   20 89 10    JSR   $1089
+146D-   B0 08       BCS   $1477
+146F-   E9 00       SBC   #$00
+1471-   88          DEY
+1472-   C0 07       CPY   #$07
+1474-   B0 F4       BCS   $146A
+1476-   60          RTS
+1477-   AE F5 B7    LDX   $B7F5
+147A-   4C 12 D4    JMP   $D412
