@@ -2,7 +2,7 @@
 
 V10-13 represented virtual disk images on a hard drive, each partition exactly one floppy in size.
 
-As I have time, I will sift through the code and perhaps leave some comments here of stuff I found interesting.
+As I have time, I will sift through the code and perhaps leave some comments here.
 
 To start, the copy protection source code on Disk 4 is interesting. :)
 
